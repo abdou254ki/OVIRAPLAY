@@ -98,7 +98,9 @@ header h2{font-weight:900;font-size:19px;margin-inline-end:auto}
 <div class="toast" id="ts"></div>
 
 <script>
-const API='https://ovira-api.onrender.com';
+// هنا تم دمج الرابط الخاص بك مباشرة
+const API = 'https://ovira-api.onrender.com';
+
 const S=['قيد المراجعة','مؤكد','تم التسليم','ملغي'];
 const COL={'قيد المراجعة':'#F59E0B','مؤكد':'#2447C9','تم التسليم':'#16A34A','ملغي':'#EF4444'};
 const DR=[['','كل الأوقات'],['1','اليوم'],['7','7 أيام'],['30','30 يومًا']];
@@ -109,7 +111,7 @@ const WM={
  'ملغي':o=>`مرحبًا ${o.customerName}، تم إلغاء طلبك ${o.orderCode}. للاستفسار راسلنا هنا.`};
 const $=s=>document.getElementById(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const msg=e=>e instanceof TypeError?'تعذّر الاتصال بالخادم':e.message;
+const msg=e=>e instanceof TypeError?'تعذّر الاتصال بالخادم، قد يكون الخادم نائمًا، يرجى المحاولة مرة أخرى':e.message;
 const num=n=>Number(n||0).toLocaleString('en-US');
 let tok='';try{tok=sessionStorage.getItem('at')||''}catch(e){}
 let tab='ov',st='',rg='',q='',pg=1,pages=1,qt,tt,lastP=null;
@@ -120,7 +122,7 @@ async function call(p,o={}){
   try{
     const r=await fetch(API+p,{...o,headers:{'Content-Type':'application/json',...(tok&&{Authorization:'Bearer '+tok}),...o.headers}});
     if(r.status==401&&tok){out();throw new Error('انتهت الجلسة، سجّل الدخول مجددًا')}
-    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||'خطأ في الخادم')}
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||'بيانات الدخول غير صحيحة')}
     return r;
   }finally{clearTimeout(w);$('wake').hidden=true}
 }
@@ -141,8 +143,7 @@ $('lf').onsubmit=async ev=>{
     const d=await api('/api/admin/login',{method:'POST',body:JSON.stringify({email:$('em').value.trim(),password:$('pw').value})});
     tok=d.token;try{sessionStorage.setItem('at',tok)}catch(e){}
     $('pw').value='';view();
-  }catch(e){$('le').textContent=msg(e)}
-  $('lb').disabled=false;
+  }catch(e){$('le').textContent=msg(e)}$('lb').disabled=false;
 };
 $('lo').onclick=out;
 $('rf').onclick=()=>{stats();if(tab=='or')load()};
@@ -159,4 +160,60 @@ async function stats(){
     d.daily.forEach(x=>m[x._id]=x);
     const row=[...Array(7)].map((_,i)=>{const t=new Date();t.setDate(t.getDate()-6+i);const x=m[key(t)]||{};return{t,o:x.orders||0,r:x.revenue||0}});
     const mx=Math.max(1,...row.map(x=>x.o)),td=row[6];
-    $('tl').innerHTML=[['طلبات اليوم',td.o],['إيرادات اليوم',num(td.r)+' DA'],['قيد المراجعة',pend],['إجمالي الإيرادات',num(g('مؤكد').sum+g('تم التسليم').sum)+' DA']].map(x=>`<div><small>${x[0]}</small><b><bdi
+    $('tl').innerHTML=[['طلبات اليوم',td.o],['إيرادات اليوم',num(td.r)+' DA'],['قيد المراجعة',pend],['إجمالي الإيرادات',num(g('مؤكد').sum+g('تم التسليم').sum)+' DA']].map(x=>`<div><small>${x[0]}</small><b><bdi>${x[1]}</bdi></b></div>`).join('');
+    $('bars').innerHTML=row.map(x=>`<div><b>${x.o}</b><i style="height:${Math.max(3,x.o/mx*100)}%"></i><small>${x.t.toLocaleDateString('ar-DZ',{weekday:'short'})}</small></div>`).join('');
+    const tm=Math.max(1,...d.top.map(x=>x.revenue));
+    $('top').innerHTML=d.top.length?d.top.map(x=>`<div class="tp"><u style="width:${x.revenue/tm*100}%"></u><span>${esc(x._id)} · ${x.qty}</span><b><bdi>${num(x.revenue)} DA</bdi></b></div>`).join(''):'<p class="mt">لا توجد مبيعات مؤكدة بعد.</p>';
+  }catch(e){if(tok)toast(msg(e))}
+}
+
+function chips(){
+  $('sc').innerHTML=['',...S].map(s=>`<button class="chip ${s==st?'on':''}" data-s="${s}">${s||'كل الحالات'}</button>`).join('');
+  $('dc').innerHTML=DR.map(d=>`<button class="chip ${d[0]==rg?'on':''}" data-d="${d[0]}">${d[1]}</button>`).join('');
+  $('sc').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{st=b.dataset.s;pg=1;load()});$('dc').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{rg=b.dataset.d;pg=1;load()});
+}
+function qs(){
+  const p=new URLSearchParams({status:st,q});
+  if(rg){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(+rg-1));p.set('from',d.toISOString())}
+  return p.toString();
+}
+const card=o=>`<article class="oc"><div class="r1"><b>${esc(o.orderCode)}</b><span class="bg" style="--c:${COL[o.status]||'#888'}">${esc(o.status)}</span></div>
+<div class="mt">${new Date(o.createdAt).toLocaleString('fr-DZ',{dateStyle:'short',timeStyle:'short'})}</div>
+<div class="r2"><b>${esc(o.customerName)}</b><a href="https://wa.me/213${esc(String(o.whatsappNumber).slice(1))}?text=${encodeURIComponent((WM[o.status]||WM['قيد المراجعة'])(o))}" target="_blank" rel="noopener"><bdi>${esc(o.whatsappNumber)}</bdi> 💬</a></div>
+<ul>${o.cartItems.map(i=>`<li>${esc(i.productName)} · ${i.months} شهر × ${i.quantity}</li>`).join('')}</ul>
+<div class="r3"><span>${esc(o.paymentMethod)}</span><b><bdi>${num(o.totalPrice)} DA</bdi></b></div>
+<div class="nt"><textarea maxlength="300" placeholder="ملاحظة داخلية…" data-n="${o._id}">${esc(o.adminNote||'')}</textarea><button data-sn="${o._id}">حفظ</button></div>
+<div class="acts">${S.filter(s=>s!=o.status).map(s=>`<button style="--c:${COL[s]}" data-id="${o._id}" data-s="${s}">${s}</button>`).join('')}</div></article>`;
+
+async function load(){
+  chips();$('list').innerHTML='<p class="mt">جارٍ التحميل…</p>';
+  try{
+    const d=await api(`/api/admin/orders?page=${pg}&${qs()}`);
+    pages=d.pages;
+    $('list').innerHTML=d.orders.length?d.orders.map(card).join(''):'<p class="mt">لا توجد طلبات مطابقة.</p>';
+    $('list').querySelectorAll('.acts button').forEach(b=>b.onclick=()=>upd(b.dataset.id,{status:b.dataset.s},b));
+    $('list').querySelectorAll('[data-sn]').forEach(b=>b.onclick=()=>upd(b.dataset.sn,{adminNote:$('list').querySelector(`[data-n="${b.dataset.sn}"]`).value},b,true));
+    $('pg').innerHTML=pages>1?`<button class="ib" id="pv" ${pg<=1?'disabled':''}>السابق</button><span>${pg} / ${pages} · ${d.total} طلب</span><button class="ib" id="nx" ${pg>=pages?'disabled':''}>التالي</button>`:`<span class="mt">${d.total} طلب</span>`;
+    if(pages>1){$('pv').onclick=()=>{pg--;load()};$('nx').onclick=()=>{pg++;load()}}
+  }catch(e){if(tok)$('list').innerHTML=`<p class="mt">${esc(msg(e))}</p>`}
+}
+async function upd(id,body,b,quiet){
+  if(body.status=='ملغي'&&!confirm('إلغاء هذا الطلب؟'))return;
+  b.disabled=true;
+  try{await api('/api/admin/orders/'+id,{method:'PATCH',body:JSON.stringify(body)});toast(quiet?'تم حفظ الملاحظة ✓':'تم التحديث ✓');if(!quiet){load();stats()}}
+  catch(e){toast(msg(e))}
+  b.disabled=false;
+}
+$('ex').onclick=async()=>{$('ex').disabled=true;
+  try{
+    const r=await call('/api/admin/export?'+qs());
+    const a=document.createElement('a');a.href=URL.createObjectURL(await r.blob());a.download='orders.csv';a.click();URL.revokeObjectURL(a.href);
+  }catch(e){toast(msg(e))}
+  $('ex').disabled=false;
+};
+$('q').oninput=e=>{clearTimeout(qt);qt=setTimeout(()=>{q=e.target.value.trim();pg=1;load()},400)};
+setInterval(()=>{if(tok&&!document.hidden){stats();if(tab=='or'&&document.activeElement.tagName!='TEXTAREA'&&document.activeElement!==$('q'))load()}},60000);
+view();
+</script>
+</body>
+</html>
