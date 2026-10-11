@@ -181,4 +181,99 @@ function cp(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.rej
 function theme(){const r=document.documentElement;const d=r.dataset.theme?r.dataset.theme=='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=d?'light':'dark';try{localStorage.setItem('ot',r.dataset.theme)}catch(e){}}
 try{const s=localStorage.getItem('ot');if(s)document.documentElement.dataset.theme=s}catch(e){}
 const gc=p=>`<div class="gc"><i class="ic" style="background:${p.c}">${p.l}</i><small>${p.n}</small></div>`;
-const card=(p,ix=0)=>{const m=Math.max(...p.pl.map(x=>sv(p,x)));return `<a class="pc" href="#/p/${p.i
+const card=(p,ix=0)=>{const m=Math.max(...p.pl.map(x=>sv(p,x)));return `<a class="pc" href="#/p/${p.id}" style="--c:${p.c};--c2:${p.c2};--i:${ix}"><div class="pv"><div class="bds"><span class="bd fl">⚡ فوري</span>${m>0?`<span class="bd sv">حتى −${m}%</span>`:''}</div>${gc(p)}</div><div class="pi"><small>${p.cat}</small><h3>${p.t}</h3><div class="pr">ابتداءً من <b>${fmt(Math.min(...p.pl.map(x=>x[1])))}</b></div><div class="btn" style="margin:0">عرض الباقات</div></div></a>`};
+const slide=(a,b,g,link,cta,ids)=>`<div class="sl" style="background:linear-gradient(135deg,${g})"><div class="tiles">${ids.map(i=>`<i class="ic" style="background:${pr(i).c}">${pr(i).l}</i>`).join('')}</div><h2>${a}</h2><p>${b}</p><a class="cta" href="${link}">${cta}</a></div>`;
+const home=()=>`<div class="w"><div class="hero">${slide('اشتراكات الترفيه<br>بأسعار تناسبك','Netflix وCrunchyroll وShahid وPrime Video في مكان واحد','#12286E,#2F5BEA','#/shop','تصفّح الاشتراكات',['netflix','cr-mega','shahid','prime'])}${slide('حسابك يصلك<br>فور تأكيد الدفع','بيانات الدخول على واتساب بلا انتظار','#5C060C,#E50914','#/p/netflix','اطلب نتفلكس',['netflix'])}${slide('شاشة باسمك<br>ورمز PIN سري','خصوصية كاملة وبلا تداخل في المشاهدات','#8A3A0A,#F47521','#/p/cr-mega','اطلب كرانشي رول',['cr-mega','cr-fan'])}</div><div class="dots"><i class="on"></i><i></i><i></i></div><h2 class="sh">اختر اشتراكك</h2><div class="g">${P.map(card).join('')}</div><h2 class="sh">لماذا تطلب من OVIRA PLAY؟</h2><div class="tr"><div><b>تسليم فوري</b>بيانات حسابك تصلك على واتساب فور تأكيد الدفع</div><div><b>شاشة خاصة بك</b>ملف شخصي باسمك ومقفل برمز PIN سري</div><div><b>ادفع كما تشاء</b>بريدي موب، Binance، Redotpay أو Bybit</div></div><h2 class="sh">الأسئلة الشائعة</h2>${faqH}</div>`;
+const shop=()=>{const cs=['الكل',...new Set(P.map(p=>p.cat))];return `<div class="w"><h1 class="ttl">المتجر</h1><div class="chips">${cs.map(c=>`<button class="chip ${c==cat?'on':''}" onclick="setCat('${c}')">${c}</button>`).join('')}</div><div class="g" style="margin-top:8px">${P.filter(p=>cat=='الكل'||p.cat==cat).map(card).join('')}</div></div>`};
+const prod=p=>{const x=p.pl[sel];return `<div class="ph" style="--c:${p.c};--c2:${p.c2}">${gc(p)}<h1>${p.t}</h1><p>${p.cat}</p></div><div class="w"><h2 class="sh">ما ستحصل عليه</h2><ul class="ft">${p.f.map(f=>`<li><i>✓</i>${f}</li>`).join('')}</ul><h2 class="sh">اختر باقتك</h2>${p.pl.map((y,i)=>`<button class="pl ${i==sel?'on':''}" onclick="pickPlan(${i})">${y[2]?'<span class="tag">الأوفر</span>':''}<span class="rd"></span><span class="d">${dur(y[0])}${sv(p,y)>0?`<em>وفّر ${sv(p,y)}%</em>`:''}</span><b>${fmt(y[1])}</b></button>`).join('')}<h2 class="sh">كيف يتم طلبك؟</h2>${STEPS.map((s,i)=>`<div class="stp"><i>${i+1}</i><div><b>${s[0]}</b><span>${s[1]}</span></div></div>`).join('')}<h2 class="sh">الأسئلة الشائعة</h2>${faqH}</div><div class="bar"><button class="btn o" onclick="add('${p.id}',${x[0]})">أضف للسلة</button><button class="btn" onclick="add('${p.id}',${x[0]},1)">اشترِ الآن · ${fmt(x[1])}</button></div>`};
+const cartV=()=>{if(!cart.length)return`<div class="w em"><div>🛒</div><h2>سلتك فارغة</h2><p class="note" style="margin-bottom:18px">اختر اشتراكك الأول وابدأ المشاهدة اليوم</p><a class="btn" href="#/shop">تصفّح الاشتراكات</a></div>`;
+const d=cart.find((a,x)=>cart.some((b,y)=>y>x&&pr(a.id).n==pr(b.id).n)),sv2=saved(),have=new Set(cart.map(i=>pr(i.id).n)),more=P.filter(p=>!have.has(p.n)).slice(0,3);
+return`<div class="w"><h1 class="ttl">سلة التسوق</h1>${d?`<div class="wn">تنبيه: سلتك تحتوي أكثر من اشتراك لـ ${pr(d.id).n}. تأكد أنك تحتاجهما معًا.</div>`:''}${cart.map((i,k)=>{const p=pr(i.id),x=pl(i),n=nudge(i);return`<div class="ci"><i class="ic" style="background:${p.c}">${p.l}</i><div class="in"><b>${p.t}</b><select class="sel" onchange="chg(${k},+this.value)" aria-label="المدة">${p.pl.map(y=>`<option value="${y[0]}" ${y[0]==i.m?'selected':''}>${dur(y[0])} — ${y[1]} DA</option>`).join('')}</select><div class="q"><button onclick="qty(${k},-1)" aria-label="إنقاص">−</button><span>${i.q}</span><button onclick="qty(${k},1)" aria-label="زيادة">+</button></div></div><div class="cr"><button class="x" onclick="del(${k})" aria-label="حذف">✕</button><b>${fmt(x[1]*i.q)}</b></div>${n&&n[0]>0?`<div class="up"><span>💡 باقة ${dur(n[1])} توفّر عليك ${fmt(n[0])}</span><button onclick="chg(${k},${n[1]},1)">اعتمدها</button></div>`:''}</div>`}).join('')}<div class="sm"><h3>ملخص الطلب</h3><div><span>عدد الاشتراكات</span><b>${cart.reduce((s,i)=>s+i.q,0)}</b></div>${sv2>0?`<div class="gr"><span>توفيرك مقارنة بالدفع الشهري</span>${fmt(sv2)}</div>`:''}<hr><div class="tt"><span>الإجمالي</span>${fmt(tot())}</div></div><a class="btn" href="#/checkout">أكمل الطلب</a><a class="lk" href="#/shop">متابعة التسوق</a>${more.length?`<h2 class="sh">قد يعجبك أيضًا</h2><div class="mr">${more.map(mini).join('')}</div>`:''}</div>`};
+const pbox=()=>{const m=PAY.find(x=>x.id==payId);return `حوّل المبلغ إلى ${m.k}:<b>${m.v}</b><button class="cp" onclick="cp('${m.v}')">${ico(I.copy)} نسخ الرقم</button>`};
+const chk=()=>!cart.length?cartV():`<div class="w"><h1 class="ttl">إتمام الطلب</h1><div class="sm">${cart.map(i=>`<div><span>${pr(i.id).t} ·${dur(pl(i)[0])} × ${i.q}</span>${fmt(pl(i)[1]*i.q)}</div>`).join('')}<hr><div class="tt"><span>الإجمالي</span>${fmt(tot())}</div></div><label class="lb" for="fn">الاسم الكامل</label><input class="in2" id="fn" autocomplete="name" value="${esc(me().n||'')}" placeholder="اكتب اسمك هنا" required><label class="lb" for="fp">رقم واتساب لاستلام الحساب</label><input class="in2" id="fp" type="tel" value="${esc(me().p||'')}" dir="ltr" autocomplete="tel" placeholder="05XX XX XX XX" required><label class="lb">طريقة الدفع</label><div class="pms">${PAY.map(m=>`<button class="pm ${m.id==payId?'on':''}" data-i="${m.id}" onclick="pick('${m.id}')">${m.n}</button>`).join('')}</div><div class="box" id="pbox">${pbox()}</div><p class="note">بعد التحويل، نجهّز لك رسالة الطلب كاملة لترسلها على واتساب مع صورة الوصل.</p><button class="btn" id="submitBtn" onclick="send()">تأكيد وإنهاء الطلب</button></div>`;
+const doneV=()=>!msg?home():`<div class="w em"><div class="okc">✓</div><h2>شكرًا ${esc(ord.n)}، استلمنا طلبك 🎉</h2><p class="note" style="margin:0 0 4px">رقم طلبك: <b>${esc(ord.code)}</b></p><p class="note">آخر خطوة: أرسل التفاصيل أدناه إلى واتساب مع صورة وصل الدفع، وسنسلّمك حسابك فور التأكيد.</p><pre>${esc(msg)}</pre>${CFG.wa?`<a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/${CFG.wa}?text=${encodeURIComponent(msg)}">إرسال الطلب عبر واتساب</a>`:''}<button class="btn o" onclick="cp(msg)">نسخ تفاصيل الطلب</button><h2 class="sh" style="justify-content:center">أضف المزيد إلى متعتك</h2><div class="mr">${P.filter(p=>!ord.ids.includes(p.n)).slice(0,3).map(mini).join('')}</div><a class="lk" href="#/shop">تصفّح كل الاشتراكات</a></div>`;
+function view(){const h=location.hash.slice(2).split('/'),v=h[0]||'home';document.body.className=v=='p'&&pr(h[1])?'pp':'';
+ if(v=='p'&&pr(h[1]))return prod(pr(h[1]));
+ return v=='shop'?shop():v=='cart'?cartV():v=='checkout'?chk():v=='done'?doneV():home()}
+function chrome(){const h=location.hash.slice(2).split('/'),v=h[0]||'home',n=cart.reduce((s,i)=>s+i.q,0);
+ $('#hd').innerHTML=`${v!='home'?`<button class="ib" onclick="back()" aria-label="رجوع">${ico(I.back)}</button>`:''}<a class="logo" href="#/"><i>▶</i>OVIRA <b>PLAY</b></a><button class="ib" onclick="theme()" aria-label="تغيير المظهر">${ico(I.moon)}</button><a class="ib" href="#/cart" aria-label="السلة">${ico(I.cart)}${n?`<span class="cnt">${n}</span>`:''}</a>`;
+ const t=[['home','الرئيسية','/'],['shop','المتجر','/shop'],['cart','السلة','/cart']];
+ $('#nv').innerHTML=t.map(x=>`<a href="#${x[2]}" class="${x[0]==v||(x[0]=='cart'&&v=='checkout')?'on':''}">${ico(I[x[0]])}${x[1]}${x[0]=='cart'&&n?`<span class="cnt" style="inset-inline-start:calc(50% + 4px)">${n}</span>`:''}</a>`).join('')}
+function draw(){clean();app.innerHTML=view();chrome()}
+function route(){const h=location.hash.slice(2).split('/');if(h[0]=='p'&&pr(h[1]))sel=Math.max(0,pr(h[1]).pl.findIndex(x=>x[2]));draw();scrollTo(0,0);app.classList.remove('enter');void app.offsetWidth;app.classList.add('enter');hero();if(h[0]=='done'&&msg)boom()}
+function back(){history.length>1?history.back():location.hash='#/'}
+function setCat(c){cat=c;draw()}
+function pickPlan(i){sel=i;draw()}
+function add(id,m,go){const e=cart.find(i=>i.id==id&&i.m==m);if(e)e.q=Math.min(9,e.q+1);else cart.push({id,m,q:1});save();if(go)location.hash='#/checkout';else{draw();bump();toast('تمت الإضافة إلى السلة ✓')}}
+function qty(k,d){cart[k].q=Math.min(9,Math.max(1,cart[k].q+d));save();draw()}
+function del(k){const it=cart.splice(k,1)[0];save();draw();toast('تم حذف الاشتراك',()=>{cart.splice(k,0,it);save();draw()},'تراجع')}
+function pick(id){payId=id;document.querySelectorAll('.pm').forEach(b=>b.classList.toggle('on',b.dataset.i==id));$('#pbox').innerHTML=pbox()}
+
+// الدالة المحدثة لإرسال الطلب إلى الخادم
+async function send(){const n=$('#fn').value.trim(),ph=normPh($('#fp').value);
+ if(n.length<3){$('#fn').focus();return toast('اكتب اسمك الكامل')}
+ if(!/^0[567]\d{8}$/.test(ph)){$('#fp').focus();return toast('أدخل رقم هاتف جزائري صحيح من 10 أرقام')}
+ const pm=PAY.find(x=>x.id==payId);
+ const submitBtn = $('#submitBtn');
+ submitBtn.disabled = true;
+ submitBtn.textContent = 'جاري إرسال الطلب...';
+
+ const payload = {
+   customerName: n,
+   whatsappNumber: ph,
+   paymentMethod: pm.n,
+   totalPrice: tot(),
+   cartItems: cart.map(i => ({
+     id: i.id,
+     m: i.m,
+     q: i.q
+   }))
+ };
+
+ try {
+   const response = await fetch(API_URL, {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json'
+     },
+     body: JSON.stringify(payload)
+   });
+
+   const data = await response.json();
+
+   if (data.success) {
+      const code = data.order.orderCode;
+      const sv2 = saved();
+      msg=['🧾 طلب جديد — OVIRA PLAY','رقم الطلب: '+code,'التاريخ: '+new Date().toLocaleString('fr-DZ',{dateStyle:'short',timeStyle:'short'}),'','👤 الاسم: '+n,'📱 الهاتف: '+ph,'','🛒 الطلبات:',...cart.map((i,k)=>(k+1)+') '+pr(i.id).t+'\n   '+dur(pl(i)[0])+' × '+i.q+' = '+pl(i)[1]*i.q+' DA'),'','💰 الإجمالي: '+tot()+' DA'+(sv2>0?' (وفّرت '+sv2+' DA)':''),'💳 طريقة الدفع: '+pm.n,'','📎 سأرسل صورة وصل الدفع بعد هذه الرسالة.'].join('\n');
+      ord={code,n:n.split(' ')[0],ids:cart.map(i=>pr(i.id).n)};
+      try{localStorage.setItem('oi',JSON.stringify({n,p:ph}))}catch(e){}
+      cart=[];save();location.hash='#/done';
+   } else {
+       toast(data.message || 'حدث خطأ أثناء معالجة الطلب.');
+       submitBtn.disabled = false;
+       submitBtn.textContent = 'تأكيد وإنهاء الطلب';
+   }
+ } catch (error) {
+     console.error('Error submitting order:', error);
+     toast('حدث خطأ في الاتصال بالخادم. يرجى المحاولة لاحقاً.');
+     submitBtn.disabled = false;
+     submitBtn.textContent = 'تأكيد وإنهاء الطلب';
+ }
+}
+
+if(CFG.wa){const f=$('#fab');f.href='https://wa.me/'+CFG.wa+'?text='+encodeURIComponent('مرحبًا OVIRA PLAY، أريد الاستفسار عن اشتراك');f.style.display='grid'}
+let ord={n:'',code:'',ids:[]},hi;
+const me=()=>{try{return JSON.parse(localStorage.getItem('oi')||'{}')}catch(e){return{}}};
+const normPh=s=>s.replace(/[٠-٩]/g,d=>d.charCodeAt(0)-1632).replace(/[\s\-().]/g,'').replace(/^(\+|00)?213/,'0');
+const best=p=>p.pl.reduce((a,b)=>b[1]/b[0]<a[1]/a[0]?b:a);
+const nudge=i=>{const p=pr(i.id),x=pl(i),tm=i.m*i.q,alt=i.q>1&&p.pl.find(y=>y[0]==tm&&y[1]<x[1]*i.q);if(alt)return[x[1]*i.q-alt[1],alt[0]];const b=best(p);return i.q==1&&b[0]>i.m&&b[1]/b[0]<x[1]/x[0]?[Math.round(x[1]/x[0]*b[0]-b[1]),b[0]]:null};
+const saved=()=>cart.reduce((s,i)=>s+(pr(i.id).pl[0][1]*pl(i)[0]-pl(i)[1])*i.q,0);
+const mini=p=>`<a class="mn" href="#/p/${p.id}"><i class="ic" style="background:${p.c}">${p.l}</i><b>${p.t}</b><small>من ${fmt(p.pl[0][1])}</small></a>`;
+function chg(k,m,r){const it=cart[k];it.m=m;if(r)it.q=1;const o=cart.findIndex((x,j)=>j!=k&&x.id==it.id&&x.m==m);if(o>-1){cart[o].q=Math.min(9,cart[o].q+it.q);cart.splice(k,1)}save();draw();toast('تم تحديث الباقة ✓')}
+function bump(){document.querySelectorAll('.cnt').forEach(e=>{e.classList.remove('bump');void e.offsetWidth;e.classList.add('bump')})}
+function hero(){clearInterval(hi);const h=$('.hero');if(!h)return;const n=h.children.length,ds=[...$('.dots').children],w=()=>h.children[0].offsetWidth+12;let c=0;h.onscroll=()=>{c=Math.round(Math.abs(h.scrollLeft)/w());ds.forEach((d,k)=>d.classList.toggle('on',k==c))};hi=setInterval(()=>h.scrollTo({left:-((c+1)%n)*w(),behavior:'smooth'}),4500)}
+function boom(){if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;const c=['#22C55E','#F97316','#2447C9','#EF4444','#FACC15'];for(let i=0;i<30;i++){const e=document.createElement('i');e.className='cf';e.style.cssText=`left:${Math.random()*100}vw;background:${c[i%5]};animation-delay:${Math.random()*.5}s;--x:${Math.random()*120-60}px`;document.body.append(e);setTimeout(()=>e.remove(),2800)}}
+addEventListener('hashchange',route);route();
+</script>
+</body>
+</html>
