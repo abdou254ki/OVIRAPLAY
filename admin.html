@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>OVIRA PLAY | لوحة الإدارة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F5FA;--card:#fff;--ink:#0D1530;--mut:#66708A;--line:#E2E6F0;--pri:#12286E;--pri2:#2447C9;--sh:0 8px 24px rgba(18,40,110,.08)}
+@media(prefers-color-scheme:dark){:root{--bg:#070A16;--card:#10162A;--ink:#F3F5FB;--mut:#93A0BA;--line:#1D2642;--pri:#2F5BEA;--pri2:#4C7DFF;--sh:0 8px 24px rgba(0,0,0,.4)}}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Cairo',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);line-height:1.6;min-height:100vh;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+button{border:0;background:none;color:inherit;cursor:pointer;font-family:inherit}[hidden]{display:none!important}
+a{color:var(--pri2);font-weight:800;text-decoration:none}
+.w{max-width:900px;margin:0 auto;padding:0 16px 40px}
+.lg{min-height:100vh;display:grid;place-items:center;padding:20px}
+.box{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:28px 22px;box-shadow:var(--sh)}
+.box h1{font-size:24px;font-weight:900;text-align:center}.box p{text-align:center;color:var(--mut);font-size:13px;margin:4px 0 18px}
+label{display:block;font-size:13px;font-weight:800;color:var(--mut);margin:14px 0 6px}
+input,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--ink);font-size:14px;font-weight:600;font-family:inherit}
+.btn{width:100%;margin-top:18px;padding:14px;border-radius:14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--pri),var(--pri2))}
+.btn:disabled{opacity:.6}.err{color:#EF4444;font-weight:700;font-size:13px;margin-top:12px;text-align:center;min-height:20px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+header .w{display:flex;align-items:center;gap:8px;height:58px;padding-bottom:0}
+header h2{font-weight:900;font-size:19px;margin-inline-end:auto}
+.ib{padding:8px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:800;font-size:13px}
+.ib:disabled{opacity:.5}
+.tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:14px 0}
+.tabs button{flex:1;padding:10px;border-radius:12px;font-weight:800;font-size:14px;color:var(--mut);transition:.2s}
+.tabs button.on{background:var(--pri2);color:#fff}
+.pb{background:#EF4444;color:#fff;font-size:11px;border-radius:10px;padding:1px 7px;margin-inline-start:6px}
+.wake{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.5);border-radius:14px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:13px}
+.tl{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:640px){.tl{grid-template-columns:repeat(4,1fr)}}
+.tl div,.pn{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+.tl small{color:var(--mut);font-weight:700;font-size:12px}.tl b{display:block;font-size:21px;font-weight:900}
+.pn{margin-top:12px}.pn h3{font-size:15px;font-weight:900;margin-bottom:12px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:150px}
+.bars div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px}
+.bars i{width:100%;max-width:38px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--pri2),var(--pri));min-height:4px;transition:height .5s}
+.bars b{font-size:12px}.bars small{color:var(--mut);font-size:11px;font-weight:700}
+.tp{position:relative;display:flex;justify-content:space-between;gap:10px;padding:8px 10px;margin-bottom:6px;font-size:13px;font-weight:700;border-radius:10px;overflow:hidden}
+.tp u{position:absolute;inset:0 auto 0 0;background:rgba(76,125,255,.14)}.tp span,.tp b{position:relative}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:8px}
+.chip{padding:7px 15px;border-radius:20px;background:var(--card);border:1px solid var(--line);font-weight:700;font-size:13px;white-space:nowrap}
+.chip.on{background:var(--pri2);color:#fff;border-color:transparent}
+.row{display:flex;gap:8px;margin:2px 0 14px}.row input{flex:1}
+.oc{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:var(--sh)}
+.r1,.r2,.r3{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mt{color:var(--mut);font-size:12px;font-weight:600}
+.bg{background:var(--c);color:#fff;font-size:12px;font-weight:800;padding:2px 12px;border-radius:20px}
+.r2{margin:10px 0 6px}
+.oc ul{list-style:none;margin:6px 0 10px;padding:10px 12px;background:var(--bg);border-radius:12px;font-size:13px;font-weight:600}
+.r3{font-weight:900;font-size:15px}.r3 span{color:var(--mut);font-size:13px;font-weight:700}
+.nt{display:flex;gap:8px;margin-top:10px}.nt textarea{height:42px;resize:none}.nt button{flex:none;padding:0 14px;border-radius:12px;border:1px solid var(--line);font-weight:800;font-size:13px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.acts button{flex:1;min-width:90px;padding:9px;border-radius:12px;border:2px solid var(--c);color:var(--c);font-weight:800;font-size:13px}
+.acts button:active{background:var(--c);color:#fff}
+.pg{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:10px;font-weight:700;font-size:13px}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));inset-inline:16px;margin:auto;max-width:340px;background:#0D1530;color:#fff;padding:12px 16px;border-radius:14px;text-align:center;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:20}
+.toast.on{opacity:1}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<section class="lg" id="login">
+  <form class="box" id="lf" autocomplete="on">
+    <h1>لوحة الإدارة</h1><p>OVIRA PLAY</p>
+    <label for="em">البريد الإلكتروني</label><input id="em" type="email" autocomplete="username" dir="ltr" required>
+    <label for="pw">كلمة السر</label><input id="pw" type="password" autocomplete="current-password" dir="ltr" required>
+    <button class="btn" id="lb" type="submit">تسجيل الدخول</button>
+    <div class="err" id="le" role="alert"></div>
+  </form>
+</section>
+
+<section id="dash" hidden>
+  <header><div class="w"><h2>OVIRA PLAY</h2><button class="ib" id="rf">تحديث</button><button class="ib" id="lo">خروج</button></div></header>
+  <div class="w">
+    <div class="tabs"><button data-t="ov" class="on">نظرة عامة</button><button data-t="or">الطلبات<span class="pb" id="pb" hidden></span></button></div>
+    <div class="wake" id="wake" hidden>الخادم يستيقظ، قد يستغرق حتى دقيقة…</div>
+
+    <div id="ov">
+      <div class="tl" id="tl"></div>
+      <div class="pn"><h3>الطلبات خلال آخر 7 أيام</h3><div class="bars" id="bars"></div></div>
+      <div class="pn"><h3>الأكثر مبيعًا (مؤكد + مُسلَّم)</h3><div id="top"></div></div>
+    </div>
+
+    <div id="or" hidden>
+      <div class="chips" id="sc"></div>
+      <div class="chips" id="dc"></div>
+      <div class="row"><input id="q" type="search" placeholder="ابحث بالاسم أو الهاتف أو رمز الطلب"><button class="ib" id="ex">CSV</button></div>
+      <div id="list"></div>
+      <div class="pg" id="pg"></div>
+    </div>
+  </div>
+</section>
+<div class="toast" id="ts"></div>
+
+<script>
+const API='https://ovira-api.onrender.com';
+const S=['قيد المراجعة','مؤكد','تم التسليم','ملغي'];
+const COL={'قيد المراجعة':'#F59E0B','مؤكد':'#2447C9','تم التسليم':'#16A34A','ملغي':'#EF4444'};
+const DR=[['','كل الأوقات'],['1','اليوم'],['7','7 أيام'],['30','30 يومًا']];
+const WM={
+ 'قيد المراجعة':o=>`مرحبًا ${o.customerName} 👋 استلمنا طلبك ${o.orderCode} وهو قيد المراجعة، وسنؤكده لك قريبًا.`,
+ 'مؤكد':o=>`مرحبًا ${o.customerName} ✅ تم تأكيد طلبك ${o.orderCode}. سنرسل لك بيانات الحساب الآن.`,
+ 'تم التسليم':o=>`مرحبًا ${o.customerName} 🎉 تم تسليم طلبك ${o.orderCode}. شكرًا لثقتك بـ OVIRA PLAY، ننتظر طلبك القادم!`,
+ 'ملغي':o=>`مرحبًا ${o.customerName}، تم إلغاء طلبك ${o.orderCode}. للاستفسار راسلنا هنا.`};
+const $=s=>document.getElementById(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const msg=e=>e instanceof TypeError?'تعذّر الاتصال بالخادم':e.message;
+const num=n=>Number(n||0).toLocaleString('en-US');
+let tok='';try{tok=sessionStorage.getItem('at')||''}catch(e){}
+let tab='ov',st='',rg='',q='',pg=1,pages=1,qt,tt,lastP=null;
+
+function toast(m){const t=$('ts');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2600)}
+async function call(p,o={}){
+  const w=setTimeout(()=>$('wake').hidden=false,4000);
+  try{
+    const r=await fetch(API+p,{...o,headers:{'Content-Type':'application/json',...(tok&&{Authorization:'Bearer '+tok}),...o.headers}});
+    if(r.status==401&&tok){out();throw new Error('انتهت الجلسة، سجّل الدخول مجددًا')}
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||'خطأ في الخادم')}
+    return r;
+  }finally{clearTimeout(w);$('wake').hidden=true}
+}
+const api=(p,o)=>call(p,o).then(r=>r.json());
+
+function view(){$('login').hidden=!!tok;$('dash').hidden=!tok;if(tok){go(tab);stats()}}
+function out(){tok='';lastP=null;try{sessionStorage.removeItem('at')}catch(e){}view()}
+function go(t){
+  tab=t;$('ov').hidden=t!='ov';$('or').hidden=t!='or';
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));
+  if(t=='or')load();
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>go(b.dataset.t));
+
+$('lf').onsubmit=async ev=>{
+  ev.preventDefault();$('lb').disabled=true;$('le').textContent='';
+  try{
+    const d=await api('/api/admin/login',{method:'POST',body:JSON.stringify({email:$('em').value.trim(),password:$('pw').value})});
+    tok=d.token;try{sessionStorage.setItem('at',tok)}catch(e){}
+    $('pw').value='';view();
+  }catch(e){$('le').textContent=msg(e)}
+  $('lb').disabled=false;
+};
+$('lo').onclick=out;
+$('rf').onclick=()=>{stats();if(tab=='or')load()};
+
+async function stats(){
+  try{
+    const d=await api('/api/admin/stats');
+    const g=k=>d.byStatus.find(x=>x._id==k)||{count:0,sum:0};
+    const pend=g('قيد المراجعة').count;
+    if(lastP!==null&&pend>lastP)toast('🔔 طلب جديد بانتظار المراجعة');
+    lastP=pend;document.title=(pend?'('+pend+') ':'')+'OVIRA PLAY | لوحة الإدارة';
+    $('pb').textContent=pend;$('pb').hidden=!pend;
+    const key=t=>t.toLocaleDateString('sv-SE'),m={};
+    d.daily.forEach(x=>m[x._id]=x);
+    const row=[...Array(7)].map((_,i)=>{const t=new Date();t.setDate(t.getDate()-6+i);const x=m[key(t)]||{};return{t,o:x.orders||0,r:x.revenue||0}});
+    const mx=Math.max(1,...row.map(x=>x.o)),td=row[6];
+    $('tl').innerHTML=[['طلبات اليوم',td.o],['إيرادات اليوم',num(td.r)+' DA'],['قيد المراجعة',pend],['إجمالي الإيرادات',num(g('مؤكد').sum+g('تم التسليم').sum)+' DA']].map(x=>`<div><small>${x[0]}</small><b><bdi
