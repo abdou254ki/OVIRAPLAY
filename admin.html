@@ -2,216 +2,773 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="robots" content="noindex,nofollow">
-<title>OVIRA PLAY | لوحة الإدارة</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة الإدارة | OVIRA PLAY v2.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#F3F5FA;--card:#fff;--ink:#0D1530;--mut:#66708A;--line:#E2E6F0;--pri:#12286E;--pri2:#2447C9;--sh:0 8px 24px rgba(18,40,110,.08)}
-@media(prefers-color-scheme:dark){:root{--bg:#070A16;--card:#10162A;--ink:#F3F5FB;--mut:#93A0BA;--line:#1D2642;--pri:#2F5BEA;--pri2:#4C7DFF;--sh:0 8px 24px rgba(0,0,0,.4)}}
-*{box-sizing:border-box;margin:0;padding:0;font-family:'Cairo',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--ink);line-height:1.6;min-height:100vh;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
-button{border:0;background:none;color:inherit;cursor:pointer;font-family:inherit}[hidden]{display:none!important}
-a{color:var(--pri2);font-weight:800;text-decoration:none}
-.w{max-width:900px;margin:0 auto;padding:0 16px 40px}
-.lg{min-height:100vh;display:grid;place-items:center;padding:20px}
-.box{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:28px 22px;box-shadow:var(--sh)}
-.box h1{font-size:24px;font-weight:900;text-align:center}.box p{text-align:center;color:var(--mut);font-size:13px;margin:4px 0 18px}
-label{display:block;font-size:13px;font-weight:800;color:var(--mut);margin:14px 0 6px}
-input,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--ink);font-size:14px;font-weight:600;font-family:inherit}
-.btn{width:100%;margin-top:18px;padding:14px;border-radius:14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--pri),var(--pri2))}
-.btn:disabled{opacity:.6}.err{color:#EF4444;font-weight:700;font-size:13px;margin-top:12px;text-align:center;min-height:20px}
-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
-header .w{display:flex;align-items:center;gap:8px;height:58px;padding-bottom:0}
-header h2{font-weight:900;font-size:19px;margin-inline-end:auto}
-.ib{padding:8px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:800;font-size:13px}
-.ib:disabled{opacity:.5}
-.tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin:14px 0}
-.tabs button{flex:1;padding:10px;border-radius:12px;font-weight:800;font-size:14px;color:var(--mut);transition:.2s}
-.tabs button.on{background:var(--pri2);color:#fff}
-.pb{background:#EF4444;color:#fff;font-size:11px;border-radius:10px;padding:1px 7px;margin-inline-start:6px}
-.wake{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.5);border-radius:14px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:13px}
-.tl{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-@media(min-width:640px){.tl{grid-template-columns:repeat(4,1fr)}}
-.tl div,.pn{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
-.tl small{color:var(--mut);font-weight:700;font-size:12px}.tl b{display:block;font-size:21px;font-weight:900}
-.pn{margin-top:12px}.pn h3{font-size:15px;font-weight:900;margin-bottom:12px}
-.bars{display:flex;align-items:flex-end;gap:8px;height:150px}
-.bars div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px}
-.bars i{width:100%;max-width:38px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--pri2),var(--pri));min-height:4px;transition:height .5s}
-.bars b{font-size:12px}.bars small{color:var(--mut);font-size:11px;font-weight:700}
-.tp{position:relative;display:flex;justify-content:space-between;gap:10px;padding:8px 10px;margin-bottom:6px;font-size:13px;font-weight:700;border-radius:10px;overflow:hidden}
-.tp u{position:absolute;inset:0 auto 0 0;background:rgba(76,125,255,.14)}.tp span,.tp b{position:relative}
-.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:8px}
-.chip{padding:7px 15px;border-radius:20px;background:var(--card);border:1px solid var(--line);font-weight:700;font-size:13px;white-space:nowrap}
+:root{--bg:#F3F5FA;--card:#fff;--ink:#0D1530;--mut:#66708A;--line:#E2E6F0;--pri:#12286E;--pri2:#1E40AF;--ok:#16A34A;--bad:#EF4444;--warn:#F59E0B}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Cairo',sans-serif}
+body{background:var(--bg);color:var(--ink);padding:14px;max-width:920px;margin:0 auto 60px}
+button{cursor:pointer;border:0;background:none;font:inherit}
+input,select,textarea{font:inherit}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:14px;box-shadow:0 8px 24px rgba(13,21,48,.05)}
+.login-box{max-width:400px;margin:70px auto;text-align:center;padding:30px 22px}
+.login-box h1{font-size:26px;font-weight:900}
+.login-box p{color:var(--mut);font-size:13px;font-weight:700;margin-bottom:20px}
+.lbl{display:block;text-align:start;font-size:12px;font-weight:800;color:var(--mut);margin:10px 0 4px}
+.inp{width:100%;background:#F8FAFC;border:1px solid var(--line);border-radius:14px;padding:11px 14px;font-size:14px;font-weight:700;color:var(--ink)}
+.btn-pri{width:100%;background:var(--pri2);color:#fff;padding:12px;border-radius:14px;font-weight:800;font-size:15px;margin-top:14px}
+.err-msg{color:var(--bad);font-size:13px;font-weight:700;margin-top:12px}
+.top-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.top-bar h2{margin-inline-end:auto;font-size:20px;font-weight:900;color:var(--pri2)}
+.btn-sm{background:var(--card);border:1px solid var(--line);padding:7px 14px;border-radius:12px;font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:5px}
+.btn-sm.pri{background:var(--pri2);color:#fff;border-color:var(--pri2)}
+.btn-sm.ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn-sm.bad{background:var(--bad);color:#fff;border-color:var(--bad)}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:var(--card);padding:6px;border-radius:18px;border:1px solid var(--line);margin-bottom:14px;overflow-x:auto}
+.tab{padding:9px 6px;border-radius:12px;font-weight:800;font-size:13px;color:var(--mut);white-space:nowrap;text-align:center}
+.tab.on{background:var(--pri2);color:#fff}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:none}
+.chip{padding:7px 14px;border-radius:18px;background:var(--card);border:1px solid var(--line);font-weight:800;font-size:12px;white-space:nowrap}
 .chip.on{background:var(--pri2);color:#fff;border-color:transparent}
-.row{display:flex;gap:8px;margin:2px 0 14px}.row input{flex:1}
-.oc{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:12px;box-shadow:var(--sh)}
-.r1,.r2,.r3{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.mt{color:var(--mut);font-size:12px;font-weight:600}
-.bg{background:var(--c);color:#fff;font-size:12px;font-weight:800;padding:2px 12px;border-radius:20px}
-.r2{margin:10px 0 6px}
-.oc ul{list-style:none;margin:6px 0 10px;padding:10px 12px;background:var(--bg);border-radius:12px;font-size:13px;font-weight:600}
-.r3{font-weight:900;font-size:15px}.r3 span{color:var(--mut);font-size:13px;font-weight:700}
-.nt{display:flex;gap:8px;margin-top:10px}.nt textarea{height:42px;resize:none}.nt button{flex:none;padding:0 14px;border-radius:12px;border:1px solid var(--line);font-weight:800;font-size:13px}
-.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.acts button{flex:1;min-width:90px;padding:9px;border-radius:12px;border:2px solid var(--c);color:var(--c);font-weight:800;font-size:13px}
-.acts button:active{background:var(--c);color:#fff}
-.pg{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:10px;font-weight:700;font-size:13px}
-.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));inset-inline:16px;margin:auto;max-width:340px;background:#0D1530;color:#fff;padding:12px 16px;border-radius:14px;text-align:center;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:20}
-.toast.on{opacity:1}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.search-row{display:flex;gap:8px;margin-bottom:14px}
+.ord-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px}
+.badge{padding:3px 10px;border-radius:20px;color:#fff;font-size:11px;font-weight:800;display:inline-block}
+.meta{font-size:12px;color:var(--mut);font-weight:700;margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap}
+.cust{display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:15px;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+.cust a{color:var(--ok);text-decoration:none;direction:ltr;background:rgba(22,163,74,.1);padding:4px 10px;border-radius:10px;font-size:13px}
+.items{background:#F8FAFC;padding:10px 14px;border-radius:12px;font-weight:700;font-size:13px;margin-bottom:10px;border:1px solid var(--line)}
+.tot-row{display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:15px;margin-bottom:10px}
+.note-row{display:flex;gap:6px;margin-bottom:10px}
+.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-top:8px}
+.act-btn{padding:9px 8px;border-radius:12px;font-weight:800;font-size:12px;border:2px solid var(--line);text-align:center}
+.act-btn.ok{border-color:var(--ok);background:rgba(22,163,74,.08);color:var(--ok)}
+.act-btn.warn{border-color:var(--warn);color:#B45309}
+.act-btn.pri{border-color:var(--pri2);color:var(--pri2)}
+.act-btn.bad{border-color:var(--bad);color:var(--bad)}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.stat-box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;text-align:center}
+.stat-box small{color:var(--mut);font-weight:800;font-size:12px;display:block}
+.stat-box b{font-size:20px;font-weight:900;color:var(--ink)}
+.slots-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-top:12px}
+.slot{border:2px solid var(--line);border-radius:14px;padding:10px;font-size:12px;background:#F8FAFC;display:flex;flex-direction:column;gap:4px}
+.slot.available{border-color:rgba(22,163,74,.45);background:rgba(22,163,74,.05)}
+.slot.occupied{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.04)}
+.modal-bg{position:fixed;inset:0;background:rgba(13,21,48,.65);display:none;place-items:center;z-index:99;padding:16px}
+.modal-bg.on{display:grid}
+.modal{background:var(--card);border-radius:22px;padding:20px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.pager{display:flex;justify-content:center;align-items:center;gap:12px;margin:16px 0;font-weight:800;font-size:14px}
+pre.creds{background:#0D1530;color:#F8FAFC;padding:12px;border-radius:12px;font-size:12px;white-space:pre-wrap;margin:8px 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:start}
+th{color:var(--mut);font-weight:800}
 </style>
 </head>
 <body>
-<section class="lg" id="login">
-  <form class="box" id="lf" autocomplete="on">
-    <h1>لوحة الإدارة</h1><p>OVIRA PLAY</p>
-    <label for="em">البريد الإلكتروني</label><input id="em" type="email" autocomplete="username" dir="ltr" required>
-    <label for="pw">كلمة السر</label><input id="pw" type="password" autocomplete="current-password" dir="ltr" required>
-    <button class="btn" id="lb" type="submit">تسجيل الدخول</button>
-    <div class="err" id="le" role="alert"></div>
-  </form>
-</section>
-
-<section id="dash" hidden>
-  <header><div class="w"><h2>OVIRA PLAY</h2><button class="ib" id="rf">تحديث</button><button class="ib" id="lo">خروج</button></div></header>
-  <div class="w">
-    <div class="tabs"><button data-t="ov" class="on">نظرة عامة</button><button data-t="or">الطلبات<span class="pb" id="pb" hidden></span></button></div>
-    <div class="wake" id="wake" hidden>الخادم يستيقظ، قد يستغرق حتى دقيقة…</div>
-
-    <div id="ov">
-      <div class="tl" id="tl"></div>
-      <div class="pn"><h3>الطلبات خلال آخر 7 أيام</h3><div class="bars" id="bars"></div></div>
-      <div class="pn"><h3>الأكثر مبيعًا (مؤكد + مُسلَّم)</h3><div id="top"></div></div>
-    </div>
-
-    <div id="or" hidden>
-      <div class="chips" id="sc"></div>
-      <div class="chips" id="dc"></div>
-      <div class="row"><input id="q" type="search" placeholder="ابحث بالاسم أو الهاتف أو رمز الطلب"><button class="ib" id="ex">CSV</button></div>
-      <div id="list"></div>
-      <div class="pg" id="pg"></div>
-    </div>
-  </div>
-</section>
-<div class="toast" id="ts"></div>
+<div id="root"></div>
+<div class="modal-bg" id="mdl" onclick="if(event.target===this)closeMdl()">
+  <div class="modal" id="mdlBox"></div>
+</div>
 
 <script>
-const API='https://ovira-api.onrender.com';
-const S=['قيد المراجعة','مؤكد','تم التسليم','ملغي'];
-const COL={'قيد المراجعة':'#F59E0B','مؤكد':'#2447C9','تم التسليم':'#16A34A','ملغي':'#EF4444'};
-const DR=[['','كل الأوقات'],['1','اليوم'],['7','7 أيام'],['30','30 يومًا']];
-const WM={
- 'قيد المراجعة':o=>`مرحبًا ${o.customerName} 👋 استلمنا طلبك ${o.orderCode} وهو قيد المراجعة، وسنؤكده لك قريبًا.`,
- 'مؤكد':o=>`مرحبًا ${o.customerName} ✅ تم تأكيد طلبك ${o.orderCode}. سنرسل لك بيانات الحساب الآن.`,
- 'تم التسليم':o=>`مرحبًا ${o.customerName} 🎉 تم تسليم طلبك ${o.orderCode}. شكرًا لثقتك بـ OVIRA PLAY، ننتظر طلبك القادم!`,
- 'ملغي':o=>`مرحبًا ${o.customerName}، تم إلغاء طلبك ${o.orderCode}. للاستفسار راسلنا هنا.`};
-const $=s=>document.getElementById(s);
-const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const msg=e=>e instanceof TypeError?'تعذّر الاتصال بالخادم':e.message;
-const num=n=>Number(n||0).toLocaleString('en-US');
-let tok='';try{tok=sessionStorage.getItem('at')||''}catch(e){}
-let tab='ov',st='',rg='',q='',pg=1,pages=1,qt,tt,lastP=null;
+const API = 'https://ovira-api.onrender.com/api/admin';
+let token = localStorage.getItem('adm_tk') || '';
+let adminRole = localStorage.getItem('adm_role') || 'owner';
+let tab = 'orders', stFilter = '', spFilter = '', daysFilter = 0, qFilter = '', curPage = 1;
+let stockProdFilter = '';
+let lastData = {};
 
-function toast(m){const t=$('ts');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2600)}
-async function call(p,o={}){
-  const w=setTimeout(()=>$('wake').hidden=false,4000);
-  try{
-    const r=await fetch(API+p,{...o,headers:{'Content-Type':'application/json',...(tok&&{Authorization:'Bearer '+tok}),...o.headers}});
-    if(r.status==401&&tok){out();throw new Error('انتهت الجلسة، سجّل الدخول مجددًا')}
-    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||'خطأ في الخادم')}
-    return r;
-  }finally{clearTimeout(w);$('wake').hidden=true}
+const COL = {'قيد المراجعة':'#F59E0B','مؤكد':'#1E40AF','تم التسليم':'#16A34A','ملغي':'#EF4444'};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+const fmt = n => Number(n || 0).toLocaleString('en-US') + ' DA';
+
+function openMdl(html) {
+  document.getElementById('mdlBox').innerHTML = html;
+  document.getElementById('mdl').classList.add('on');
 }
-const api=(p,o)=>call(p,o).then(r=>r.json());
-
-function view(){$('login').hidden=!!tok;$('dash').hidden=!tok;if(tok){go(tab);stats()}}
-function out(){tok='';lastP=null;try{sessionStorage.removeItem('at')}catch(e){}view()}
-function go(t){
-  tab=t;$('ov').hidden=t!='ov';$('or').hidden=t!='or';
-  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));
-  if(t=='or')load();
-}
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>go(b.dataset.t));
-
-$('lf').onsubmit=async ev=>{
-  ev.preventDefault();$('lb').disabled=true;$('le').textContent='';
-  try{
-    const d=await api('/api/admin/login',{method:'POST',body:JSON.stringify({email:$('em').value.trim(),password:$('pw').value})});
-    tok=d.token;try{sessionStorage.setItem('at',tok)}catch(e){}
-    $('pw').value='';view();
-  }catch(e){$('le').textContent=msg(e)}$('lb').disabled=false;
-};
-$('lo').onclick=out;
-$('rf').onclick=()=>{stats();if(tab=='or')load()};
-
-async function stats(){
-  try{
-    const d=await api('/api/admin/stats');
-    const g=k=>d.byStatus.find(x=>x._id==k)||{count:0,sum:0};
-    const pend=g('قيد المراجعة').count;
-    if(lastP!==null&&pend>lastP)toast('🔔 طلب جديد بانتظار المراجعة');
-    lastP=pend;document.title=(pend?'('+pend+') ':'')+'OVIRA PLAY | لوحة الإدارة';
-    $('pb').textContent=pend;$('pb').hidden=!pend;
-    const key=t=>t.toLocaleDateString('sv-SE'),m={};
-    d.daily.forEach(x=>m[x._id]=x);
-    const row=[...Array(7)].map((_,i)=>{const t=new Date();t.setDate(t.getDate()-6+i);const x=m[key(t)]||{};return{t,o:x.orders||0,r:x.revenue||0}});
-    const mx=Math.max(1,...row.map(x=>x.o)),td=row[6];
-    $('tl').innerHTML=[['طلبات اليوم',td.o],['إيرادات اليوم',num(td.r)+' DA'],['قيد المراجعة',pend],['إجمالي الإيرادات',num(g('مؤكد').sum+g('تم التسليم').sum)+' DA'],['🧾 وصل بانتظار تأكيدك',(d.attention||{}).awaiting||0],['⏰ متأخرة (+2 ساعة)',(d.attention||{}).late||0]].map(x=>`<div><small>${x[0]}</small><b><bdi>${x[1]}</bdi></b></div>`).join('');
-    $('bars').innerHTML=row.map(x=>`<div><b>${x.o}</b><i style="height:${Math.max(3,x.o/mx*100)}%"></i><small>${x.t.toLocaleDateString('ar-DZ',{weekday:'short'})}</small></div>`).join('');
-    const tm=Math.max(1,...d.top.map(x=>x.revenue));
-    $('top').innerHTML=d.top.length?d.top.map(x=>`<div class="tp"><u style="width:${x.revenue/tm*100}%"></u><span>${esc(x._id)} · ${x.qty}</span><b><bdi>${num(x.revenue)} DA</bdi></b></div>`).join(''):'<p class="mt">لا توجد مبيعات مؤكدة بعد.</p>';
-  }catch(e){if(tok)toast(msg(e))}
+function closeMdl() {
+  document.getElementById('mdl').classList.remove('on');
 }
 
-function chips(){
-  $('sc').innerHTML=['',...S].map(s=>`<button class="chip ${s==st?'on':''}" data-s="${s}">${s||'كل الحالات'}</button>`).join('');
-  $('dc').innerHTML=DR.map(d=>`<button class="chip ${d[0]==rg?'on':''}" data-d="${d[0]}">${d[1]}</button>`).join('');
-  $('sc').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{st=b.dataset.s;pg=1;load()});$('dc').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{rg=b.dataset.d;pg=1;load()});
+function renderLogin(err = '') {
+  document.getElementById('root').innerHTML = `
+    <div class="card login-box">
+      <h1>لوحة الإدارة</h1>
+      <p>OVIRA PLAY v2.0</p>
+      <label class="lbl">البريد الإلكتروني</label>
+      <input class="inp" id="em" type="email" dir="ltr" placeholder="admin@ovira.dz">
+      <label class="lbl">كلمة السر</label>
+      <input class="inp" id="pw" type="password" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn-pri" onclick="doLogin()">تسجيل الدخول</button>
+      ${err ? `<div class="err-msg">${esc(err)}</div>` : ''}
+    </div>`;
 }
-function qs(){
-  const p=new URLSearchParams({status:st,q});
-  if(rg){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(+rg-1));p.set('from',d.toISOString())}
-  return p.toString();
-}
-const card=o=>`<article class="oc"><div class="r1"><b>${esc(o.orderCode)}</b><span class="bg" style="--c:${COL[o.status]||'#888'}">${esc(o.status)}</span></div>
-<div class="mt">${new Date(o.createdAt).toLocaleString('fr-DZ',{dateStyle:'short',timeStyle:'short'})}${o.receiptCount?' · 🧾 وصل مُرسل':''}${o.telegram?' · ✈️ تيليغرام':''}${o.repeat>1?' · 🔁 عميل متكرر ('+o.repeat+')':''}${o.late?' · ⏰ متأخر':''}</div>
-<div class="r2"><b>${esc(o.customerName)}</b><a href="https://wa.me/213${esc(String(o.whatsappNumber).slice(1))}?text=${encodeURIComponent((WM[o.status]||WM['قيد المراجعة'])(o))}" target="_blank" rel="noopener"><bdi>${esc(o.whatsappNumber)}</bdi> 💬</a></div>
-<ul>${o.cartItems.map(i=>`<li>${esc(i.productName)} · ${i.months} شهر × ${i.quantity}</li>`).join('')}</ul>
-<div class="r3"><span>${esc(o.paymentMethod)}</span><b><bdi>${num(o.totalPrice)} DA</bdi></b></div>
-<div class="nt"><textarea maxlength="300" placeholder="ملاحظة داخلية…" data-n="${o._id}">${esc(o.adminNote||'')}</textarea><button data-sn="${o._id}">حفظ</button></div>
-<div class="acts">${S.filter(s=>s!=o.status).map(s=>`<button style="--c:${COL[s]}" data-id="${o._id}" data-s="${s}">${s}</button>`).join('')}</div></article>`;
 
-async function load(){
-  chips();$('list').innerHTML='<p class="mt">جارٍ التحميل…</p>';
-  try{
-    const d=await api(`/api/admin/orders?page=${pg}&${qs()}`);
-    pages=d.pages;
-    $('list').innerHTML=d.orders.length?d.orders.map(card).join(''):'<p class="mt">لا توجد طلبات مطابقة.</p>';
-    $('list').querySelectorAll('.acts button').forEach(b=>b.onclick=()=>upd(b.dataset.id,{status:b.dataset.s},b));
-    $('list').querySelectorAll('[data-sn]').forEach(b=>b.onclick=()=>upd(b.dataset.sn,{adminNote:$('list').querySelector(`[data-n="${b.dataset.sn}"]`).value},b,true));
-    $('pg').innerHTML=pages>1?`<button class="ib" id="pv" ${pg<=1?'disabled':''}>السابق</button><span>${pg} / ${pages} · ${d.total} طلب</span><button class="ib" id="nx" ${pg>=pages?'disabled':''}>التالي</button>`:`<span class="mt">${d.total} طلب</span>`;
-    if(pages>1){$('pv').onclick=()=>{pg--;load()};$('nx').onclick=()=>{pg++;load()}}
-  }catch(e){if(tok)$('list').innerHTML=`<p class="mt">${esc(msg(e))}</p>`}
+async function doLogin() {
+  const email = document.getElementById('em').value.trim();
+  const password = document.getElementById('pw').value;
+  try {
+    const r = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const d = await r.json();
+    if (!d.success) return renderLogin(d.message || 'بيانات الدخول غير صحيحة.');
+    token = d.token;
+    adminRole = d.role || 'owner';
+    localStorage.setItem('adm_tk', token);
+    localStorage.setItem('adm_role', adminRole);
+    loadPanel();
+  } catch (e) {
+    renderLogin('تعذّر الاتصال بالخادم');
+  }
 }
-async function upd(id,body,b,quiet){
-  if(body.status=='ملغي'&&!confirm('إلغاء هذا الطلب؟'))return;
-  b.disabled=true;
-  try{await api('/api/admin/orders/'+id,{method:'PATCH',body:JSON.stringify(body)});toast(quiet?'تم حفظ الملاحظة ✓':'تم التحديث ✓');if(!quiet){load();stats()}}
-  catch(e){toast(msg(e))}
-  b.disabled=false;
+
+function logout() {
+  token = '';
+  localStorage.removeItem('adm_tk');
+  renderLogin();
 }
-$('ex').onclick=async()=>{$('ex').disabled=true;
-  try{
-    const r=await call('/api/admin/export?'+qs());
-    const a=document.createElement('a');a.href=URL.createObjectURL(await r.blob());a.download='orders.csv';a.click();URL.revokeObjectURL(a.href);
-  }catch(e){toast(msg(e))}
-  $('ex').disabled=false;
-};
-$('q').oninput=e=>{clearTimeout(qt);qt=setTimeout(()=>{q=e.target.value.trim();pg=1;load()},400)};
-setInterval(()=>{if(tok&&!document.hidden){stats();if(tab=='or'&&document.activeElement.tagName!='TEXTAREA'&&document.activeElement!==$('q'))load()}},60000);
-view();
+
+function buildQueryParams() {
+  const params = new URLSearchParams();
+  params.set('page', curPage);
+  if (stFilter) params.set('status', stFilter);
+  if (spFilter) params.set('special', spFilter);
+  if (qFilter) params.set('q', qFilter);
+  if (daysFilter > 0) {
+    params.set('from', new Date(Date.now() - daysFilter * 864e5).toISOString());
+  }
+  return params;
+}
+
+async function apiGet(path) {
+  const r = await fetch(API + path, { headers: { 'Authorization': 'Bearer ' + token } });
+  if (r.status === 401) { logout(); throw new Error('UNAUTHORIZED'); }
+  return r.json();
+}
+
+async function loadPanel() {
+  if (!token) return renderLogin();
+  try {
+    if (tab === 'orders') {
+      lastData = await apiGet('/orders?' + buildQueryParams().toString());
+    } else if (tab === 'stock') {
+      lastData = await apiGet('/stock' + (stockProdFilter ? '?productId=' + stockProdFilter : ''));
+    } else if (tab === 'renewals') {
+      lastData = await apiGet('/renewals');
+    } else if (tab === 'stats') {
+      lastData = await apiGet('/stats');
+    } else if (tab === 'manage') {
+      const [cust, coup, aud] = await Promise.all([
+        apiGet('/customers'),
+        apiGet('/coupons'),
+        apiGet('/audit')
+      ]);
+      lastData = { customers: cust.customers || [], coupons: coup.coupons || [], audits: aud.audits || [], admins: aud.admins || [] };
+    }
+    renderMain(lastData);
+  } catch (e) {
+    if (e.message !== 'UNAUTHORIZED') alert('خطأ في جلب البيانات من الخادم');
+  }
+}
+
+function waLink(phone, text) {
+  const p = String(phone || '').replace(/^0/, '213');
+  return `https://wa.me/${p}?text=${encodeURIComponent(text)}`;
+}
+
+function smartWaText(o) {
+  if (o.status === 'تم التسليم' && o.delivery && o.delivery.credentials) {
+    return `مرحباً ${o.customerName} 🌟\nتم تفعيل طلبك رقم (${o.orderCode}) في OVIRA PLAY بنجاح!\n\nتفاصيل اشتراكك:\n${o.delivery.credentials}\n\nشكراً لثقتك بنا!`;
+  }
+  if (o.status === 'مؤكد') {
+    return `مرحباً ${o.customerName}، تم تأكيد دفعتك للطلب (${o.orderCode}) وجاري إرسال بيانات الحساب لك خلال لحظات.`;
+  }
+  return `مرحباً ${o.customerName}، بخصوص طلبك رقم (${o.orderCode}) بقيمة ${o.totalPrice} DA في OVIRA PLAY، يرجى إرسال صورة وصل الدفع لتأكيد الطلب.`;
+}
+
+function renderOrdersTab(d) {
+  const statuses = [
+    ['', '', 'كل الطلبات'],
+    ['', 'awaiting_receipt', '📎 بانتظار مراجعة الوصل'],
+    ['', 'late', '⏰ متأخرة (+2 سا)'],
+    ['قيد المراجعة', '', '🟡 قيد المراجعة'],
+    ['مؤكد', '', '🔵 مؤكد'],
+    ['تم التسليم', '', '🟢 تم التسليم'],
+    ['ملغي', '', '🔴 ملغي']
+  ];
+  const times = [[0, 'كل الأوقات'], [1, 'اليوم'], [7, '7 أيام'], [30, '30 يومًا']];
+
+  const list = (d.orders || []).map(o => {
+    const creds = o.delivery && o.delivery.credentials ? o.delivery.credentials : '';
+    const receiptBtns = (o.receiptIds || []).map((fid, idx) =>
+      `<button class="btn-sm pri" onclick="viewReceipt('${fid}','${esc(o.orderCode)}')">📎 عرض الوصل ${idx + 1}</button>`
+    ).join(' ');
+
+    return `
+      <div class="card">
+        <div class="ord-head">
+          <div>
+            <span class="badge" style="background:${COL[o.status] || '#666'}">${esc(o.status)}</span>
+            ${o.late ? '<span class="badge" style="background:#DC2626">⏰ متأخر</span>' : ''}
+            ${o.telegram ? '<span class="badge" style="background:#0284C7">✈️ تيليغرام</span>' : ''}
+          </div>
+          <b style="font-size:17px">${esc(o.orderCode)}</b>
+        </div>
+        <div class="meta">
+          <span>🕒 ${new Date(o.createdAt).toLocaleString('fr-DZ')}</span>
+          ${o.repeat > 1 ? `<span>🔁 عميل متكرر (${o.repeat} طلبات)</span>` : ''}
+          ${o.couponCode ? `<span>🎟️ كوبون: ${esc(o.couponCode)} (-${o.discountAmount} DA)</span>` : ''}
+        </div>
+        <div class="cust">
+          <span>👤 ${esc(o.customerName)}</span>
+          <a href="${waLink(o.whatsappNumber, smartWaText(o))}" target="_blank" rel="noopener">💬 ${esc(o.whatsappNumber)} (رسالة ذكية)</a>
+        </div>
+        ${o.targetEmail ? `<div style="font-size:13px;font-weight:800;color:var(--pri2);margin-bottom:8px">📧 إيميل التفعيل المطلوب: <span dir="ltr">${esc(o.targetEmail)}</span></div>` : ''}
+        <div class="items">
+          ${o.cartItems.map(i => `• <b>${esc(i.productName)}</b> — ${i.months} شهر × ${i.quantity} (${i.unitPrice * i.quantity} DA)${i.targetEmail ? ` [${esc(i.targetEmail)}]` : ''}`).join('<br>')}
+        </div>
+        <div class="tot-row">
+          <span style="color:var(--pri2)">💰 ${fmt(o.totalPrice)}</span>
+          <span style="color:var(--mut);font-size:13px">💳 ${esc(o.paymentMethod)}</span>
+        </div>
+        ${receiptBtns ? `<div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">${receiptBtns}</div>` : ''}
+        ${creds ? `<details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:800;font-size:13px;color:var(--ok)">🔐 عرض بيانات الحساب المسلمة للعميل</summary><pre class="creds">${esc(creds)}</pre></details>` : ''}
+        <div class="note-row">
+          <input class="inp" id="nt_${o._id}" value="${esc(o.adminNote || '')}" placeholder="ملاحظة داخلية..." style="padding:8px 12px">
+          <button class="btn-sm" onclick="saveNote('${o._id}')">حفظ</button>
+        </div>
+        <div class="actions">
+          <button class="act-btn ok" onclick="deliverAuto('${o._id}')">⚡ تسليم تلقائي (شاشة)</button>
+          <button class="act-btn ok" onclick="openManualDeliver('${o._id}','${esc(o.orderCode)}')">✍️ تسليم يدوي</button>
+          <button class="act-btn pri" onclick="upStatus('${o._id}','مؤكد')">✅ مؤكد</button>
+          <button class="act-btn warn" onclick="upStatus('${o._id}','قيد المراجعة')">🟡 مراجعة</button>
+          <button class="act-btn bad" onclick="upStatus('${o._id}','ملغي')">❌ ملغي</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="chips">
+      ${statuses.map(s => `<button class="chip ${stFilter === s[0] && spFilter === s[1] ? 'on' : ''}" onclick="stFilter='${s[0]}';spFilter='${s[1]}';curPage=1;loadPanel()">${s[2]}</button>`).join('')}
+    </div>
+    <div class="chips">
+      ${times.map(t => `<button class="chip ${daysFilter === t[0] ? 'on' : ''}" onclick="daysFilter=${t[0]};curPage=1;loadPanel()">${t[1]}</button>`).join('')}
+    </div>
+    <div class="search-row">
+      <input class="inp" placeholder="ابحث بالاسم، الهاتف، الإيميل أو رمز الطلب..." value="${esc(qFilter)}" onchange="qFilter=this.value;curPage=1;loadPanel()">
+      <button class="btn-sm pri" onclick="dlCsv()">📥 تصدير CSV</button>
+    </div>
+    ${list || '<div class="card" style="text-align:center">لا توجد طلبات مطابقة للبحث</div>'}
+    <div class="pager">
+      <button class="btn-sm" ${d.page <= 1 ? 'disabled' : ''} onclick="curPage--;loadPanel()">السابق</button>
+      <span>صفحة ${d.page || 1} من ${d.pages || 1} (الإجمالي: ${d.total || 0})</span>
+      <button class="btn-sm" ${d.page >= d.pages ? 'disabled' : ''} onclick="curPage++;loadPanel()">التالي</button>
+    </div>`;
+}
+
+function renderStockTab(d) {
+  const cat = d.catalog || {};
+  const avail = d.availability || {};
+  const summaryCards = Object.keys(cat).map(id => {
+    const a = avail[id] || { availableSlots: 0, totalSlots: 0, accountsCount: 0 };
+    const col = a.availableSlots > 2 ? 'var(--ok)' : a.availableSlots > 0 ? 'var(--warn)' : 'var(--bad)';
+    return `<div class="stat-box" style="cursor:pointer;border-color:${stockProdFilter===id?'var(--pri2)':'var(--line)'}" onclick="stockProdFilter='${stockProdFilter===id?'':id}';loadPanel()">
+      <small>${esc(cat[id].name)}</small>
+      <b style="color:${col}">${a.availableSlots} / ${a.totalSlots}</b>
+      <small>شاشة متاحة (${a.accountsCount} حساب)</small>
+    </div>`;
+  }).join('');
+
+  const stocksHtml = (d.stocks || []).map(st => {
+    const occ = (st.slots || []).filter(s => s.status === 'occupied').length;
+    const tot = (st.slots || []).length;
+    const masterDaysLeft = Math.ceil((new Date(st.masterExpiresAt) - Date.now()) / 86400000);
+
+    const slotsBoxes = (st.slots || []).map(sl => `
+      <div class="slot ${sl.status}">
+        <div style="display:flex;justify-content:space-between;font-weight:900">
+          <span>🖥️ ${esc(sl.profileName || 'شاشة ' + sl.slotNumber)}</span>
+          <span style="color:${sl.status === 'available' ? 'var(--ok)' : 'var(--bad)'}">${sl.status === 'available' ? 'متاحة' : 'مشغولة'}</span>
+        </div>
+        ${sl.pin ? `<div>🔒 PIN: <b dir="ltr">${esc(sl.pin)}</b></div>` : ''}
+        ${sl.status === 'occupied' ? `
+          <div>👤 ${esc(sl.customerName)}</div>
+          <div dir="ltr">📱 ${esc(sl.customerPhone)}</div>
+          <div>📅 تنتهي: ${sl.expiresAt ? new Date(sl.expiresAt).toLocaleDateString('fr-DZ') : '-'}</div>
+          <button class="btn-sm bad" style="margin-top:4px;justify-content:center" onclick="freeSlot('${st._id}',${sl.slotNumber})">🔓 إخلاء وتغيير PIN</button>
+        ` : '<div style="color:var(--mut)">جاهزة للبيع الفوري</div>'}
+      </div>`).join('');
+
+    return `
+      <div class="card">
+        <div class="ord-head">
+          <div>
+            <span class="badge" style="background:var(--pri2)">${esc(st.code)}</span>
+            <b style="font-size:16px;margin-inline-start:6px">${esc(st.productName)}</b>
+          </div>
+          <span class="badge" style="background:${occ >= tot ? 'var(--bad)' : 'var(--ok)'}">مشغول: ${occ} من ${tot}</span>
+        </div>
+        <div class="meta">
+          <span>📧 الإيميل: <b dir="ltr">${esc(st.email)}</b></span>
+          <span>🔑 الباسورد: <b dir="ltr">${esc(st.password)}</b></span>
+          <span>💵 التكلفة: <b>${fmt(st.costPrice)}</b></span>
+          <span>⏳ تجديد الحساب الأم: <b style="color:${masterDaysLeft<=3?'var(--bad)':'inherit'}">بعد ${masterDaysLeft} يوم (${new Date(st.masterExpiresAt).toLocaleDateString('fr-DZ')})</b></span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn-sm pri" onclick="openEditStock('${st._id}','${esc(st.email)}','${esc(st.password)}')">🔄 تغيير الباسورد وإشعار المشتركين</button>
+          <button class="btn-sm bad" onclick="delStock('${st._id}')">🗑️ حذف الحساب</button>
+        </div>
+        <div class="slots-grid">${slotsBoxes}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="grid-3">${summaryCards}</div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>➕ إضافة حساب أم جديد للمخزون (يقسم لشاشات تلقائياً)</h3>
+        <button class="btn-sm ok" onclick="openAddStockModal()">+ إضافة حساب</button>
+      </div>
+    </div>
+    ${stocksHtml || '<div class="card" style="text-align:center">لا توجد حسابات في المخزون حالياً. اضغط (+ إضافة حساب) للبدء.</div>'}`;
+}
+
+function renderRenewalsTab(d) {
+  const slots = (d.expiringSlots || []).map(s => {
+    const days = Math.ceil((new Date(s.expiresAt) - Date.now()) / 86400000);
+    const msg = `مرحباً ${s.customerName} 👋\nتذكير من OVIRA PLAY: اشتراكك في (${s.productName} - ${s.profileName}) سينتهي قريباً (${new Date(s.expiresAt).toLocaleDateString('fr-DZ')}). هل ترغب في تجديد اشتراكك للاحتفاظ بشاشتك؟`;
+    return `
+      <div class="card">
+        <div class="ord-head">
+          <b>${esc(s.productName)} (${esc(s.stockCode)} · شاشة ${s.slotNumber})</b>
+          <span class="badge" style="background:${days<=0?'var(--bad)':'var(--warn)'}">${days<=0 ? 'منتهي!' : 'متبقي ' + days + ' يوم'}</span>
+        </div>
+        <div class="meta">
+          <span>👤 العميل: <b>${esc(s.customerName)}</b></span>
+          <span>📧 الحساب: <b dir="ltr">${esc(s.email)}</b></span>
+          ${s.pin ? `<span>🔒 PIN الحالي: <b>${esc(s.pin)}</b></span>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <a class="btn-sm ok" href="${waLink(s.customerPhone, msg)}" target="_blank">💬 تذكير العميل عبر واتساب</a>
+          <button class="btn-sm bad" onclick="freeSlot('${s.stockId}',${s.slotNumber})">🔓 إخلاء الشاشة وتوليد PIN جديد</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  const masters = (d.expiringMasters || []).map(m => `
+    <div class="card" style="border-color:var(--bad)">
+      <div class="ord-head">
+        <b>⚠️ حساب أم يحتاج تجديد: ${esc(m.productName)} (${esc(m.code)})</b>
+        <span class="badge" style="background:var(--bad)">ينتهي ${new Date(m.masterExpiresAt).toLocaleDateString('fr-DZ')}</span>
+      </div>
+      <div class="meta">📧 <b dir="ltr">${esc(m.email)}</b> · عدد المشتركين بداخله حالياً: <b>${m.occupiedCount}</b></div>
+    </div>`).join('');
+
+  return `
+    <h3 style="margin-bottom:10px">🚨 حسابات أم تحتاج تجديد الدفع من طرفك (${(d.expiringMasters||[]).length})</h3>
+    ${masters || '<div class="card">✅ جميع الحسابات الأم صلاحيتها ممتازة.</div>'}
+    <h3 style="margin:18px 0 10px">⏳ شاشات عملاء تنتهي قريباً أو انتهت (${(d.expiringSlots||[]).length})</h3>
+    ${slots || '<div class="card">✅ لا توجد شاشات عملاء تنتهي خلال الـ 7 أيام القادمة.</div>'}`;
+}
+
+function renderStatsTab(d) {
+  if (d.restricted) return '<div class="card">ليس لديك صلاحية لرؤية التقارير المالية.</div>';
+  const fin = d.financials || { totalRevenue: 0, totalCost: 0, netProfit: 0 };
+  const att = d.attention || { awaiting: 0, late: 0, expiringOrders: 0 };
+
+  return `
+    <div class="grid-3">
+      <div class="stat-box" style="border-color:var(--pri2)"><small>📎 بانتظار مراجعة الوصل</small><b style="color:var(--pri2)">${att.awaiting}</b></div>
+      <div class="stat-box" style="border-color:var(--bad)"><small>⏰ طلبات متأخرة (+2 سا)</small><b style="color:var(--bad)">${att.late}</b></div>
+      <div class="stat-box" style="border-color:var(--warn)"><small>⏳ تنتهي خلال 3 أيام</small><b style="color:var(--warn)">${att.expiringOrders}</b></div>
+    </div>
+    <div class="grid-3">
+      <div class="stat-box"><small>💰 إجمالي المبيعات المؤكدة</small><b style="color:var(--pri2)">${fmt(fin.totalRevenue)}</b></div>
+      <div class="stat-box"><small>📦 تكلفة شراء الحسابات</small><b style="color:var(--bad)">${fmt(fin.totalCost)}</b></div>
+      <div class="stat-box"><small>📈 صافي الربح الحقيقي</small><b style="color:var(--ok)">${fmt(fin.netProfit)}</b></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>🏆 أفضل المنتجات مبيعاً</h3>
+        <table>
+          <thead><tr><th>المنتج</th><th>الكمية</th><th>الإيرادات</th></tr></thead>
+          <tbody>${(d.top || []).map(t => `<tr><td>${esc(t._id)}</td><td>${t.qty}</td><td><b>${fmt(t.revenue)}</b></td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>📅 مبيعات آخر 8 أيام</h3>
+        <table>
+          <thead><tr><th>التاريخ</th><th>الطلبات</th><th>المبيعات المؤكدة</th></tr></thead>
+          <tbody>${(d.daily || []).map(x => `<tr><td>${esc(x._id)}</td><td>${x.orders}</td><td><b>${fmt(x.revenue)}</b></td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📊 توزيع الطلبات حسب الحالة</h3>
+      <table>
+        <thead><tr><th>الحالة</th><th>العدد</th><th>القيمة الإجمالية</th></tr></thead>
+        <tbody>${(d.byStatus || []).map(s => `<tr><td><b>${esc(s._id)}</b></td><td>${s.count}</td><td>${fmt(s.sum)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderManageTab(d) {
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3>🎟️ كوبونات الخصم للإعلانات</h3>
+        <button class="btn-sm pri" onclick="openCouponModal()">+ كوبون جديد</button>
+      </div>
+      <table>
+        <thead><tr><th>الكود</th><th>الخصم</th><th>الاستخدام</th><th>إجراء</th></tr></thead>
+        <tbody>
+          ${(d.coupons || []).map(c => `<tr>
+            <td><b>${esc(c.code)}</b></td>
+            <td>${c.value} ${c.type === 'percent' ? '%' : 'DA'}</td>
+            <td>${c.usedCount} / ${c.maxUses}</td>
+            <td><button class="btn-sm bad" onclick="delCoupon('${c._id}')">حذف</button></td>
+          </tr>`).join('') || '<tr><td colspan="4">لا توجد كوبونات</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:10px">👥 العملاء المسجلون والمحفظة (${(d.customers || []).length})</h3>
+      <table>
+        <thead><tr><th>الاسم</th><th>الهاتف</th><th>رصيد المحفظة</th><th>إجراء</th></tr></thead>
+        <tbody>
+          ${(d.customers || []).map(c => `<tr>
+            <td>${esc(c.name)} ${c.blocked ? '<span class="badge" style="background:var(--bad)">محظور</span>' : ''}</td>
+            <td dir="ltr">${esc(c.phone)}</td>
+            <td><b>${fmt(c.balance)}</b></td>
+            <td>
+              <button class="btn-sm" onclick="editCustomerBalance('${c._id}','${esc(c.name)}',${c.balance || 0})">تعديل الرصيد</button>
+              <button class="btn-sm ${c.blocked ? 'ok' : 'bad'}" onclick="toggleBlockCustomer('${c._id}',${!c.blocked})">${c.blocked ? 'فك الحظر' : 'حظر'}</button>
+            </td>
+          </tr>`).join('') || '<tr><td colspan="4">لا يوجد عملاء مسجلون بعد</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3>🛡️ المشرفون وسجل الرقابة (Audit)</h3>
+        ${adminRole === 'owner' ? `<button class="btn-sm pri" onclick="openStaffModal()">+ إضافة مشرف</button>` : ''}
+      </div>
+      <div style="margin-bottom:12px;font-size:13px">
+        <b>المشرفون الحاليون:</b> ${(d.admins || []).map(a => `<span class="badge" style="background:var(--pri);margin:2px">${esc(a.name)} (${a.role}) - ID: ${a.telegramId}</span>`).join(' ')}
+      </div>
+      <table>
+        <thead><tr><th>التوقيت</th><th>العملية</th><th>التفاصيل</th></tr></thead>
+        <tbody>
+          ${(d.audits || []).slice(0, 15).map(a => `<tr>
+            <td>${new Date(a.at).toLocaleString('fr-DZ')}</td>
+            <td><b>${esc(a.action)}</b></td>
+            <td>${esc(a.summary)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderMain(d) {
+  let content = '';
+  if (tab === 'orders') content = renderOrdersTab(d);
+  else if (tab === 'stock') content = renderStockTab(d);
+  else if (tab === 'renewals') content = renderRenewalsTab(d);
+  else if (tab === 'stats') content = renderStatsTab(d);
+  else if (tab === 'manage') content = renderManageTab(d);
+
+  document.getElementById('root').innerHTML = `
+    <div class="top-bar">
+      <h2>👑 OVIRA PLAY v2.0</h2>
+      <button class="btn-sm" onclick="loadPanel()">🔄 تحديث</button>
+      <button class="btn-sm bad" onclick="logout()">خروج</button>
+    </div>
+    <div class="tabs">
+      <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';loadPanel()">📋 الطلبات</button>
+      <button class="tab ${tab === 'stock' ? 'on' : ''}" onclick="tab='stock';loadPanel()">🗄️ المخزون والشاشات</button>
+      <button class="tab ${tab === 'renewals' ? 'on' : ''}" onclick="tab='renewals';loadPanel()">⏳ التجديدات</button>
+      <button class="tab ${tab === 'stats' ? 'on' : ''}" onclick="tab='stats';loadPanel()">📊 المالية</button>
+      <button class="tab ${tab === 'manage' ? 'on' : ''}" onclick="tab='manage';loadPanel()">⚙️ الإدارة</button>
+    </div>
+    ${content}`;
+}
+
+function viewReceipt(fileId, code) {
+  openMdl(`
+    <h3 style="margin-bottom:10px">📎 وصل الدفع للطلب ${code}</h3>
+    <img src="${API}/receipt/${fileId}?token=${encodeURIComponent(token)}" style="width:100%;border-radius:14px;border:1px solid var(--line)" alt="Receipt">
+    <button class="btn-pri" onclick="closeMdl()">إغلاق</button>
+  `);
+}
+
+async function upStatus(id, status) {
+  await fetch(`${API}/orders/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ status })
+  });
+  loadPanel();
+}
+
+async function saveNote(id) {
+  const adminNote = document.getElementById('nt_' + id).value;
+  await fetch(`${API}/orders/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ adminNote })
+  });
+  loadPanel();
+}
+
+async function deliverAuto(id) {
+  if (!confirm('هل تريد سحب شاشة متاحة من المخزون وتسليمها للعميل تلقائياً؟')) return;
+  const r = await fetch(`${API}/orders/${id}/deliver`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ mode: 'auto' })
+  });
+  const d = await r.json();
+  if (!d.success) return alert(d.message || 'فشل التسليم التلقائي');
+  alert('✅ تم سحب الشاشة من المخزون وإرسالها للعميل!');
+  loadPanel();
+}
+
+function openManualDeliver(id, code) {
+  openMdl(`
+    <h3>✍️ تسليم يدوي للطلب ${code}</h3>
+    <label class="lbl">بيانات الحساب (الإيميل، كلمة السر، الشاشة، الـ PIN)</label>
+    <textarea class="inp" id="md_creds" rows="5" placeholder="الإيميل: example@mail.com&#10;كلمة السر: 123456&#10;الشاشة: 2&#10;PIN: 2222"></textarea>
+    <label class="lbl">مدة الصلاحية بالأيام (اتركه فارغاً للحساب التلقائي حسب الباقة)</label>
+    <input class="inp" id="md_days" type="number" placeholder="مثال: 30">
+    <button class="btn-pri" onclick="submitManualDeliver('${id}')">حفظ وإرسال للعميل</button>
+  `);
+}
+
+async function submitManualDeliver(id) {
+  const credentials = document.getElementById('md_creds').value.trim();
+  const customDays = document.getElementById('md_days').value;
+  if (!credentials) return alert('أدخل بيانات الحساب');
+  const r = await fetch(`${API}/orders/${id}/deliver`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ mode: 'manual', credentials, customDays })
+  });
+  const d = await r.json();
+  if (!d.success) return alert(d.message);
+  closeMdl();
+  loadPanel();
+}
+
+function openAddStockModal() {
+  const cat = lastData.catalog || {};
+  const opts = Object.keys(cat).map(k => `<option value="${k}" data-slots="${cat[k].defaultSlots||5}">${esc(cat[k].name)} (الافتراضي: ${cat[k].defaultSlots||5} شاشات)</option>`).join('');
+  openMdl(`
+    <h3>➕ إضافة حساب أم للمخزون</h3>
+    <label class="lbl">المنتج</label>
+    <select class="inp" id="st_prod" onchange="document.getElementById('st_slots').value=this.options[this.selectedIndex].dataset.slots">${opts}</select>
+    <label class="lbl">إيميل الحساب الأم</label>
+    <input class="inp" id="st_em" dir="ltr" placeholder="account@gmail.com">
+    <label class="inp-lbl lbl">كلمة السر</label>
+    <input class="inp" id="st_pw" dir="ltr" placeholder="Password123">
+    <div class="grid-2">
+      <div>
+        <label class="lbl">عدد الشاشات / المقاعد</label>
+        <input class="inp" id="st_slots" type="number" value="5">
+      </div>
+      <div>
+        <label class="lbl">تكلفة الشراء (DA)</label>
+        <input class="inp" id="st_cost" type="number" value="0">
+      </div>
+    </div>
+    <label class="lbl">صلاحية الحساب الأم بالأيام (لتنبيهك قبل انتهائه)</label>
+    <input class="inp" id="st_days" type="number" value="30">
+    <button class="btn-pri" onclick="submitNewStock()">إنشاء الحساب وتوليد الشاشات</button>
+  `);
+}
+
+async function submitNewStock() {
+  const body = {
+    productId: document.getElementById('st_prod').value,
+    email: document.getElementById('st_em').value.trim(),
+    password: document.getElementById('st_pw').value.trim(),
+    slotsCount: Number(document.getElementById('st_slots').value),
+    costPrice: Number(document.getElementById('st_cost').value),
+    masterDays: Number(document.getElementById('st_days').value)
+  };
+  if (!body.email || !body.password) return alert('الإيميل وكلمة السر مطلوبان');
+  const r = await fetch(`${API}/stock`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (!d.success) return alert(d.message);
+  closeMdl();
+  loadPanel();
+}
+
+function openEditStock(id, email, pass) {
+  openMdl(`
+    <h3>🔄 تحديث بيانات الحساب الأم</h3>
+    <label class="lbl">الإيميل</label>
+    <input class="inp" id="es_em" dir="ltr" value="${email}">
+    <label class="lbl">كلمة السر الجديدة</label>
+    <input class="inp" id="es_pw" dir="ltr" value="${pass}">
+    <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px;font-weight:800">
+      <input type="checkbox" id="es_nt" checked> إرسال إشعار فوري لجميع العملاء المشتركين في هذا الحساب على تيليغرام وتحديث صفحتهم
+    </label>
+    <button class="btn-pri" onclick="submitEditStock('${id}')">حفظ وتحديث</button>
+  `);
+}
+
+async function submitEditStock(id) {
+  const email = document.getElementById('es_em').value.trim();
+  const password = document.getElementById('es_pw').value.trim();
+  const notifyCustomers = document.getElementById('es_nt').checked;
+  const r = await fetch(`${API}/stock/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ email, password, notifyCustomers })
+  });
+  const d = await r.json();
+  if (!d.success) return alert(d.message);
+  closeMdl();
+  alert(`✅ تم التحديث وإشعار ${d.notifiedCount || 0} عميل.`);
+  loadPanel();
+}
+
+async function freeSlot(stockId, slotNumber) {
+  if (!confirm('هل تريد إخلاء هذه الشاشة وتوليد رمز PIN عشوائي جديد لها لتصبح متاحة للبيع؟')) return;
+  const r = await fetch(`${API}/stock/${stockId}/slots/${slotNumber}/release`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ rotatePin: true })
+  });
+  const d = await r.json();
+  if (!d.success) return alert(d.message);
+  alert(`🔓 تم إخلاء الشاشة! رمز الـ PIN الجديد هو: ${d.slot.pin || 'بدون PIN'}`);
+  loadPanel();
+}
+
+async function delStock(id) {
+  if (!confirm('حذف هذا الحساب الأم نهائياً؟')) return;
+  await fetch(`${API}/stock/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+  loadPanel();
+}
+
+function openCouponModal() {
+  openMdl(`
+    <h3>🎟️ إنشاء كوبون خصم</h3>
+    <label class="lbl">رمز الكوبون (مثال: OVIRA10)</label>
+    <input class="inp" id="cp_code" dir="ltr" style="text-transform:uppercase">
+    <label class="lbl">نوع الخصم</label>
+    <select class="inp" id="cp_type"><option value="fixed">مبلغ ثابت (DA)</option><option value="percent">نسبة مئوية (%)</option></select>
+    <label class="lbl">قيمة الخصم</label>
+    <input class="inp" id="cp_val" type="number" placeholder="200">
+    <label class="lbl">الحد الأقصى للاستخدام</label>
+    <input class="inp" id="cp_max" type="number" value="100">
+    <button class="btn-pri" onclick="submitCoupon()">حفظ الكوبون</button>
+  `);
+}
+
+async function submitCoupon() {
+  const body = {
+    code: document.getElementById('cp_code').value.trim(),
+    type: document.getElementById('cp_type').value,
+    value: Number(document.getElementById('cp_val').value),
+    maxUses: Number(document.getElementById('cp_max').value)
+  };
+  const r = await fetch(`${API}/coupons`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (!d.success) return alert(d.message);
+  closeMdl();
+  loadPanel();
+}
+
+async function delCoupon(id) {
+  await fetch(`${API}/coupons/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+  loadPanel();
+}
+
+async function editCustomerBalance(id, name, cur) {
+  const val = prompt(`أدخل رصيد المحفظة الجديد للعميل (${name}) بالدينار:`, cur);
+  if (val === null) return;
+  await fetch(`${API}/customers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ balance: Number(val) })
+  });
+  loadPanel();
+}
+
+async function toggleBlockCustomer(id, blocked) {
+  await fetch(`${API}/customers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ blocked })
+  });
+  loadPanel();
+}
+
+function openStaffModal() {
+  openMdl(`
+    <h3>🛡️ إضافة / تحديث مشرف</h3>
+    <label class="lbl">الاسم</label>
+    <input class="inp" id="sf_name" placeholder="اسم المشرف">
+    <label class="lbl">معرف تيليغرام الرقمي (Telegram ID)</label>
+    <input class="inp" id="sf_tg" type="number" dir="ltr" placeholder="123456789">
+    <label class="lbl">الصلاحية</label>
+    <select class="inp" id="sf_role"><option value="staff">مشرف طلبات ومخزون (staff)</option><option value="viewer">مشاهد فقط (viewer)</option><option value="owner">مالك كامل الصلاحية (owner)</option></select>
+    <label class="lbl">البريد الإلكتروني للدخول للوحة (اختياري)</label>
+    <input class="inp" id="sf_em" dir="ltr">
+    <label class="lbl">كلمة السر للدخول للوحة (اختياري)</label>
+    <input class="inp" id="sf_pw" type="password" dir="ltr">
+    <button class="btn-pri" onclick="submitStaff()">حفظ المشرف</button>
+  `);
+}
+
+async function submitStaff() {
+  const body = {
+    name: document.getElementById('sf_name').value.trim(),
+    telegramId: Number(document.getElementById('sf_tg').value),
+    role: document.getElementById('sf_role').value,
+    email: document.getElementById('sf_em').value.trim(),
+    password: document.getElementById('sf_pw').value
+  };
+  const r = await fetch(`${API}/staff`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (!d.success) return alert(d.message);
+  closeMdl();
+  loadPanel();
+}
+
+async function dlCsv() {
+  const r = await fetch(`${API}/export?${buildQueryParams().toString()}`, {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if (!r.ok) return alert('غير مصرح أو فشل التحميل');
+  const blob = await r.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ovira_orders.csv';
+  a.click();
+}
+
+loadPanel();
 </script>
 </body>
 </html>
