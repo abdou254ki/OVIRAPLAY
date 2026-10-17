@@ -68,14 +68,12 @@ a {
   text-decoration: none;
 }
 
-/* Layout Shell */
 .app-shell {
   display: flex;
   min-height: 100vh;
   width: 100%;
 }
 
-/* Sidebar */
 .sidebar {
   width: 260px;
   background: var(--sidebar);
@@ -100,7 +98,6 @@ a {
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
-/* Official OVIRA PLAY Logo Replica */
 .ovira-logo {
   display: inline-flex;
   flex-direction: column;
@@ -183,7 +180,6 @@ html[dir="ltr"] .nav-item .chev {
   font-size: 12.5px;
 }
 
-/* Main Area */
 .main-area {
   flex: 1;
   min-width: 0;
@@ -191,7 +187,6 @@ html[dir="ltr"] .nav-item .chev {
   flex-direction: column;
 }
 
-/* Top Header */
 .top-header {
   background: var(--card);
   border-bottom: 1px solid var(--line);
@@ -333,7 +328,6 @@ html[dir="ltr"] .nav-item .chev {
   place-items: center;
 }
 
-/* Content Container */
 .content-wrap {
   padding: 20px 24px 40px;
   max-width: 1600px;
@@ -341,7 +335,6 @@ html[dir="ltr"] .nav-item .chev {
   margin: 0 auto;
 }
 
-/* Subheader bar */
 .sub-bar {
   display: flex;
   align-items: center;
@@ -403,7 +396,6 @@ html[dir="ltr"] .nav-item .chev {
   color: var(--ink);
 }
 
-/* Row 1: 4 Gradient KPI Cards */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -501,7 +493,6 @@ html[dir="ltr"] .nav-item .chev {
   opacity: 0.85;
 }
 
-/* Main Dashboard Split Grid (Right 3/4 content + Left 1/4 sidebar widgets in RTL) */
 .dash-body-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 310px;
@@ -544,7 +535,6 @@ html[dir="ltr"] .nav-item .chev {
   color: var(--ink);
 }
 
-/* Row 2: 4 Detailed Stat Cards */
 .stats4-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -597,7 +587,6 @@ html[dir="ltr"] .nav-item .chev {
   margin-inline-end: 6px;
 }
 
-/* Row 3: Charts & Top Products */
 .charts3-grid {
   display: grid;
   grid-template-columns: 1.55fr 1.15fr 1fr;
@@ -623,7 +612,6 @@ html[dir="ltr"] .nav-item .chev {
   color: #fff;
 }
 
-/* Donut Chart */
 .donut-wrap {
   display: flex;
   align-items: center;
@@ -676,7 +664,6 @@ html[dir="ltr"] .nav-item .chev {
   color: var(--mut);
 }
 
-/* Top Selling Products Bars */
 .top-prod-list {
   display: flex;
   flex-direction: column;
@@ -713,7 +700,6 @@ html[dir="ltr"] .nav-item .chev {
   border-radius: 6px;
 }
 
-/* Row 4: Tables & Mini Finance */
 .tables3-grid {
   display: grid;
   grid-template-columns: 0.78fr 1.45fr 1fr;
@@ -780,7 +766,6 @@ html[dir="ltr"] .nav-item .chev {
   flex-shrink: 0;
 }
 
-/* Bottom 4 Highlight Cards */
 .bottom4-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -798,7 +783,6 @@ html[dir="ltr"] .nav-item .chev {
   box-shadow: var(--sh);
 }
 
-/* Side Column Widgets */
 .notif-list {
   display: flex;
   flex-direction: column;
@@ -869,7 +853,6 @@ html[dir="ltr"] .nav-item .chev {
   border-radius: 6px;
 }
 
-/* Promo Dark Card */
 .promo-card {
   background: radial-gradient(circle at 80% 20%, #1E293B 0%, #090D16 100%);
   border-radius: var(--radius);
@@ -907,7 +890,6 @@ html[dir="ltr"] .nav-item .chev {
   box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
 }
 
-/* Functional Sub-Views (Orders, Stock, Renewals, Finance, Manage) */
 .section-card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -984,7 +966,6 @@ html[dir="ltr"] .nav-item .chev {
 .slot.occupied { border-color: rgba(239,68,68,.4); background: rgba(239,68,68,.04); }
 pre.creds { background: #0B1120; color: #F8FAFC; padding: 12px; border-radius: 12px; font-size: 12px; white-space: pre-wrap; margin: 8px 0; overflow-x: auto; }
 
-/* Login Screen */
 .login-screen {
   min-height: 100vh;
   display: grid;
@@ -1012,7 +993,6 @@ pre.creds { background: #0B1120; color: #F8FAFC; padding: 12px; border-radius: 1
 .lbl { display: block; text-align: start; font-size: 12px; font-weight: 800; color: var(--mut); margin: 12px 0 5px; }
 .btn-pri { width: 100%; background: linear-gradient(90deg, #4F46E5, #3B82F6); color: #fff; padding: 12px; border-radius: 13px; font-weight: 800; font-size: 14.5px; margin-top: 14px; }
 
-/* Modal & Overlay */
 .modal-bg {
   position: fixed;
   inset: 0;
@@ -1044,7 +1024,6 @@ pre.creds { background: #0B1120; color: #F8FAFC; padding: 12px; border-radius: 1
 }
 .drawer-backdrop.on { display: block; }
 
-/* Responsive Breakpoints */
 @media (max-width: 1320px) {
   .dash-body-grid {
     grid-template-columns: 1fr;
@@ -1122,7 +1101,6 @@ let activeNav = 'dashboard';
 let periodFilter = 'month';
 let chartTab = 'sales';
 
-// Existing functional filters & state
 let stFilter = '', spFilter = '', daysFilter = 0, qFilter = '', curPage = 1;
 let stockProdFilter = '';
 let isDemoMode = localStorage.getItem('adm_demo') === '1';
@@ -1135,32 +1113,22 @@ let store = {
   manageData: { customers: [], coupons: [], audits: [], admins: [] }
 };
 
-// Official OVIRA PLAY Vector Logo (Exact match to attached image 1000083464.jpg)
 function oviraLogoSvg(cls = '') {
   return `
   <div class="ovira-logo ${cls}" title="OVIRA PLAY">
     <svg viewBox="0 0 280 115" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Top Play Triangle Icon -->
       <path d="M126 10.5C126 7.4 129.3 5.5 132 7.1L158.5 22.4C161.2 24 161.2 27.9 158.5 29.5L132 44.8C129.3 46.4 126 44.5 126 41.4V10.5Z" stroke="#2D76BA" stroke-width="5.5" stroke-linejoin="round"/>
-      <!-- OVIRA Wordmark -->
-      <!-- O -->
       <rect x="18" y="55" width="42" height="27" rx="11" stroke="#FFFFFF" stroke-width="6.5"/>
-      <!-- V -->
       <path d="M72 55L91 82L110 55" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <!-- I -->
       <line x1="126" y1="55" x2="126" y2="82" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round"/>
-      <!-- R -->
       <path d="M144 82V55H168C173.5 55 178 59 178 64C178 69 173.5 73 168 73H144M163 73L177 82" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <!-- A with Blue Inner Triangle -->
       <path d="M192 82L211 55L230 82" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
       <polygon points="211,67 203,80 219,80" fill="#2D76BA"/>
-      <!-- PLAY Subtext -->
       <text x="129" y="108" fill="#63A6DC" font-family="'Inter', 'Cairo', sans-serif" font-weight="800" font-size="21" letter-spacing="13" text-anchor="middle">PLAY</text>
     </svg>
   </div>`;
 }
 
-// Unified Translation System (AR / EN)
 const I18N = {
   ar: {
     dir: 'rtl',
@@ -1177,7 +1145,6 @@ const I18N = {
     customPeriod: 'فترة مخصصة',
     dateRange: '30 أبريل 2025 - 30 مارس 2025',
     currency: 'د.ج',
-    // Nav
     nav_dashboard: 'لوحة التحكم',
     nav_products: 'المنتجات والخدمات',
     nav_orders: 'الطلبات',
@@ -1193,12 +1160,10 @@ const I18N = {
     nav_staff: 'المستخدمون والصلاحيات',
     nav_settings: 'إعدادات النظام',
     footerSlogan: 'مستقبل الاشتراكات الرقمية',
-    // KPIs
     totalSales: 'إجمالي المبيعات',
     collectedRev: 'الإيرادات المحصلة',
     grossProfit: 'إجمالي الأرباح',
     netProfit: 'صافي الأرباح',
-    // 4 Stat cards
     ordersTitle: 'الطلبات',
     ordNew: 'جديد',
     ordProc: 'قيد المعالجة',
@@ -1216,7 +1181,6 @@ const I18N = {
     supOpen: 'تذاكر مفتوحة',
     supProc: 'قيد المعالجة',
     supClosed: 'مغلقة',
-    // Charts
     salesAndProfit: 'المبيعات والأرباح',
     tabSales: 'المبيعات',
     tabProfits: 'الأرباح',
@@ -1224,7 +1188,6 @@ const I18N = {
     salesByProd: 'توزيع المبيعات حسب المنتجات',
     other: 'أخرى',
     topSelling: 'أكثر المنتجات مبيعاً',
-    // Tables
     latestOrders: 'أحدث الطلبات',
     bestCustomers: 'أفضل العملاء',
     viewAll: 'عرض الكل',
@@ -1235,7 +1198,6 @@ const I18N = {
     colDate: 'التاريخ',
     colTotalPurchases: 'إجمالي المشتريات',
     colOrdersCount: 'عدد الطلبات',
-    // Side & Finance
     latestAlerts: 'أحدث التنبيهات',
     finStatus: 'الوضع المالي',
     curBalance: 'الرصيد الحالي',
@@ -1245,7 +1207,6 @@ const I18N = {
     expProfitMonth: 'الربح المتوقع لهذا الشهر',
     promoText: 'كل ما تحتاجه من اشتراكات رقمية في مكان واحد',
     viewProducts: 'عرض المنتجات',
-    // Bottom 4
     mostProfitable: 'أكثر المنتجات ربحية',
     margin: 'هامش',
     topSources: 'أكثر مصادر الطلبات',
@@ -1390,7 +1351,6 @@ function closeMdl() {
   document.getElementById('mdl').classList.remove('on');
 }
 
-// Reference Default Data (Used to populate reference sections & when in Demo/Fallback mode)
 const REF_ORDERS = [
   { _id: '1024', orderCode: '#1024', customerName: 'أحمد محمد', customerEn: 'Ahmed Mohamed', whatsappNumber: '0557112233', product: 'Netflix - شهر', productEn: 'Netflix - 1 Month', cartItems: [{productName: 'Netflix', months: 1, quantity: 1, unitPrice: 2800}], totalPrice: 2800, paymentMethod: 'بريدي موب', status: 'تم التسليم', statusLabelAr: 'مكتملة', statusLabelEn: 'Completed', pill: 'ok', date: '2025/04/30', createdAt: '2025-04-30T12:00:00Z' },
   { _id: '1023', orderCode: '#1023', customerName: 'سارة علي', customerEn: 'Sara Ali', whatsappNumber: '0661223344', product: 'Spotify - 3 أشهر', productEn: 'Spotify - 3 Months', cartItems: [{productName: 'Spotify', months: 3, quantity: 1, unitPrice: 7500}], totalPrice: 7500, paymentMethod: 'Binance', status: 'قيد المراجعة', statusLabelAr: 'قيد المعالجة', statusLabelEn: 'Processing', pill: 'warn', date: '2025/04/29', createdAt: '2025-04-29T15:30:00Z' },
@@ -1407,7 +1367,6 @@ const REF_CUSTOMERS = [
   { _id: 'c5', name: 'خالد يوسف', nameEn: 'Khaled Youssef', phone: '0662556677', spent: 39420, orders: 6, balance: 0, star: false }
 ];
 
-// Login Screen
 function renderLogin(err = '') {
   document.getElementById('root').innerHTML = `
     <div class="login-screen">
@@ -1539,7 +1498,6 @@ function switchNav(id) {
   loadPanel();
 }
 
-// Sidebar Navigation Items matching the reference image
 function getNavItems() {
   return [
     { id: 'dashboard', label: t('nav_dashboard'), icon: '<path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/>' },
@@ -1559,7 +1517,6 @@ function getNavItems() {
   ];
 }
 
-// Reference Dashboard View (Exact match to 1000091841.png + Live Data binding)
 function renderDashboardView() {
   const fin = store.statsData.financials || {};
   const totalSalesVal = fin.totalRevenue ? fin.totalRevenue : 1356750;
@@ -1576,7 +1533,6 @@ function renderDashboardView() {
     : REF_CUSTOMERS;
 
   return `
-    <!-- Subheader Title & Period Filter Bar -->
     <div class="sub-bar">
       <div class="page-title">
         <h1>${t('dashTitle')}</h1>
@@ -1598,7 +1554,6 @@ function renderDashboardView() {
       </div>
     </div>
 
-    <!-- Row 1: 4 Top KPI Gradient Cards -->
     <div class="kpi-row">
       <div class="kpi-card sales">
         <div class="kpi-main">
@@ -1649,13 +1604,10 @@ function renderDashboardView() {
       </div>
     </div>
 
-    <!-- Main Split Grid: Main Column + Side Column -->
     <div class="dash-body-grid">
       <div class="dash-main-col">
 
-        <!-- Row 2: 4 Detailed Breakdown Cards -->
         <div class="stats4-grid">
-          <!-- Support Card -->
           <div class="w-card" onclick="switchNav('support')" style="cursor:pointer">
             <div class="detail-stat-top">
               <div>
@@ -1672,7 +1624,6 @@ function renderDashboardView() {
             </div>
           </div>
 
-          <!-- Active Subscriptions Card -->
           <div class="w-card" onclick="switchNav('renewals')" style="cursor:pointer">
             <div class="detail-stat-top">
               <div>
@@ -1689,7 +1640,6 @@ function renderDashboardView() {
             </div>
           </div>
 
-          <!-- Customers Card -->
           <div class="w-card" onclick="switchNav('customers')" style="cursor:pointer">
             <div class="detail-stat-top">
               <div>
@@ -1706,7 +1656,6 @@ function renderDashboardView() {
             </div>
           </div>
 
-          <!-- Orders Card -->
           <div class="w-card" onclick="switchNav('orders')" style="cursor:pointer">
             <div class="detail-stat-top">
               <div>
@@ -1725,9 +1674,7 @@ function renderDashboardView() {
           </div>
         </div>
 
-        <!-- Row 3: Charts & Best Selling Products -->
         <div class="charts3-grid">
-          <!-- Best Selling Products -->
           <div class="w-card">
             <div class="w-head">
               <h3>${t('topSelling')}</h3>
@@ -1766,7 +1713,6 @@ function renderDashboardView() {
             </div>
           </div>
 
-          <!-- Sales Distribution Donut Chart -->
           <div class="w-card">
             <div class="w-head">
               <h3>${t('salesByProd')}</h3>
@@ -1797,7 +1743,6 @@ function renderDashboardView() {
             </div>
           </div>
 
-          <!-- Sales and Profits Line/Area Chart -->
           <div class="w-card">
             <div class="w-head">
               <h3>${t('salesAndProfit')}</h3>
@@ -1819,7 +1764,6 @@ function renderDashboardView() {
                     <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.0"/>
                   </linearGradient>
                 </defs>
-                <!-- Grid lines -->
                 <g stroke="currentColor" stroke-opacity="0.08" stroke-width="1">
                   <line x1="35" y1="20" x2="445" y2="20"/>
                   <line x1="35" y1="52" x2="445" y2="52"/>
@@ -1827,7 +1771,6 @@ function renderDashboardView() {
                   <line x1="35" y1="116" x2="445" y2="116"/>
                   <line x1="35" y1="145" x2="445" y2="145"/>
                 </g>
-                <!-- Y labels -->
                 <g fill="#94A3B8" font-size="9" font-weight="700">
                   <text x="2" y="23">400K</text>
                   <text x="2" y="55">300K</text>
@@ -1835,20 +1778,16 @@ function renderDashboardView() {
                   <text x="2" y="119">100K</text>
                   <text x="14" y="148">0</text>
                 </g>
-                <!-- Purple Sales Area & Line -->
                 <path d="M40,95 Q85,112 125,75 T210,70 T295,60 T375,45 L440,85 L440,145 L40,145 Z" fill="url(#purpGrad)"/>
                 <path d="M40,95 Q85,112 125,75 T210,70 T295,60 T375,45 L440,85" fill="none" stroke="#8B5CF6" stroke-width="2.5"/>
-                <!-- Blue Profit Area & Line -->
                 <path d="M40,122 Q85,130 125,105 T210,108 T295,92 T375,78 L440,105 L440,145 L40,145 Z" fill="url(#blueGrad)"/>
                 <path d="M40,122 Q85,130 125,105 T210,108 T295,92 T375,78 L440,105" fill="none" stroke="#3B82F6" stroke-width="2.5"/>
-                <!-- Points -->
                 <g fill="#8B5CF6">
                   <circle cx="40" cy="95" r="3"/><circle cx="125" cy="75" r="3"/><circle cx="210" cy="70" r="3"/><circle cx="295" cy="60" r="3"/><circle cx="375" cy="45" r="3.5"/><circle cx="440" cy="85" r="3"/>
                 </g>
                 <g fill="#3B82F6">
                   <circle cx="40" cy="122" r="3"/><circle cx="125" cy="105" r="3"/><circle cx="210" cy="108" r="3"/><circle cx="295" cy="92" r="3"/><circle cx="375" cy="78" r="3"/><circle cx="440" cy="105" r="3"/>
                 </g>
-                <!-- X labels -->
                 <g fill="#94A3B8" font-size="8.5" font-weight="700" text-anchor="middle">
                   <text x="50" y="162">1 مارس</text>
                   <text x="115" y="162">5 مارس</text>
@@ -1867,9 +1806,7 @@ function renderDashboardView() {
           </div>
         </div>
 
-        <!-- Row 4: Mini Financial Card + Latest Orders Table + Top Customers Table -->
         <div class="tables3-grid">
-          <!-- Mini Financial Summary -->
           <div class="w-card">
             <div class="w-head">
               <h3>${t('finStatus')}</h3>
@@ -1883,7 +1820,6 @@ function renderDashboardView() {
             </div>
           </div>
 
-          <!-- Latest Orders Table -->
           <div class="w-card">
             <div class="w-head">
               <h3>${t('latestOrders')}</h3>
@@ -1923,7 +1859,6 @@ function renderDashboardView() {
             </div>
           </div>
 
-          <!-- Top Customers Table -->
           <div class="w-card">
             <div class="w-head">
               <h3>${t('bestCustomers')}</h3>
@@ -1962,7 +1897,6 @@ function renderDashboardView() {
           </div>
         </div>
 
-        <!-- Row 5: Bottom 4 Highlight Cards -->
         <div class="bottom4-grid">
           <div class="mini-high-card">
             <div style="width:100%">
@@ -2007,9 +1941,7 @@ function renderDashboardView() {
 
       </div>
 
-      <!-- Left Column (In RTL): Alerts, Financial Status, Promo Card -->
       <div class="dash-side-col">
-        <!-- Latest Alerts -->
         <div class="w-card">
           <div class="w-head">
             <h3>${t('latestAlerts')}</h3>
@@ -2054,7 +1986,6 @@ function renderDashboardView() {
           </div>
         </div>
 
-        <!-- Financial Position Card -->
         <div class="w-card">
           <div class="w-head">
             <h3>${t('finStatus')}</h3>
@@ -2070,7 +2001,6 @@ function renderDashboardView() {
           </div>
         </div>
 
-        <!-- Promotional OVIRA Card -->
         <div class="promo-card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
             <div class="promo-floating-icons" style="flex:1">
@@ -2093,7 +2023,6 @@ function renderDashboardView() {
   `;
 }
 
-// Existing Functional Views (Orders, Stock, Renewals, Finance/Stats, Customers/Coupons/Audit)
 function waLink(phone, text) {
   const p = String(phone || '').replace(/^0/, '213');
   return `https://wa.me/${p}?text=${encodeURIComponent(text)}`;
@@ -2418,7 +2347,6 @@ function renderApp() {
 
   document.getElementById('root').innerHTML = `
     <div class="app-shell">
-      <!-- Dark Sidebar with Official OVIRA PLAY Logo -->
       <aside class="sidebar" id="sidebarEl">
         <div class="sidebar-brand">
           <a href="javascript:void(0)" onclick="switchNav('dashboard')">${oviraLogoSvg()}</a>
@@ -2441,9 +2369,7 @@ function renderApp() {
         </div>
       </aside>
 
-      <!-- Main Content Area -->
       <div class="main-area">
-        <!-- Top Bar -->
         <header class="top-header">
           <div style="display:flex;align-items:center;gap:10px;flex:1">
             <button class="menu-toggle" onclick="toggleMobileSidebar()" aria-label="Menu">
@@ -2478,7 +2404,6 @@ function renderApp() {
           </div>
         </header>
 
-        <!-- Dynamic View Content -->
         <main class="content-wrap">
           ${mainViewHtml}
         </main>
@@ -2487,7 +2412,6 @@ function renderApp() {
   `;
 }
 
-// Existing API Action Handlers (Preserved 100%)
 function viewReceipt(fileId, code) {
   openMdl(`
     <h3 style="margin-bottom:10px">📎 وصل الدفع للطلب ${code}</h3>
