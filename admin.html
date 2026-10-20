@@ -1103,10 +1103,10 @@ let chartTab = 'sales';
 
 let stFilter = '', spFilter = '', daysFilter = 0, qFilter = '', curPage = 1;
 let stockProdFilter = '';
-let isDemoMode = localStorage.getItem('adm_demo') === '1';
+localStorage.removeItem('adm_demo');
 
 let store = {
-  ordersData: { orders: [], total: 320, page: 1, pages: 1 },
+  ordersData: { orders: [], total: 0, page: 1, pages: 1 },
   stockData: { stocks: [], catalog: {}, availability: {} },
   renewalsData: { expiringSlots: [], expiringMasters: [] },
   statsData: {},
@@ -1351,22 +1351,6 @@ function closeMdl() {
   document.getElementById('mdl').classList.remove('on');
 }
 
-const REF_ORDERS = [
-  { _id: '1024', orderCode: '#1024', customerName: 'أحمد محمد', customerEn: 'Ahmed Mohamed', whatsappNumber: '0557112233', product: 'Netflix - شهر', productEn: 'Netflix - 1 Month', cartItems: [{productName: 'Netflix', months: 1, quantity: 1, unitPrice: 2800}], totalPrice: 2800, paymentMethod: 'بريدي موب', status: 'تم التسليم', statusLabelAr: 'مكتملة', statusLabelEn: 'Completed', pill: 'ok', date: '2025/04/30', createdAt: '2025-04-30T12:00:00Z' },
-  { _id: '1023', orderCode: '#1023', customerName: 'سارة علي', customerEn: 'Sara Ali', whatsappNumber: '0661223344', product: 'Spotify - 3 أشهر', productEn: 'Spotify - 3 Months', cartItems: [{productName: 'Spotify', months: 3, quantity: 1, unitPrice: 7500}], totalPrice: 7500, paymentMethod: 'Binance', status: 'قيد المراجعة', statusLabelAr: 'قيد المعالجة', statusLabelEn: 'Processing', pill: 'warn', date: '2025/04/29', createdAt: '2025-04-29T15:30:00Z' },
-  { _id: '1022', orderCode: '#1022', customerName: 'محمد عثمان', customerEn: 'Mohamed Othman', whatsappNumber: '0770334455', product: 'ChatGPT - شهر', productEn: 'ChatGPT - 1 Month', cartItems: [{productName: 'ChatGPT Plus', months: 1, quantity: 1, unitPrice: 5200}], totalPrice: 5200, paymentMethod: 'بريدي موب', status: 'مؤكد', statusLabelAr: 'مدفوع', statusLabelEn: 'Paid', pill: 'pri', date: '2025/04/28', createdAt: '2025-04-28T10:15:00Z' },
-  { _id: '1021', orderCode: '#1021', customerName: 'ليلى حسن', customerEn: 'Layla Hassan', whatsappNumber: '0550445566', product: 'Canva Pro - سنة', productEn: 'Canva Pro - 1 Year', cartItems: [{productName: 'Canva Pro', months: 12, quantity: 1, unitPrice: 12000}], totalPrice: 12000, paymentMethod: 'Redotpay', status: 'قيد المراجعة', statusLabelAr: 'جديد', statusLabelEn: 'New', pill: 'bad', date: '2025/04/27', createdAt: '2025-04-27T18:20:00Z' },
-  { _id: '1020', orderCode: '#1020', customerName: 'خالد يوسف', customerEn: 'Khaled Youssef', whatsappNumber: '0662556677', product: 'Netflix - 3 أشهر', productEn: 'Netflix - 3 Months', cartItems: [{productName: 'Netflix', months: 3, quantity: 1, unitPrice: 8400}], totalPrice: 8400, paymentMethod: 'بريدي موب', status: 'تم التسليم', statusLabelAr: 'مكتملة', statusLabelEn: 'Completed', pill: 'ok', date: '2025/04/26', createdAt: '2025-04-26T09:00:00Z' }
-];
-
-const REF_CUSTOMERS = [
-  { _id: 'c1', name: 'أحمد محمد', nameEn: 'Ahmed Mohamed', phone: '0557112233', spent: 82500, orders: 12, balance: 2500, star: true },
-  { _id: 'c2', name: 'سارة علي', nameEn: 'Sara Ali', phone: '0661223344', spent: 64230, orders: 10, balance: 1200, star: true },
-  { _id: 'c3', name: 'محمد عثمان', nameEn: 'Mohamed Othman', phone: '0770334455', spent: 52800, orders: 8, balance: 0, star: false },
-  { _id: 'c4', name: 'ليلى حسن', nameEn: 'Layla Hassan', phone: '0550445566', spent: 47600, orders: 7, balance: 800, star: false },
-  { _id: 'c5', name: 'خالد يوسف', nameEn: 'Khaled Youssef', phone: '0662556677', spent: 39420, orders: 6, balance: 0, star: false }
-];
-
 function renderLogin(err = '') {
   document.getElementById('root').innerHTML = `
     <div class="login-screen">
@@ -1379,20 +1363,9 @@ function renderLogin(err = '') {
         <label class="lbl">${lang === 'ar' ? 'كلمة السر' : 'Password'}</label>
         <input class="inp" id="pw" type="password" dir="ltr" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
         <button class="btn-pri" onclick="doLogin()">${lang === 'ar' ? 'تسجيل الدخول' : 'Sign In'}</button>
-        <button class="btn-sm" style="width:100%;justify-content:center;margin-top:10px;padding:10px" onclick="enterDemoMode()">
-          👁️ ${lang === 'ar' ? 'معاينة لوحة التحكم مباشرة (البيانات المرجعية)' : 'Preview Reference Dashboard'}
-        </button>
         ${err ? `<div style="color:var(--bad);font-size:13px;font-weight:700;margin-top:12px">${esc(err)}</div>` : ''}
       </div>
     </div>`;
-}
-
-function enterDemoMode() {
-  isDemoMode = true;
-  localStorage.setItem('adm_demo', '1');
-  store.ordersData = { orders: REF_ORDERS, total: 320, page: 1, pages: 1 };
-  store.manageData.customers = REF_CUSTOMERS;
-  renderApp();
 }
 
 async function doLogin() {
@@ -1409,8 +1382,7 @@ async function doLogin() {
     if (!d.success) return renderLogin(d.message || 'بيانات الدخول غير صحيحة.');
     token = d.token;
     adminRole = d.role || 'owner';
-    isDemoMode = false;
-    localStorage.removeItem('adm_demo');
+        localStorage.removeItem('adm_demo');
     localStorage.setItem('adm_tk', token);
     localStorage.setItem('adm_role', adminRole);
     loadPanel();
@@ -1421,8 +1393,7 @@ async function doLogin() {
 
 function logout() {
   token = '';
-  isDemoMode = false;
-  localStorage.removeItem('adm_tk');
+    localStorage.removeItem('adm_tk');
   localStorage.removeItem('adm_demo');
   renderLogin();
 }
@@ -1446,16 +1417,12 @@ async function apiGet(path) {
 }
 
 async function loadPanel() {
-  if (!token && !isDemoMode) return renderLogin();
-  if (isDemoMode) {
-    renderApp();
-    return;
-  }
+  if (!token) return renderLogin();
   try {
     if (activeNav === 'dashboard') {
       const [ord, st, ren, stk, cust] = await Promise.all([
         apiGet('/orders?page=1').catch(() => ({ orders: [] })),
-        apiGet('/stats').catch(() => ({})),
+        apiGet('/stats' + ({today:'?days=1',yesterday:'?days=1&skip=1','7days':'?days=7',month:'?days=30',prev:'?days=30&skip=30'}[periodFilter] || '')).catch(() => ({})),
         apiGet('/renewals').catch(() => ({})),
         apiGet('/stock').catch(() => ({})),
         apiGet('/customers').catch(() => ({ customers: [] }))
@@ -1518,505 +1485,100 @@ function getNavItems() {
 }
 
 function renderDashboardView() {
-  const fin = store.statsData.financials || {};
-  const totalSalesVal = fin.totalRevenue ? fin.totalRevenue : 1356750;
-  const collectedVal = fin.totalRevenue ? Math.round(fin.totalRevenue * 0.92) : 1248300;
-  const grossProfVal = fin.netProfit ? Math.round(fin.netProfit * 1.28) : 621450;
-  const netProfVal = fin.netProfit ? fin.netProfit : 482650;
+  const S = store.statsData.summary;
+  const att = store.statsData.attention || {};
+  const ar = lang === 'ar';
+  const none = ar ? 'لا توجد بيانات بعد' : 'No data yet';
+  if (!S) return `<div class="sub-bar"><div class="page-title"><h1>${t('dashTitle')}</h1><p>${none}</p></div></div>`;
 
-  const liveOrders = (store.ordersData && store.ordersData.orders && store.ordersData.orders.length)
-    ? store.ordersData.orders.slice(0, 5)
-    : REF_ORDERS;
+  const O = S.orders || {}, C = S.customers || {}, B = S.subs || {}, F = S.finance || {}, A = S.alerts || {}, SRC = S.sources || {};
+  const orders = (store.ordersData.orders || []).slice(0, 5);
+  const top = S.top || [], tc = S.topCustomers || [];
+  const maxQ = Math.max(1, ...top.map(x => x.qty));
+  const tabs = [['today', 'today'], ['yesterday', 'yesterday'], ['7days', 'days7'], ['month', 'currMonth'], ['prev', 'prevMonth']];
+  const kpi = (cls, ico, title, val) => `<div class="kpi-card ${cls}"><div class="kpi-main"><div class="kpi-head"><span class="kpi-badge-ico">${ico}</span><span class="kpi-title">${title}</span></div><div class="kpi-val">${fmt(val)}</div></div></div>`;
+  const card = (nav, title, total, ico, rows) => `<div class="w-card" onclick="switchNav('${nav}')" style="cursor:pointer"><div class="detail-stat-top"><div><div style="font-size:13px;font-weight:800;color:var(--mut)">${title}</div><div class="detail-stat-num">${fmtNum(total)}</div></div><div class="detail-stat-ico" style="background:rgba(37,99,235,0.12);color:#1D4ED8">${ico}</div></div><div class="detail-stat-list">${rows.map(r => `<div class="detail-stat-row"><span><i class="dot" style="background:${r[0]}"></i>${r[1]}</span><b>${fmtNum(r[2])}</b></div>`).join('')}</div></div>`;
 
-  const liveCustomers = (store.manageData.customers && store.manageData.customers.length)
-    ? store.manageData.customers.slice(0, 5)
-    : REF_CUSTOMERS;
+  const sr = S.series || {}, ys = sr[chartTab] || [], lb = sr.labels || [];
+  const lo = Math.min(0, ...ys), hi = Math.max(1, ...ys);
+  const X = i => 40 + (ys.length > 1 ? i * 400 / (ys.length - 1) : 200);
+  const Y = v => 145 - (v - lo) / (hi - lo) * 125;
+  const line = ys.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const col = chartTab === 'sales' ? '#8B5CF6' : chartTab === 'profits' ? '#10B981' : '#F59E0B';
+  const chart = ys.some(v => v) ? `<svg viewBox="0 0 460 175" width="100%" height="165"><defs><linearGradient id="dg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${col}" stop-opacity="0.25"/><stop offset="100%" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><g stroke="#94A3B8" stroke-opacity="0.25"><line x1="40" y1="20" x2="440" y2="20"/><line x1="40" y1="145" x2="440" y2="145"/></g><path d="${line} L${X(ys.length - 1).toFixed(1)},145 L40,145 Z" fill="url(#dg)"/><path d="${line}" fill="none" stroke="${col}" stroke-width="2.5"/><g fill="#94A3B8" font-size="9" font-weight="700"><text x="0" y="24">${fmtNum(hi)}</text><text x="0" y="148">${fmtNum(lo)}</text><text x="40" y="165">${esc(lb[0] || '')}</text><text x="440" y="165" text-anchor="end">${esc(lb[lb.length - 1] || '')}</text></g></svg>` : `<p style="text-align:center;color:var(--mut);padding:50px 0">${none}</p>`;
+
+  const al = [];
+  if (att.awaiting) al.push(['#FEF3C7', '#D97706', ar ? `${att.awaiting} طلب بوصل دفع بانتظار المراجعة` : `${att.awaiting} orders with receipt awaiting review`]);
+  if (att.late) al.push(['#FEE2E2', '#DC2626', ar ? `${att.late} طلب متأخر أكثر من ساعتين` : `${att.late} orders pending over 2 hours`]);
+  if (A.expSoon) al.push(['#FEF3C7', '#D97706', ar ? `${A.expSoon} اشتراك ينتهي خلال 7 أيام` : `${A.expSoon} subscriptions expire within 7 days`]);
+  if (A.masterSoon) al.push(['#FEE2E2', '#DC2626', ar ? `${A.masterSoon} حساب أم يحتاج تجديدًا` : `${A.masterSoon} master accounts need renewal`]);
+  if (A.lowStock) al.push(['#FEE2E2', '#DC2626', ar ? `${A.lowStock} حساب بلا شاشات متاحة` : `${A.lowStock} accounts with no free screens`]);
 
   return `
     <div class="sub-bar">
-      <div class="page-title">
-        <h1>${t('dashTitle')}</h1>
-        <p>${t('dashSub')}</p>
-      </div>
-      <div class="filters-bar">
-        <div class="period-tabs">
-          <button class="period-tab ${periodFilter==='today'?'active':''}" onclick="periodFilter='today';daysFilter=1;loadPanel()">${t('today')}</button>
-          <button class="period-tab ${periodFilter==='yesterday'?'active':''}" onclick="periodFilter='yesterday';daysFilter=2;loadPanel()">${t('yesterday')}</button>
-          <button class="period-tab ${periodFilter==='7days'?'active':''}" onclick="periodFilter='7days';daysFilter=7;loadPanel()">${t('days7')}</button>
-          <button class="period-tab ${periodFilter==='month'?'active':''}" onclick="periodFilter='month';daysFilter=30;loadPanel()">${t('currMonth')}</button>
-          <button class="period-tab ${periodFilter==='prev'?'active':''}" onclick="periodFilter='prev';daysFilter=60;loadPanel()">${t('prevMonth')}</button>
-          <button class="period-tab ${periodFilter==='custom'?'active':''}" onclick="periodFilter='custom';daysFilter=0;loadPanel()">${t('customPeriod')}</button>
-        </div>
-        <div class="date-picker-box">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span>${t('dateRange')}</span>
-        </div>
-      </div>
+      <div class="page-title"><h1>${t('dashTitle')}</h1><p>${t('dashSub')}</p></div>
+      <div class="filters-bar"><div class="period-tabs">${tabs.map(p => `<button class="period-tab ${periodFilter === p[0] ? 'active' : ''}" onclick="periodFilter='${p[0]}';loadPanel()">${t(p[1])}</button>`).join('')}</div></div>
     </div>
-
     <div class="kpi-row">
-      <div class="kpi-card sales">
-        <div class="kpi-main">
-          <div class="kpi-head">
-            <span class="kpi-badge-ico">🛒</span>
-            <span class="kpi-title">${t('totalSales')}</span>
-          </div>
-          <div class="kpi-val">${fmt(totalSalesVal)}</div>
-          <div class="kpi-trend">↑ 20%</div>
-        </div>
-        <div class="kpi-side-ico" style="color:#E11D48">🛒</div>
-      </div>
-
-      <div class="kpi-card revenue">
-        <div class="kpi-main">
-          <div class="kpi-head">
-            <span class="kpi-badge-ico">👛</span>
-            <span class="kpi-title">${t('collectedRev')}</span>
-          </div>
-          <div class="kpi-val">${fmt(collectedVal)}</div>
-          <div class="kpi-trend">↑ 18%</div>
-        </div>
-        <div class="kpi-side-ico" style="color:#2563EB">💳</div>
-      </div>
-
-      <div class="kpi-card profit">
-        <div class="kpi-main">
-          <div class="kpi-head">
-            <span class="kpi-badge-ico">💲</span>
-            <span class="kpi-title">${t('grossProfit')}</span>
-          </div>
-          <div class="kpi-val">${fmt(grossProfVal)}</div>
-          <div class="kpi-trend">↑ 15%</div>
-        </div>
-        <div class="kpi-side-ico" style="color:#7C3AED">💰</div>
-      </div>
-
-      <div class="kpi-card net">
-        <div class="kpi-main">
-          <div class="kpi-head">
-            <span class="kpi-badge-ico">📈</span>
-            <span class="kpi-title">${t('netProfit')}</span>
-          </div>
-          <div class="kpi-val">${fmt(netProfVal)}</div>
-          <div class="kpi-trend">↑ 12%</div>
-        </div>
-        <div class="kpi-side-ico" style="color:#059669">📊</div>
-      </div>
+      ${kpi('sales', '🛒', t('totalSales'), S.totalSales)}
+      ${kpi('revenue', '👛', t('collectedRev'), S.collected)}
+      ${kpi('profit', '📦', ar ? 'تكلفة الحسابات' : 'Accounts cost', S.costs)}
+      ${kpi('net', '📈', t('netProfit'), S.netProfit)}
     </div>
-
     <div class="dash-body-grid">
       <div class="dash-main-col">
-
         <div class="stats4-grid">
-          <div class="w-card" onclick="switchNav('support')" style="cursor:pointer">
-            <div class="detail-stat-top">
-              <div>
-                <div style="font-size:13px;font-weight:800;color:var(--mut)">${t('supportTitle')}</div>
-                <div class="detail-stat-num">48</div>
-                <div class="kpi-trend" style="margin-top:4px">↑ 10%</div>
-              </div>
-              <div class="detail-stat-ico" style="background:rgba(139,92,246,0.12);color:#7C3AED">🎧</div>
-            </div>
-            <div class="detail-stat-list">
-              <div class="detail-stat-row"><span><i class="dot" style="background:#EC4899"></i>${t('supOpen')}</span><b>28</b></div>
-              <div class="detail-stat-row"><span><i class="dot" style="background:#F43F5E"></i>${t('supProc')}</span><b>12</b></div>
-              <div class="detail-stat-row"><span><i class="dot" style="background:#94A3B8"></i>${t('supClosed')}</span><b>8</b></div>
-            </div>
-          </div>
-
-          <div class="w-card" onclick="switchNav('renewals')" style="cursor:pointer">
-            <div class="detail-stat-top">
-              <div>
-                <div style="font-size:13px;font-weight:800;color:var(--mut)">${t('subsTitle')}</div>
-                <div class="detail-stat-num">980</div>
-                <div class="kpi-trend" style="margin-top:4px">↑ 16%</div>
-              </div>
-              <div class="detail-stat-ico" style="background:rgba(59,130,246,0.12);color:#2563EB">🔄</div>
-            </div>
-            <div class="detail-stat-list">
-              <div class="detail-stat-row"><span><i class="dot" style="background:#10B981"></i>${t('subExpSoon')}</span><b>120</b></div>
-              <div class="detail-stat-row"><span><i class="dot" style="background:#EF4444"></i>${t('subExpired')}</span><b>85</b></div>
-              <div class="detail-stat-row"><span><i class="dot" style="background:#F87171"></i>${t('subNeedAct')}</span><b>45</b></div>
-            </div>
-          </div>
-
-          <div class="w-card" onclick="switchNav('customers')" style="cursor:pointer">
-            <div class="detail-stat-top">
-              <div>
-                <div style="font-size:13px;font-weight:800;color:var(--mut)">${t('customersTitle')}</div>
-                <div class="detail-stat-num">1,245</div>
-                <div class="kpi-trend" style="margin-top:4px">↑ 17%</div>
-              </div>
-              <div class="detail-stat-ico" style="background:rgba(14,165,233,0.12);color:#0284C7">👥</div>
-            </div>
-            <div class="detail-stat-list">
-              <div class="detail-stat-row"><span>${t('custNew')}</span><b>320</b></div>
-              <div class="detail-stat-row"><span>${t('custRep')}</span><b>925</b></div>
-              <div class="detail-stat-row"><span>${t('custBlk')}</span><b>0</b></div>
-            </div>
-          </div>
-
-          <div class="w-card" onclick="switchNav('orders')" style="cursor:pointer">
-            <div class="detail-stat-top">
-              <div>
-                <div style="font-size:13px;font-weight:800;color:var(--mut)">${t('ordersTitle')}</div>
-                <div class="detail-stat-num">${store.ordersData.total || 320}</div>
-                <div class="kpi-trend" style="margin-top:4px">↑ 24%</div>
-              </div>
-              <div class="detail-stat-ico" style="background:rgba(37,99,235,0.12);color:#1D4ED8">📄</div>
-            </div>
-            <div class="detail-stat-list">
-              <div class="detail-stat-row"><span><i class="dot" style="background:#A855F7"></i>${t('ordNew')}</span><b>45</b></div>
-              <div class="detail-stat-row"><span><i class="dot" style="background:#F43F5E"></i>${t('ordProc')}</span><b>32</b></div>
-              <div class="detail-stat-row"><span><i class="dot" style="background:#10B981"></i>${t('ordDone')}</span><b>210</b></div>
-              <div class="detail-stat-row"><span><i class="dot" style="background:#EF4444"></i>${t('ordCanc')}</span><b>33</b></div>
-            </div>
-          </div>
+          ${card('orders', t('ordersTitle'), O.total, '📄', [['#F59E0B', t('ordNew'), O.review], ['#2563EB', t('ordProc'), O.confirmed], ['#10B981', t('ordDone'), O.done], ['#EF4444', t('ordCanc'), O.canceled]])}
+          ${card('renewals', t('subsTitle'), B.active, '🔄', [['#10B981', t('subExpSoon'), B.expSoon], ['#EF4444', t('subExpired'), B.expired], ['#F87171', t('subNeedAct'), B.needAct]])}
+          ${card('customers', t('customersTitle'), C.total, '👥', [['#0EA5E9', t('custNew'), C.new], ['#8B5CF6', t('custRep'), C.repeat], ['#EF4444', t('custBlk'), C.blocked]])}
+          ${card('orders', ar ? 'مصادر الطلبات' : 'Order sources', O.total, '🌐', [['#2563EB', t('website'), SRC.website], ['#0EA5E9', 'Telegram', SRC.telegram]])}
         </div>
-
         <div class="charts3-grid">
           <div class="w-card">
-            <div class="w-head">
-              <h3>${t('topSelling')}</h3>
+            <div class="w-head"><h3>${t('salesAndProfit')}</h3>
+              <div class="chart-tabs">${[['sales', 'tabSales'], ['profits', 'tabProfits'], ['expenses', 'tabExpenses']].map(c => `<button class="chart-tab ${chartTab === c[0] ? 'active' : ''}" onclick="chartTab='${c[0]}';renderApp()">${t(c[1])}</button>`).join('')}</div>
             </div>
-            <div class="top-prod-list">
-              <div class="top-prod-row">
-                <span class="prod-brand-ico" style="background:#111;color:#E50914">N</span>
-                <span style="width:72px">Netflix</span>
-                <div class="prod-bar-track"><div class="prod-bar-fill" style="width:88%;background:#4F46E5"></div></div>
-                <b>320</b>
-              </div>
-              <div class="top-prod-row">
-                <span class="prod-brand-ico" style="background:#1DB954">S</span>
-                <span style="width:72px">Spotify</span>
-                <div class="prod-bar-track"><div class="prod-bar-fill" style="width:70%;background:#3B82F6"></div></div>
-                <b>245</b>
-              </div>
-              <div class="top-prod-row">
-                <span class="prod-brand-ico" style="background:#10A37F">AI</span>
-                <span style="width:72px">ChatGPT</span>
-                <div class="prod-bar-track"><div class="prod-bar-fill" style="width:60%;background:#0EA5E9"></div></div>
-                <b>210</b>
-              </div>
-              <div class="top-prod-row">
-                <span class="prod-brand-ico" style="background:#00C4CC">C</span>
-                <span style="width:72px">Canva Pro</span>
-                <div class="prod-bar-track"><div class="prod-bar-fill" style="width:50%;background:#06B6D4"></div></div>
-                <b>180</b>
-              </div>
-              <div class="top-prod-row">
-                <span class="prod-brand-ico" style="background:#1E293B">✂</span>
-                <span style="width:72px">CapCut Pro</span>
-                <div class="prod-bar-track"><div class="prod-bar-fill" style="width:42%;background:#38BDF8"></div></div>
-                <b>150</b>
-              </div>
-            </div>
+            <div style="width:100%;overflow:hidden">${chart}</div>
           </div>
-
           <div class="w-card">
-            <div class="w-head">
-              <h3>${t('salesByProd')}</h3>
-            </div>
-            <div class="donut-wrap">
-              <div class="donut-legend">
-                <div class="legend-item"><span class="legend-name"><i class="dot" style="background:#6366F1"></i>Netflix</span><b>28%</b></div>
-                <div class="legend-item"><span class="legend-name"><i class="dot" style="background:#3B82F6"></i>Spotify</span><b>18%</b></div>
-                <div class="legend-item"><span class="legend-name"><i class="dot" style="background:#10B981"></i>ChatGPT</span><b>15%</b></div>
-                <div class="legend-item"><span class="legend-name"><i class="dot" style="background:#F59E0B"></i>Canva Pro</span><b>12%</b></div>
-                <div class="legend-item"><span class="legend-name"><i class="dot" style="background:#EC4899"></i>CapCut Pro</span><b>8%</b></div>
-                <div class="legend-item"><span class="legend-name"><i class="dot" style="background:#8B5CF6"></i>${t('other')}</span><b>19%</b></div>
-              </div>
-              <div class="donut-svg-box">
-                <svg viewBox="0 0 42 42" width="142" height="142">
-                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#6366F1" stroke-width="5.5" stroke-dasharray="28 72" stroke-dashoffset="25"></circle>
-                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#3B82F6" stroke-width="5.5" stroke-dasharray="18 82" stroke-dashoffset="97"></circle>
-                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#10B981" stroke-width="5.5" stroke-dasharray="15 85" stroke-dashoffset="79"></circle>
-                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#F59E0B" stroke-width="5.5" stroke-dasharray="12 88" stroke-dashoffset="64"></circle>
-                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#EC4899" stroke-width="5.5" stroke-dasharray="8 92" stroke-dashoffset="52"></circle>
-                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#8B5CF6" stroke-width="5.5" stroke-dasharray="19 81" stroke-dashoffset="44"></circle>
-                </svg>
-                <div class="donut-center">
-                  <b>${fmtNum(totalSalesVal)}</b>
-                  <small>${t('currency')}</small>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="w-card">
-            <div class="w-head">
-              <h3>${t('salesAndProfit')}</h3>
-              <div class="chart-tabs">
-                <button class="chart-tab ${chartTab==='sales'?'active':''}" onclick="chartTab='sales';renderApp()">${t('tabSales')}</button>
-                <button class="chart-tab ${chartTab==='profits'?'active':''}" onclick="chartTab='profits';renderApp()">${t('tabProfits')}</button>
-                <button class="chart-tab ${chartTab==='expenses'?'active':''}" onclick="chartTab='expenses';renderApp()">${t('tabExpenses')}</button>
-              </div>
-            </div>
-            <div style="width:100%;overflow:hidden">
-              <svg viewBox="0 0 460 175" width="100%" height="165">
-                <defs>
-                  <linearGradient id="purpGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.32"/>
-                    <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.0"/>
-                  </linearGradient>
-                  <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.26"/>
-                    <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.0"/>
-                  </linearGradient>
-                </defs>
-                <g stroke="currentColor" stroke-opacity="0.08" stroke-width="1">
-                  <line x1="35" y1="20" x2="445" y2="20"/>
-                  <line x1="35" y1="52" x2="445" y2="52"/>
-                  <line x1="35" y1="84" x2="445" y2="84"/>
-                  <line x1="35" y1="116" x2="445" y2="116"/>
-                  <line x1="35" y1="145" x2="445" y2="145"/>
-                </g>
-                <g fill="#94A3B8" font-size="9" font-weight="700">
-                  <text x="2" y="23">400K</text>
-                  <text x="2" y="55">300K</text>
-                  <text x="2" y="87">200K</text>
-                  <text x="2" y="119">100K</text>
-                  <text x="14" y="148">0</text>
-                </g>
-                <path d="M40,95 Q85,112 125,75 T210,70 T295,60 T375,45 L440,85 L440,145 L40,145 Z" fill="url(#purpGrad)"/>
-                <path d="M40,95 Q85,112 125,75 T210,70 T295,60 T375,45 L440,85" fill="none" stroke="#8B5CF6" stroke-width="2.5"/>
-                <path d="M40,122 Q85,130 125,105 T210,108 T295,92 T375,78 L440,105 L440,145 L40,145 Z" fill="url(#blueGrad)"/>
-                <path d="M40,122 Q85,130 125,105 T210,108 T295,92 T375,78 L440,105" fill="none" stroke="#3B82F6" stroke-width="2.5"/>
-                <g fill="#8B5CF6">
-                  <circle cx="40" cy="95" r="3"/><circle cx="125" cy="75" r="3"/><circle cx="210" cy="70" r="3"/><circle cx="295" cy="60" r="3"/><circle cx="375" cy="45" r="3.5"/><circle cx="440" cy="85" r="3"/>
-                </g>
-                <g fill="#3B82F6">
-                  <circle cx="40" cy="122" r="3"/><circle cx="125" cy="105" r="3"/><circle cx="210" cy="108" r="3"/><circle cx="295" cy="92" r="3"/><circle cx="375" cy="78" r="3"/><circle cx="440" cy="105" r="3"/>
-                </g>
-                <g fill="#94A3B8" font-size="8.5" font-weight="700" text-anchor="middle">
-                  <text x="50" y="162">1 مارس</text>
-                  <text x="115" y="162">5 مارس</text>
-                  <text x="180" y="162">10 مارس</text>
-                  <text x="245" y="162">15 مارس</text>
-                  <text x="310" y="162">20 مارس</text>
-                  <text x="375" y="162">25 مارس</text>
-                  <text x="430" y="162">30 مارس</text>
-                </g>
-              </svg>
-              <div style="display:flex;justify-content:center;gap:16px;font-size:11px;font-weight:800;margin-top:2px">
-                <span><i class="dot" style="background:#8B5CF6"></i>${t('tabSales')}</span>
-                <span><i class="dot" style="background:#3B82F6"></i>${t('tabProfits')}</span>
-              </div>
-            </div>
+            <div class="w-head"><h3>${t('topSelling')}</h3></div>
+            <div class="top-prod-list">${top.length ? top.map(x => `<div class="top-prod-row"><span class="prod-brand-ico" style="background:#4F46E5;color:#fff">${esc(String(x.name || '?')[0])}</span><span style="width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</span><div class="prod-bar-track"><div class="prod-bar-fill" style="width:${Math.round(x.qty / maxQ * 100)}%;background:#4F46E5"></div></div><b>${fmtNum(x.qty)}</b></div>`).join('') : `<p style="color:var(--mut)">${none}</p>`}</div>
           </div>
         </div>
-
         <div class="tables3-grid">
           <div class="w-card">
-            <div class="w-head">
-              <h3>${t('finStatus')}</h3>
-              <span>🛡️</span>
-            </div>
+            <div class="w-head"><h3>${t('finStatus')}</h3><span>🛡️</span></div>
             <div class="fin-rows">
-              <div class="fin-row"><span>${t('curBalance')}</span><b>1,250,000 ${t('currency')}</b></div>
-              <div class="fin-row"><span>${t('payBalances')}</span><b>820,000 ${t('currency')}</b></div>
-              <div class="fin-row"><span>${t('suppDebts')}</span><b>320,000 ${t('currency')}</b></div>
-              <div class="fin-row"><span>${t('custDebts')}</span><b>150,000 ${t('currency')}</b></div>
+              <div class="fin-row"><span>${t('curBalance')}</span><b>${fmt(F.balance)}</b></div>
+              <div class="fin-row"><span>${ar ? 'إجمالي المحصّل' : 'Total collected'}</span><b>${fmt(F.gateways)}</b></div>
+              <div class="fin-row"><span>${ar ? 'تكلفة الحسابات (الفترة)' : 'Accounts cost (period)'}</span><b>${fmt(S.costs)}</b></div>
             </div>
           </div>
-
           <div class="w-card">
-            <div class="w-head">
-              <h3>${t('latestOrders')}</h3>
-              <button style="font-size:11.5px;color:var(--pri2);font-weight:800" onclick="switchNav('orders')">${t('viewAll')} ‹</button>
-            </div>
-            <div class="table-scroll">
-              <table class="clean-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>${t('colCustomer')}</th>
-                    <th>${t('colProduct')}</th>
-                    <th>${t('colAmount')}</th>
-                    <th>${t('colStatus')}</th>
-                    <th>${t('colDate')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${liveOrders.map(o => {
-                    const cName = lang === 'en' && o.customerEn ? o.customerEn : o.customerName;
-                    const prodText = o.product ? (lang === 'en' ? o.productEn : o.product) : ((o.cartItems && o.cartItems[0]) ? `${o.cartItems[0].productName} -${o.cartItems[0].months} شهر` : 'Netflix');
-                    const pillCls = o.pill || (o.status === 'تم التسليم' ? 'ok' : o.status === 'مؤكد' ? 'pri' : o.status === 'ملغي' ? 'bad' : 'warn');
-                    const stText = o.statusLabelAr ? (lang === 'en' ? o.statusLabelEn : o.statusLabelAr) : o.status;
-                    const dt = o.date || new Date(o.createdAt || Date.now()).toLocaleDateString('en-CA').replace(/-/g, '/');
-                    return `
-                      <tr onclick="switchNav('orders')" style="cursor:pointer">
-                        <td><b>${esc(String(o.orderCode || '').replace(/^#?/, '#'))}</b></td>
-                        <td><span class="cust-cell"><span class="mini-av">${esc(String(cName || 'U')[0])}</span>${esc(cName)}</span></td>
-                        <td>${esc(prodText)}</td>
-                        <td><b>${fmt(o.totalPrice)}</b></td>
-                        <td><span class="st-pill ${pillCls}">${esc(stText)}</span></td>
-                        <td style="color:var(--mut)">${esc(dt)}</td>
-                      </tr>`;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
+            <div class="w-head"><h3>${t('latestOrders')}</h3><button style="font-size:11.5px;color:var(--pri2);font-weight:800" onclick="switchNav('orders')">${t('viewAll')} ‹</button></div>
+            <div class="table-scroll"><table class="clean-table">
+              <thead><tr><th>#</th><th>${t('colCustomer')}</th><th>${t('colProduct')}</th><th>${t('colAmount')}</th><th>${t('colStatus')}</th><th>${t('colDate')}</th></tr></thead>
+              <tbody>${orders.length ? orders.map(o => {
+                const it = (o.cartItems || [])[0];
+                const prod = it ? `${it.productName} - ${it.months} ${ar ? 'شهر' : 'mo'}${o.cartItems.length > 1 ? ` +${o.cartItems.length - 1}` : ''}` : '—';
+                const pill = o.status === 'تم التسليم' ? 'ok' : o.status === 'مؤكد' ? 'pri' : o.status === 'ملغي' ? 'bad' : 'warn';
+                return `<tr onclick="switchNav('orders')" style="cursor:pointer"><td><b>${esc(o.orderCode)}</b></td><td><span class="cust-cell"><span class="mini-av">${esc(String(o.customerName || 'U')[0])}</span>${esc(o.customerName)}</span></td><td>${esc(prod)}</td><td><b>${fmt(o.totalPrice)}</b></td><td><span class="st-pill ${pill}">${esc(o.status)}</span></td><td style="color:var(--mut)">${esc(new Date(o.createdAt).toLocaleDateString('en-CA').replace(/-/g, '/'))}</td></tr>`;
+              }).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--mut)">${none}</td></tr>`}</tbody>
+            </table></div>
           </div>
-
           <div class="w-card">
-            <div class="w-head">
-              <h3>${t('bestCustomers')}</h3>
-              <button style="font-size:11.5px;color:var(--pri2);font-weight:800" onclick="switchNav('customers')">${t('viewAll')} ‹</button>
-            </div>
-            <div class="table-scroll">
-              <table class="clean-table">
-                <thead>
-                  <tr>
-                    <th>${t('colCustomer')}</th>
-                    <th>${t('colTotalPurchases')}</th>
-                    <th>${t('colOrdersCount')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${liveCustomers.map((c, idx) => {
-                    const nm = lang === 'en' && c.nameEn ? c.nameEn : c.name;
-                    const spent = c.spent || (c.balance ? c.balance * 10 : 45000 - idx * 5000);
-                    const ordCnt = c.orders || (12 - idx * 2);
-                    return `
-                      <tr onclick="switchNav('customers')" style="cursor:pointer">
-                        <td>
-                          <span class="cust-cell">
-                            ${idx < 2 ? '<span style="color:#F59E0B">★</span>' : '<span style="color:#CBD5E1">★</span>'}
-                            <span class="mini-av">${esc(String(nm || 'C')[0])}</span>
-                            <b>${esc(nm)}</b>
-                          </span>
-                        </td>
-                        <td><b>${fmt(spent)}</b></td>
-                        <td style="text-align:center"><b>${ordCnt}</b></td>
-                      </tr>`;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
+            <div class="w-head"><h3>${t('bestCustomers')}</h3><button style="font-size:11.5px;color:var(--pri2);font-weight:800" onclick="switchNav('customers')">${t('viewAll')} ‹</button></div>
+            <div class="table-scroll"><table class="clean-table">
+              <thead><tr><th>${t('colCustomer')}</th><th>${t('colTotalPurchases')}</th><th>${t('colOrdersCount')}</th></tr></thead>
+              <tbody>${tc.length ? tc.map(c => `<tr onclick="switchNav('customers')" style="cursor:pointer"><td><span class="cust-cell"><span class="mini-av">${esc(String(c.name || 'C')[0])}</span><b>${esc(c.name)}</b></span></td><td><b>${fmt(c.spent)}</b></td><td style="text-align:center"><b>${fmtNum(c.orders)}</b></td></tr>`).join('') : `<tr><td colspan="3" style="text-align:center;color:var(--mut)">${none}</td></tr>`}</tbody>
+            </table></div>
           </div>
         </div>
-
-        <div class="bottom4-grid">
-          <div class="mini-high-card">
-            <div style="width:100%">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                <b style="font-size:13px">${t('impAlerts')}</b>
-                <span style="color:#F59E0B">🔔</span>
-              </div>
-              <div style="font-size:11.5px;font-weight:700;color:var(--mut);display:flex;flex-direction:column;gap:4px">
-                <span>🟡 ${t('impAlert1')}</span>
-                <span>🔴 ${t('impAlert2')}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="mini-high-card">
-            <div>
-              <div style="font-size:12.5px;font-weight:800;color:var(--mut)">${t('topCampaigns')}</div>
-              <div style="font-size:14px;font-weight:900;margin-top:4px">${t('ramadanCamp')}</div>
-              <div style="font-size:12px;font-weight:800;color:#7C3AED">ROAS 4.8</div>
-            </div>
-            <div class="detail-stat-ico" style="background:rgba(245,158,11,0.12);color:#D97706">📢</div>
-          </div>
-
-          <div class="mini-high-card">
-            <div>
-              <div style="font-size:12.5px;font-weight:800;color:var(--mut)">${t('topSources')}</div>
-              <div style="font-size:14px;font-weight:900;margin-top:4px">${t('website')}</div>
-              <div style="font-size:13px;font-weight:900;color:#2563EB">65%</div>
-            </div>
-            <div class="detail-stat-ico" style="background:rgba(59,130,246,0.12);color:#2563EB">🌐</div>
-          </div>
-
-          <div class="mini-high-card">
-            <div>
-              <div style="font-size:12.5px;font-weight:800;color:var(--mut)">${t('mostProfitable')}</div>
-              <div style="font-size:14px;font-weight:900;margin-top:4px">ChatGPT</div>
-              <div style="font-size:12px;font-weight:800;color:#10B981">68% ${t('margin')}</div>
-            </div>
-            <div class="detail-stat-ico" style="background:rgba(16,185,129,0.12);color:#10B981">🤖</div>
-          </div>
-        </div>
-
       </div>
-
       <div class="dash-side-col">
         <div class="w-card">
-          <div class="w-head">
-            <h3>${t('latestAlerts')}</h3>
-            <span style="color:#EF4444">🔔</span>
-          </div>
-          <div class="notif-list">
-            <div class="notif-item">
-              <div class="notif-ico" style="background:#FEF3C7;color:#D97706">🔔</div>
-              <div class="notif-text">
-                <b>${lang==='ar'?'اشتراكين على وشك الانتهاء خلال 3 أيام.':'2 subscriptions expiring in 3 days.'}</b>
-                <small>${lang==='ar'?'منذ ساعة':'1 hour ago'}</small>
-              </div>
-            </div>
-            <div class="notif-item">
-              <div class="notif-ico" style="background:#FEE2E2;color:#DC2626">🔔</div>
-              <div class="notif-text">
-                <b>${lang==='ar'?'انخفاض المخزون لمنتج Netflix':'Low stock alert for Netflix'}</b>
-                <small>${lang==='ar'?'منذ ساعتين':'2 hours ago'}</small>
-              </div>
-            </div>
-            <div class="notif-item">
-              <div class="notif-ico" style="background:#DCFCE7;color:#16A34A">🛒</div>
-              <div class="notif-text">
-                <b>${lang==='ar'?'طلب جديد رقم #1024':'New order #1024 received'}</b>
-                <small>${lang==='ar'?'منذ 3 ساعات':'3 hours ago'}</small>
-              </div>
-            </div>
-            <div class="notif-item">
-              <div class="notif-ico" style="background:#FEF3C7;color:#D97706">🔔</div>
-              <div class="notif-text">
-                <b>${lang==='ar'?'دفع محقق من عميل جديد':'Verified payment from new customer'}</b>
-                <small>${lang==='ar'?'منذ 5 ساعات':'5 hours ago'}</small>
-              </div>
-            </div>
-            <div class="notif-item">
-              <div class="notif-ico" style="background:#EDE9FE;color:#7C3AED">🎧</div>
-              <div class="notif-text">
-                <b>${lang==='ar'?'تذكرة دعم جديدة من العميل #784':'New support ticket from #784'}</b>
-                <small>${lang==='ar'?'منذ 6 ساعات':'6 hours ago'}</small>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="w-card">
-          <div class="w-head">
-            <h3>${t('finStatus')}</h3>
-            <span style="color:#6366F1">👛</span>
-          </div>
-          <div class="fin-rows">
-            <div class="fin-row"><span>${t('curBalance')}</span><b>1,250,000 ${t('currency')}</b></div>
-            <div class="fin-row"><span>${t('payBalances')}</span><b>820,000 ${t('currency')}</b></div>
-            <div class="fin-row"><span>${t('suppDebts')}</span><b>320,000 ${t('currency')}</b></div>
-            <div class="fin-row"><span>${t('custDebts')}</span><b>150,000 ${t('currency')}</b></div>
-            <div class="fin-bar"><div></div></div>
-            <div class="fin-row"><span style="color:#0D9488;font-weight:800">${t('expProfitMonth')}</span><b style="color:#0D9488">620,000 ${t('currency')}</b></div>
-          </div>
-        </div>
-
-        <div class="promo-card">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-            <div class="promo-floating-icons" style="flex:1">
-              <div class="fl-ico" style="width:42px;height:42px;background:#111;color:#E50914;top:4px;inset-inline-start:8px;transform:rotate(-12deg);font-size:20px">N</div>
-              <div class="fl-ico" style="width:38px;height:38px;background:#1DB954;top:14px;inset-inline-start:58px;transform:rotate(10deg);font-size:17px">S</div>
-              <div class="fl-ico" style="width:44px;height:44px;background:#10A37F;top:48px;inset-inline-start:18px;transform:rotate(6deg);font-size:16px">AI</div>
-              <div class="fl-ico" style="width:38px;height:38px;background:#00C4CC;top:52px;inset-inline-start:72px;transform:rotate(-8deg);font-size:15px">C</div>
-            </div>
-            <div style="text-align:end">
-              ${oviraLogoSvg('sm')}
-              <p style="font-size:11.5px;color:#CBD5E1;margin-top:6px;line-height:1.4">${t('promoText')}</p>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:flex-end;margin-top:12px">
-            <button class="promo-btn" onclick="switchNav('stock')">${t('viewProducts')}</button>
-          </div>
+          <div class="w-head"><h3>${t('latestAlerts')}</h3><span style="color:#EF4444">🔔</span></div>
+          <div class="notif-list">${al.length ? al.map(a => `<div class="notif-item"><div class="notif-ico" style="background:${a[0]};color:${a[1]}">🔔</div><div class="notif-text"><b>${a[2]}</b></div></div>`).join('') : `<p style="color:var(--mut);padding:8px 0">${ar ? 'لا توجد تنبيهات ✅' : 'No alerts ✅'}</p>`}</div>
         </div>
       </div>
     </div>
@@ -2049,7 +1611,7 @@ function renderOrdersTab(d) {
     ['ملغي', '', '🔴 ملغي']
   ];
   const times = [[0, 'كل الأوقات'], [1, 'اليوم'], [7, '7 أيام'], [30, '30 يومًا']];
-  const ordersArr = (d.orders && d.orders.length) ? d.orders : (isDemoMode ? REF_ORDERS : []);
+  const ordersArr = d.orders || [];
 
   const list = ordersArr.map(o => {
     const creds = o.delivery && o.delivery.credentials ? o.delivery.credentials : '';
@@ -2236,8 +1798,8 @@ function renderRenewalsTab(d) {
 }
 
 function renderFinanceTab(d) {
-  const fin = d.financials || { totalRevenue: 1356750, totalCost: 320000, netProfit: 482650 };
-  const att = d.attention || { awaiting: 4, late: 2, expiringOrders: 3 };
+  const fin = d.financials || { totalRevenue: 0, totalCost: 0, netProfit: 0 };
+  const att = d.attention || { awaiting: 0, late: 0 };
 
   return `
     <div class="sub-bar">
@@ -2255,14 +1817,14 @@ function renderFinanceTab(d) {
       <div class="table-scroll">
         <table class="clean-table">
           <thead><tr><th>المنتج</th><th>الكمية</th><th>الإيرادات</th></tr></thead>
-          <tbody>${(d.top && d.top.length ? d.top : [{_id:'Netflix',qty:320,revenue:420000},{_id:'Spotify',qty:245,revenue:280000},{_id:'ChatGPT',qty:210,revenue:250000}]).map(x => `<tr><td><b>${esc(x._id)}</b></td><td>${x.qty}</td><td><b>${fmt(x.revenue)}</b></td></tr>`).join('')}</tbody>
+          <tbody>${(d.top || []).map(x => `<tr><td><b>${esc(x._id)}</b></td><td>${x.qty}</td><td><b>${fmt(x.revenue)}</b></td></tr>`).join('')}</tbody>
         </table>
       </div>
     </div>`;
 }
 
 function renderManageTab(d) {
-  const custList = (d.customers && d.customers.length) ? d.customers : REF_CUSTOMERS;
+  const custList = d.customers || [];
   return `
     <div class="sub-bar">
       <div class="page-title"><h1>⚙️ ${t('nav_customers')} & ${t('nav_settings')}</h1></div>
@@ -2333,7 +1895,7 @@ function renderManageTab(d) {
 }
 
 function renderApp() {
-  if (!token && !isDemoMode) return renderLogin();
+  if (!token) return renderLogin();
 
   let mainViewHtml = '';
   if (activeNav === 'dashboard') mainViewHtml = renderDashboardView();
@@ -2421,12 +1983,6 @@ function viewReceipt(fileId, code) {
 }
 
 async function upStatus(id, status) {
-  if (isDemoMode) {
-    const item = REF_ORDERS.find(x => x._id === id);
-    if (item) item.status = status;
-    renderApp();
-    return;
-  }
   await fetch(`${API}/orders/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -2437,7 +1993,6 @@ async function upStatus(id, status) {
 
 async function saveNote(id) {
   const adminNote = document.getElementById('nt_' + id).value;
-  if (isDemoMode) return alert('تم حفظ الملاحظة');
   await fetch(`${API}/orders/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
