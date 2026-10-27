@@ -1,0 +1,532 @@
+const API = 'https://ovira-api.onrender.com/api/admin';
+let token = sessionStorage.getItem('adm_tk') || '';
+let tab = 'orders', stFilter = '', qFilter = '', compFilter = '';
+let openComplaintsCount = 0;
+
+const COL = {
+  'قيد المراجعة': '#F59E0B',
+  'مؤكد': '#1E40AF',
+  'تم التسليم': '#16A34A',
+  'ملغي': '#EF4444'
+};
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
+const fmt = (n) => Number(n || 0).toLocaleString('en-US') + ' DA';
+
+let tt;
+function toast(msg) {
+  const el = document.getElementById('admToast');
+  if (!el) return alert(msg);
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(tt);
+  tt = setTimeout(() => el.classList.remove('on'), 2600);
+}
+
+function renderLogin(err = '') {
+  document.getElementById('root').innerHTML = `
+    <div class="card login-box">
+      <h1>🔒 لوحة الإدارة</h1>
+      <p>OVIRA PLAY — تسجيل الدخول المحمي</p>
+      <label class="lbl">البريد الإلكتروني</label>
+      <input class="inp" id="em" type="email" dir="ltr" placeholder="admin@ovira">
+      <label class="lbl">كلمة السر</label>
+      <input class="inp" id="pw" type="password" dir="ltr" placeholder="••••••••">
+      <button class="btn-pri" onclick="doLogin()">تسجيل الدخول</button>
+      ${err ? `<div class="err-msg">${esc(err)}</div>` : ''}
+    </div>`;
+}
+
+async function doLogin() {
+  const email = document.getElementById('em').value.trim();
+  const password = document.getElementById('pw').value;
+  if (!email || !password) return renderLogin('أدخل البريد الإلكتروني وكلمة السر.');
+  try {
+    const r = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success || !d.token) return renderLogin(d.message || 'بيانات الدخول غير صحيحة.');
+    token = d.token;
+    sessionStorage.setItem('adm_tk', token);
+    loadPanel();
+  } catch (e) {
+    renderLogin('تعذّر الاتصال بالخادم، تأكد أن السيرفر يعمل.');
+  }
+}
+
+function logout() {
+  token = '';
+  sessionStorage.removeItem('adm_tk');
+  renderLogin();
+}
+
+async function loadPanel() {
+  if (!token) return renderLogin();
+
+  let endpoint = '';
+  const params = new URLSearchParams();
+
+  if (tab === 'orders') {
+    if (stFilter) params.set('status', stFilter);
+    if (qFilter) params.set('q', qFilter);
+    endpoint = 'orders?' + params.toString();
+  } else if (tab === 'complaints') {
+    if (compFilter) params.set('status', compFilter);
+    endpoint = 'complaints?' + params.toString();
+  } else if (tab === 'customers') {
+    if (qFilter) params.set('q', qFilter);
+    endpoint = 'customers?' + params.toString();
+  } else {
+    endpoint = 'settings';
+  }
+
+  try {
+    const r = await fetch(`${API}/${endpoint}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (r.status === 401 || r.status === 403) return logout();
+    const d = await r.json();
+    if (!d.success) return logout();
+    if (typeof d.openComplaints === 'number') openComplaintsCount = d.openComplaints;
+    renderMain(d);
+  } catch (e) {
+    renderLogin('تعذّر الاتصال بالخادم.');
+  }
+}
+
+function renderMain(d) {
+  let content = '';
+
+  // ==================== 1. تبويب الطلبات وتسليم الشاشات ====================
+  if (tab === 'orders') {
+    const statuses = ['', 'قيد المراجعة', 'مؤكد', 'تم التسليم', 'ملغي'];
+    const list = (d.orders || []).map((o) => {
+      const pd = o.paymentDetails || {};
+      const da = o.deliveredAccount || {};
+      return `
+      <div class="card">
+        <div class="ord-head">
+          <span class="badge" style="background:${COL[o.status] || '#666'}">${esc(o.status)}</span>
+          <b style="font-size:17px" dir="ltr">${esc(o.orderCode)} ${o.isPaidOnline ? '⚡' : ''} ${o.telegram ? '📲' : ''}</b>
+        </div>
+        <div class="meta">🕒 تاريخ الطلب: ${new Date(o.createdAt).toLocaleString('fr-DZ')}</div>
+
+        <div class="cust-box">
+          <div>👤 <b>الاسم:</b> ${esc(o.customerName)}</div>
+          <div>📱 <b>واتساب:</b> <a href="https://wa.me/213${esc(String(o.whatsappNumber || '').replace(/^0/, ''))}" target="_blank" dir="ltr">${esc(o.whatsappNumber)} 💬</a></div>
+          ${o.customerEmail ? `<div>📧 <b>الإيميل الشخصي:</b> <span dir="ltr">${esc(o.customerEmail)}</span></div>` : ''}
+        </div>
+
+        <div class="items">
+          ${o.cartItems.map((i) => `• ${esc(i.productName)} — ${i.months} شهر × ${i.quantity}`).join('<br>')}
+        </div>
+
+        <div class="tot-row">
+          <span>${fmt(o.totalPrice)}</span>
+          <span style="color:var(--mut);font-size:14px">${esc(o.paymentMethod)}</span>
+        </div>
+
+        ${o.isPaidOnline && pd.paidAtFormatted ? `
+        <div class="chargily-receipt">
+          <b class="title">⚡ تفاصيل وصل الدفع الإلكتروني المؤكّد:</b>
+          <div>• المبلغ المدفوع: <b>${fmt(pd.amountPaid || o.totalPrice)}</b> (${esc(pd.paymentMethodUsed || 'Chargily Pay')})</div>
+          <div>• وقت الدفع: <b dir="ltr">${esc(pd.paidAtFormatted)}</b></div>
+          <div>• اسم الدافع: ${esc(pd.payerName || o.customerName)} | الإيميل: ${esc(pd.payerEmail || o.customerEmail || '—')}</div>
+          ${pd.transactionId ? `<div>• مرجع العملية: <code dir="ltr">${esc(pd.transactionId)}</code></div>` : ''}
+        </div>` : ''}
+
+        <!-- صندوق تسليم الحساب واسم الشاشة وكود PIN -->
+        <div class="deliver-box">
+          <h4>🔑 تسليم الحساب والشاشة للعميل (يُرسل تلقائياً لتيليغرام والموقع)</h4>
+          <label class="lbl">بيانات الحساب (البريد وكلمة المرور) *</label>
+          <input class="inp" id="dlv_cred_${o._id}" dir="ltr" value="${esc(da.credentials || '')}" placeholder="email@domain.com : password123">
+          <div class="grid-2">
+            <div>
+              <label class="lbl">👤 اسم الشاشة (Profile Name)</label>
+              <input class="inp" id="dlv_prof_${o._id}" value="${esc(da.profileName || '')}" placeholder="مثال: الشاشة 2 - باسم العميل">
+            </div>
+            <div>
+              <label class="lbl">🔢 كود الشاشة (PIN Code)</label>
+              <input class="inp" id="dlv_pin_${o._id}" dir="ltr" value="${esc(da.pinCode || '')}" placeholder="مثال: 4455">
+            </div>
+          </div>
+          <label class="lbl">📌 ملاحظة أو تعليمات إضافية للزبون (اختياري)</label>
+          <input class="inp" id="dlv_note_${o._id}" value="${esc(da.extraNote || '')}" placeholder="مثال: ممنوع تغيير كلمة السر أو الدخول لشاشة أخرى">
+          <button class="btn-ok" onclick="deliverAccount('${o._id}')">🚀 حفظ وتسليم الحساب للعميل الآن</button>
+        </div>
+
+        <div class="note-row">
+          <button class="btn-sm" onclick="saveNote('${o._id}')">حفظ الملاحظة</button>
+          <input class="inp" id="nt_${o._id}" value="${esc(o.adminNote || '')}" placeholder="ملاحظة إدارية داخلية..." style="padding:8px 12px">
+        </div>
+
+        <div class="actions">
+          <button class="act-btn ok" onclick="upStatus('${o._id}','تم التسليم')">تم التسليم</button>
+          <button class="act-btn pri" onclick="upStatus('${o._id}','مؤكد')">مؤكد</button>
+          <button class="act-btn warn" onclick="upStatus('${o._id}','قيد المراجعة')">مراجعة</button>
+          <button class="act-btn bad" onclick="upStatus('${o._id}','ملغي')">ملغي</button>
+        </div>
+        <button class="btn-sm" style="margin-top:8px;color:var(--bad);width:100%" onclick="delOrder('${o._id}')">🗑️ حذف الطلب نهائياً</button>
+      </div>`;
+    }).join('');
+
+    content = `
+      <div class="chips">
+        ${statuses.map((s) => `<button class="chip ${stFilter === s ? 'on' : ''}" onclick="stFilter='${s}';loadPanel()">${s || 'كل الطلبات'}</button>`).join('')}
+      </div>
+      <div class="search-row">
+        <input class="inp" placeholder="ابحث بالاسم أو الهاتف أو الإيميل أو رمز الطلب..." value="${esc(qFilter)}" onchange="qFilter=this.value;loadPanel()">
+        <button class="btn-sm" onclick="loadPanel()">بحث</button>
+      </div>
+      ${list || '<div class="card" style="text-align:center">لا توجد طلبات مطابقة حالياً</div>'}`;
+  }
+
+  // ==================== 2. تبويب شكاوى الزبائن ====================
+  else if (tab === 'complaints') {
+    const cStatuses = ['', 'مفتوحة', 'تم الرد', 'مغلقة'];
+    const cList = (d.complaints || []).map((c) => `
+      <div class="card">
+        <div class="ord-head">
+          <span class="badge" style="background:${c.status === 'مفتوحة' ? '#EF4444' : c.status === 'تم الرد' ? '#16A34A' : '#66708A'}">${esc(c.status)}</span>
+          <b dir="ltr">${esc(c.ticketCode)} ${c.orderCode ? `· الطلب: ${esc(c.orderCode)}` : ''}</b>
+        </div>
+        <div class="meta">🕒 ${new Date(c.createdAt).toLocaleString('fr-DZ')}</div>
+        <div class="cust-box">
+          <div>👤 <b>العميل:</b> ${esc(c.customerName)}</div>
+          <div>📱 <b>واتساب:</b> <a href="https://wa.me/213${esc(String(c.whatsappNumber || '').replace(/^0/, ''))}" target="_blank" dir="ltr">${esc(c.whatsappNumber)} 💬</a></div>
+          ${c.customerEmail ? `<div>📧 <b>الإيميل:</b> ${esc(c.customerEmail)}</div>` : ''}
+        </div>
+        <div class="items">
+          <div style="color:var(--pri2);margin-bottom:4px">📌 الموضوع: ${esc(c.subject)}</div>
+          <div style="font-weight:600">${esc(c.message)}</div>
+        </div>
+        <label class="lbl">💬 رد الإدارة (يصل للزبون في تيليغرام وفي حسابه بالموقع)</label>
+        <textarea class="inp" id="crep_${c._id}" placeholder="اكتب ردك لحل مشكلة العميل...">${esc(c.adminReply || '')}</textarea>
+        <div class="grid-2" style="margin-top:8px">
+          <button class="btn-pri" style="margin:0" onclick="replyComplaint('${c._id}','تم الرد')">إرسال الرد للعميل</button>
+          <button class="btn-sm" onclick="replyComplaint('${c._id}','مغلقة')">🔒 إغلاق التذكرة</button>
+        </div>
+      </div>`).join('');
+
+    content = `
+      <div class="chips">
+        ${cStatuses.map((s) => `<button class="chip ${compFilter === s ? 'on' : ''}" onclick="compFilter='${s}';loadPanel()">${s || 'كل الشكاوى'}</button>`).join('')}
+      </div>
+      ${cList || '<div class="card" style="text-align:center">لا توجد شكاوى أو تذاكر دعم حالياً</div>'}`;
+  }
+
+  // ==================== 3. تبويب الزبائن وإدارة أرصدتهم ====================
+  else if (tab === 'customers') {
+    const custList = (d.customers || []).map((c) => `
+      <div class="card">
+        <div class="ord-head">
+          <div>
+            <b style="font-size:16px">${esc(c.name)}</b>
+            ${c.blocked ? '<span class="badge" style="background:var(--bad);margin-right:6px">محظور</span>' : ''}
+          </div>
+          <span class="wallet-badge">💰 الرصيد: ${fmt(c.balance || 0)}</span>
+        </div>
+        <div class="cust-box">
+          <div>📱 <b>الهاتف:</b> <a href="https://wa.me/213${esc(String(c.phone || '').replace(/^0/, ''))}" target="_blank" dir="ltr">${esc(c.phone)}</a></div>
+          <div>📧 <b>الإيميل:</b> <span dir="ltr">${esc(c.email || 'غير محدد')}</span></div>
+          <div>📦 <b>عدد الطلبات:</b> ${c.ordersCount || 0} طلب · <b>إجمالي المشتريات:</b> ${fmt(c.totalSpent || 0)}</div>
+        </div>
+
+        <div class="grid-2" style="margin-top:10px">
+          <div>
+            <label class="lbl">💰 تحديد الرصيد الجديد (DA)</label>
+            <div style="display:flex;gap:6px">
+              <input class="inp" id="bal_${c._id}" type="number" dir="ltr" value="${c.balance || 0}">
+              <button class="btn-sm" style="background:var(--ok);color:#fff" onclick="setCustBalance('${c._id}')">حفظ الرصيد</button>
+            </div>
+          </div>
+          <div>
+            <label class="lbl">🔑 تعيين كلمة سر جديدة للزبون</label>
+            <div style="display:flex;gap:6px">
+              <input class="inp" id="cpw_${c._id}" type="text" dir="ltr" placeholder="6 أحرف فأكثر">
+              <button class="btn-sm" onclick="setCustPass('${c._id}')">تحديث</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn-sm" onclick="addQuickBalance('${c._id}', 500)">+500 DA</button>
+          <button class="btn-sm" onclick="addQuickBalance('${c._id}', 1000)">+1000 DA</button>
+          <button class="btn-sm" onclick="addQuickBalance('${c._id}', -500)">-500 DA</button>
+          <button class="btn-sm" style="margin-inline-start:auto;color:${c.blocked ? 'var(--ok)' : 'var(--bad)'}" onclick="toggleBlockCust('${c._id}', ${!c.blocked})">
+            ${c.blocked ? '✅ فك الحظر' : '🚫 حظر الحساب'}
+          </button>
+        </div>
+      </div>`).join('');
+
+    content = `
+      <div class="card">
+        <h3>➕ إضافة حساب زبون جديد / شحن رصيد ابتدائي</h3>
+        <div class="grid-2">
+          <div>
+            <label class="lbl">الاسم الكامل *</label>
+            <input class="inp" id="nc_name" placeholder="اسم الزبون">
+          </div>
+          <div>
+            <label class="lbl">رقم الهاتف *</label>
+            <input class="inp" id="nc_phone" dir="ltr" placeholder="05XX XX XX XX">
+          </div>
+          <div>
+            <label class="lbl">البريد الإلكتروني</label>
+            <input class="inp" id="nc_email" dir="ltr" placeholder="client@gmail.com">
+          </div>
+          <div>
+            <label class="lbl">الرصيد الابتدائي (DA)</label>
+            <input class="inp" id="nc_bal" type="number" dir="ltr" value="0">
+          </div>
+        </div>
+        <label class="lbl">كلمة سر الحساب (6 أحرف فأكثر)</label>
+        <input class="inp" id="nc_pass" dir="ltr" placeholder="••••••••">
+        <button class="btn-pri" onclick="createCustomer()">إضافة الزبون وحفظ الرصيد</button>
+      </div>
+
+      <div class="search-row">
+        <input class="inp" placeholder="ابحث عن زبون بالاسم أو الهاتف أو الإيميل..." value="${esc(qFilter)}" onchange="qFilter=this.value;loadPanel()">
+        <button class="btn-sm" onclick="loadPanel()">بحث</button>
+      </div>
+      ${custList || '<div class="card" style="text-align:center">لا يوجد زبائن مسجلون حالياً</div>'}`;
+  }
+
+  // ==================== 4. تبويب إعدادات شارجيلي والأمان ====================
+  else if (tab === 'settings') {
+    const ch = d.chargily || {};
+    content = `
+      <div class="card">
+        <h3>⚡ إعدادات الدفع التلقائي (Chargily Pay V2)</h3>
+        <label class="lbl">وضع التشغيل الحالي</label>
+        <select class="inp" id="ch_mode">
+          <option value="test" ${ch.mode === 'test' ? 'selected' : ''}>🧪 وضع التجربة (Test Mode)</option>
+          <option value="live" ${ch.mode === 'live' ? 'selected' : ''}>🟢 الوضع الحقيقي (Live Mode)</option>
+        </select>
+
+        <label class="lbl">رابط الـ Webhook (انسخه وضعه في لوحة شارجيلي)</label>
+        <input class="inp" dir="ltr" readonly value="${esc(ch.webhookUrl || '')}" onclick="this.select()">
+
+        <hr style="margin:16px 0;border:0;border-top:1px solid var(--line)">
+        <h4>🧪 مفاتيح وضع التجربة (Test Keys)</h4>
+        <label class="lbl">المفتاح العام التجريبي (Test Public Key)</label>
+        <input class="inp" id="ch_tpk" dir="ltr" value="${esc(ch.testPublicKey || '')}">
+        <label class="lbl">المفتاح السري التجريبي (Test Secret Key)</label>
+        <input class="inp" id="ch_tsk" dir="ltr" value="${esc(ch.testSecretKey || '')}" placeholder="test_sk_...">
+
+        <hr style="margin:16px 0;border:0;border-top:1px solid var(--line)">
+        <h4>🟢 مفاتيح الوضع الحقيقي (Live Keys)</h4>
+        <label class="lbl">المفتاح العام الحقيقي (Live Public Key)</label>
+        <input class="inp" id="ch_lpk" dir="ltr" value="${esc(ch.livePublicKey || '')}" placeholder="live_pk_...">
+        <label class="lbl">المفتاح السري الحقيقي (Live Secret Key)</label>
+        <input class="inp" id="ch_lsk" dir="ltr" value="${esc(ch.liveSecretKey || '')}" placeholder="live_sk_...">
+
+        <button class="btn-pri" onclick="saveChargily()">💾 حفظ إعدادات ومفاتيح شارجيلي</button>
+      </div>
+
+      <div class="card">
+        <h3>🔑 تغيير البريد الإلكتروني وكلمة السر للمدير</h3>
+        <label class="lbl">البريد الإلكتروني الجديد</label>
+        <input class="inp" id="new_em" dir="ltr" placeholder="admin@rioxstore.shop">
+        <label class="lbl">كلمة السر الجديدة (6 أحرف فأكثر)</label>
+        <input class="inp" id="new_pw" type="password" dir="ltr" placeholder="••••••••">
+        <button class="btn-pri" onclick="saveCreds()">تحديث بيانات الدخول</button>
+      </div>
+
+      <div class="card">
+        <h3>🧹 تصفية وتنظيف قاعدة البيانات</h3>
+        <p style="font-size:13px;color:var(--mut);margin:8px 0">لحذف أي حسابات مدراء وهمية أو مسح الطلبات التجريبية السابقة والبدء بقاعدة بيانات نظيفة.</p>
+        <button class="btn-bad" onclick="cleanDb(false)">حذف المدراء الوهميين فقط</button>
+        <button class="btn-bad" onclick="cleanDb(true)">تصفير شامل (حذف الطلبات التجريبية + الشكاوى + المدراء الوهميين)</button>
+      </div>`;
+  }
+
+  document.getElementById('root').innerHTML = `
+    <div class="top-bar">
+      <button class="btn-sm" onclick="logout()">خروج 🔒</button>
+      <button class="btn-sm" onclick="loadPanel()">تحديث 🔄</button>
+      <h2>لوحة إدارة OVIRA PLAY</h2>
+    </div>
+    <div class="tabs">
+      <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';qFilter='';loadPanel()">📋 الطلبات</button>
+      <button class="tab ${tab === 'complaints' ? 'on' : ''}" onclick="tab='complaints';loadPanel()">🎫 الشكاوى ${openComplaintsCount ? `<span class="badge-cnt">${openComplaintsCount}</span>` : ''}</button>
+      <button class="tab ${tab === 'customers' ? 'on' : ''}" onclick="tab='customers';qFilter='';loadPanel()">👥 الزبائن والأرصدة</button>
+      <button class="tab ${tab === 'settings' ? 'on' : ''}" onclick="tab='settings';loadPanel()">⚙️ الإعدادات</button>
+    </div>
+    ${content}`;
+}
+
+// ==================== العمليات والإجراءات ====================
+
+async function deliverAccount(orderId) {
+  const credentials = document.getElementById('dlv_cred_' + orderId).value.trim();
+  const profileName = document.getElementById('dlv_prof_' + orderId).value.trim();
+  const pinCode = document.getElementById('dlv_pin_' + orderId).value.trim();
+  const extraNote = document.getElementById('dlv_note_' + orderId).value.trim();
+
+  if (!credentials) return toast('أدخل بيانات الحساب (الإيميل وكلمة السر) أولاً');
+
+  const r = await fetch(`${API}/orders/${orderId}/deliver`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ credentials, profileName, pinCode, extraNote })
+  });
+  const d = await r.json();
+  toast(d.message || 'تم تسليم الحساب بنجاح ✓');
+  loadPanel();
+}
+
+async function upStatus(id, status) {
+  await fetch(`${API}/orders/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ status })
+  });
+  toast('تم تحديث الحالة ✓');
+  loadPanel();
+}
+
+async function saveNote(id) {
+  const adminNote = document.getElementById('nt_' + id).value;
+  await fetch(`${API}/orders/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ adminNote })
+  });
+  toast('تم حفظ الملاحظة ✓');
+  loadPanel();
+}
+
+async function delOrder(id) {
+  if (!confirm('هل أنت متأكد من حذف هذا الطلب نهائياً؟')) return;
+  await fetch(`${API}/orders/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  toast('تم حذف الطلب');
+  loadPanel();
+}
+
+async function replyComplaint(id, status) {
+  const reply = document.getElementById('crep_' + id).value.trim();
+  const r = await fetch(`${API}/complaints/${id}/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ reply, status })
+  });
+  const d = await r.json();
+  toast(d.message || 'تم التحديث ✓');
+  loadPanel();
+}
+
+async function createCustomer() {
+  const payload = {
+    name: document.getElementById('nc_name').value.trim(),
+    phone: document.getElementById('nc_phone').value.trim(),
+    email: document.getElementById('nc_email').value.trim(),
+    balance: Number(document.getElementById('nc_bal').value || 0),
+    password: document.getElementById('nc_pass').value
+  };
+  const r = await fetch(`${API}/customers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(payload)
+  });
+  const d = await r.json();
+  toast(d.message || 'تمت العملية');
+  if (d.success) loadPanel();
+}
+
+async function setCustBalance(id) {
+  const exactBalance = Number(document.getElementById('bal_' + id).value || 0);
+  const r = await fetch(`${API}/customers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ exactBalance })
+  });
+  const d = await r.json();
+  toast(d.message || 'تم تحديث الرصيد ✓');
+  loadPanel();
+}
+
+async function addQuickBalance(id, balanceDelta) {
+  const r = await fetch(`${API}/customers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ balanceDelta })
+  });
+  const d = await r.json();
+  toast(d.message || 'تم تعديل الرصيد ✓');
+  loadPanel();
+}
+
+async function setCustPass(id) {
+  const newPassword = document.getElementById('cpw_' + id).value;
+  if (!newPassword || newPassword.length < 6) return toast('كلمة السر يجب أن تكون 6 أحرف على الأقل');
+  const r = await fetch(`${API}/customers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ newPassword })
+  });
+  const d = await r.json();
+  toast(d.message || 'تم تحديث كلمة سر الزبون ✓');
+  loadPanel();
+}
+
+async function toggleBlockCust(id, blocked) {
+  const r = await fetch(`${API}/customers/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ blocked })
+  });
+  const d = await r.json();
+  toast(d.message || 'تم التحديث ✓');
+  loadPanel();
+}
+
+async function saveChargily() {
+  const payload = {
+    mode: document.getElementById('ch_mode').value,
+    testPublicKey: document.getElementById('ch_tpk').value,
+    testSecretKey: document.getElementById('ch_tsk').value,
+    livePublicKey: document.getElementById('ch_lpk').value,
+    liveSecretKey: document.getElementById('ch_lsk').value
+  };
+  const r = await fetch(`${API}/settings/chargily`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(payload)
+  });
+  const d = await r.json();
+  toast(d.message || 'تم حفظ إعدادات شارجيلي ✓');
+  loadPanel();
+}
+
+async function saveCreds() {
+  const newEmail = document.getElementById('new_em').value.trim();
+  const newPassword = document.getElementById('new_pw').value;
+  const r = await fetch(`${API}/settings/credentials`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ newEmail, newPassword })
+  });
+  const d = await r.json();
+  toast(d.message || 'تم تحديث بيانات الدخول ✓');
+}
+
+async function cleanDb(deleteOrders) {
+  if (!confirm(deleteOrders ? 'هل أنت متأكد من مسح كل الطلبات التجريبية والشكاوى والمدراء الوهميين؟' : 'هل تريد مسح جميع المدراء الوهميين والإبقاء على حسابك فقط؟')) return;
+  const r = await fetch(`${API}/settings/clean-db`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ deleteOrders })
+  });
+  const d = await r.json();
+  toast(d.message || 'تم التنظيف بنجاح');
+  loadPanel();
+}
+
+loadPanel();
