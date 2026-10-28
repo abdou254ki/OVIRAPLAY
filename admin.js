@@ -10,6 +10,17 @@ const COL = {
   'ملغي': '#EF4444'
 };
 
+const PRESETS = {
+  crunchyroll: { brand: 'Crunchyroll', cat: 'أنمي', c1: '#F47521', c2: '#8A3A0A', ic: 'C' },
+  netflix: { brand: 'Netflix', cat: 'أفلام ومسلسلات', c1: '#E50914', c2: '#5C060C', ic: 'N' },
+  shahid: { brand: 'Shahid VIP', cat: 'أفلام ومسلسلات', c1: '#005FF9', c2: '#002E8A', ic: 'S' },
+  prime: { brand: 'Prime Video', cat: 'أفلام ومسلسلات', c1: '#00A8E1', c2: '#005B7F', ic: 'P' },
+  youtube: { brand: 'YouTube', cat: 'ترفيه وموسيقى', c1: '#FF0000', c2: '#7A0000', ic: '▶' },
+  spotify: { brand: 'Spotify', cat: 'ترفيه وموسيقى', c1: '#1DB954', c2: '#0B5E28', ic: 'S' },
+  chatgpt: { brand: 'ChatGPT Plus', cat: 'ذكاء اصطناعي وبرامج', c1: '#10A37F', c2: '#074F3D', ic: 'AI' },
+  canva: { brand: 'Canva Pro', cat: 'ذكاء اصطناعي وبرامج', c1: '#7D2AE8', c2: '#3B1078', ic: 'C' }
+};
+
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
 const fmt = (n) => Number(n || 0).toLocaleString('en-US') + ' DA';
 
@@ -73,6 +84,8 @@ async function loadPanel() {
     if (stFilter) params.set('status', stFilter);
     if (qFilter) params.set('q', qFilter);
     endpoint = 'orders?' + params.toString();
+  } else if (tab === 'products') {
+    endpoint = 'products';
   } else if (tab === 'complaints') {
     if (compFilter) params.set('status', compFilter);
     endpoint = 'complaints?' + params.toString();
@@ -96,6 +109,16 @@ async function loadPanel() {
     renderLogin('تعذّر الاتصال بالخادم.');
   }
 }
+
+window.applyPreset = (key) => {
+  const p = PRESETS[key];
+  if (!p) return;
+  document.getElementById('np_brand').value = p.brand;
+  document.getElementById('np_cat').value = p.cat;
+  document.getElementById('np_c1').value = p.c1;
+  document.getElementById('np_c2').value = p.c2;
+  document.getElementById('np_ic').value = p.ic;
+};
 
 function renderMain(d) {
   let content = '';
@@ -138,7 +161,6 @@ function renderMain(d) {
           ${pd.transactionId ? `<div>• مرجع العملية: <code dir="ltr">${esc(pd.transactionId)}</code></div>` : ''}
         </div>` : ''}
 
-        <!-- صندوق تسليم الحساب واسم الشاشة وكود PIN -->
         <div class="deliver-box">
           <h4>🔑 تسليم الحساب والشاشة للعميل (يُرسل تلقائياً لتيليغرام والموقع)</h4>
           <label class="lbl">بيانات الحساب (البريد وكلمة المرور) *</label>
@@ -184,7 +206,130 @@ function renderMain(d) {
       ${list || '<div class="card" style="text-align:center">لا توجد طلبات مطابقة حالياً</div>'}`;
   }
 
-  // ==================== 2. تبويب شكاوى الزبائن ====================
+  // ==================== 2. تبويب بطاقات العرض وصفحات الهبوط ====================
+  else if (tab === 'products') {
+    const pList = (d.products || []).map((p) => {
+      const plansStr = (p.plans || []).map((pl) => `${pl.months}:${pl.price}${pl.best ? '*' : ''}`).join(', ');
+      const featsStr = (p.features || []).join('\n');
+      const stepsStr = (p.steps || []).map((s) => `${s.title} | ${s.desc}`).join('\n');
+      return `
+      <div class="card">
+        <div class="ord-head">
+          <span class="badge" style="background:${p.active ? '#16A34A' : '#EF4444'}">${p.active ? '🟢 معروضة في الموقع' : '🔴 مخفية'}</span>
+          <b dir="ltr">#/p/${esc(p.productId)}</b>
+        </div>
+        <div class="grid-2" style="margin-top:8px">
+          <div>
+            <label class="lbl">العلامة التجارية (مثل Crunchyroll)</label>
+            <input class="inp" id="pr_br_${p._id}" value="${esc(p.brandName)}">
+          </div>
+          <div>
+            <label class="lbl">عنوان البطاقة وصفحة الهبوط</label>
+            <input class="inp" id="pr_tl_${p._id}" value="${esc(p.title)}">
+          </div>
+          <div>
+            <label class="lbl">القسم / التصنيف</label>
+            <input class="inp" id="pr_cat_${p._id}" value="${esc(p.category)}">
+          </div>
+          <div>
+            <label class="lbl">نص الشارة العلوية</label>
+            <input class="inp" id="pr_bdg_${p._id}" value="${esc(p.badgeText || '⚡ فوري')}">
+          </div>
+        </div>
+        <label class="lbl">الوصف التفصيلي تحت العنوان في صفحة الهبوط</label>
+        <input class="inp" id="pr_sub_${p._id}" value="${esc(p.subtitle || '')}">
+        <div class="grid-2">
+          <div>
+            <label class="lbl">اللون الأساسي (Hex)</label>
+            <input class="inp" id="pr_c1_${p._id}" dir="ltr" value="${esc(p.primaryColor)}">
+          </div>
+          <div>
+            <label class="lbl">اللون الثانوي (Hex)</label>
+            <input class="inp" id="pr_c2_${p._id}" dir="ltr" value="${esc(p.secondaryColor)}">
+          </div>
+          <div>
+            <label class="lbl">حرف/أيقونة البطاقة</label>
+            <input class="inp" id="pr_ic_${p._id}" value="${esc(p.iconText)}">
+          </div>
+          <div>
+            <label class="lbl">رابط صورة مخصصة (اختياري)</label>
+            <input class="inp" id="pr_img_${p._id}" dir="ltr" value="${esc(p.imageUrl || '')}" placeholder="https://...">
+          </div>
+        </div>
+        <label class="lbl">الباقات والأسعار (الأشهر:السعر، ضع * للأوفر)</label>
+        <input class="inp" id="pr_pl_${p._id}" dir="ltr" value="${esc(plansStr)}">
+        <label class="lbl">مميزات صفحة الهبوط (كل ميزة في سطر)</label>
+        <textarea class="inp" id="pr_ft_${p._id}">${esc(featsStr)}</textarea>
+        <label class="lbl">خطوات الطلب في صفحة الهبوط (العنوان | الشرح)</label>
+        <textarea class="inp" id="pr_st_${p._id}">${esc(stepsStr)}</textarea>
+        <div class="grid-2" style="margin-top:10px">
+          <button class="btn-ok" style="margin:0" onclick="updateProduct('${p._id}')">💾 حفظ التعديلات</button>
+          <button class="btn-sm" onclick="toggleProduct('${p._id}', ${!p.active})">${p.active ? '🙈 إخفاء من الموقع' : '👁️ إظهار في الموقع'}</button>
+        </div>
+        <button class="btn-bad" onclick="deleteProduct('${p._id}')">🗑️ حذف البطاقة نهائياً</button>
+      </div>`;
+    }).join('');
+
+    content = `
+      <div class="card" style="border:2px solid var(--pri2)">
+        <h3>➕ إنشاء بطاقة عرض وصفحة هبوط كاملة جديدة</h3>
+        <p style="font-size:12px;color:var(--mut);margin:6px 0">اختر قالباً جاهزاً لتعبئة الألوان والتصميم تلقائياً (أو خصصه كما تشاء):</p>
+        <div class="chips">
+          <button class="chip" onclick="applyPreset('crunchyroll')">🟠 Crunchyroll</button>
+          <button class="chip" onclick="applyPreset('netflix')">🔴 Netflix</button>
+          <button class="chip" onclick="applyPreset('shahid')">🔵 Shahid VIP</button>
+          <button class="chip" onclick="applyPreset('prime')">💠 Prime Video</button>
+          <button class="chip" onclick="applyPreset('youtube')">▶️ YouTube</button>
+          <button class="chip" onclick="applyPreset('spotify')">🟢 Spotify</button>
+          <button class="chip" onclick="applyPreset('chatgpt')">🤖 ChatGPT</button>
+          <button class="chip" onclick="applyPreset('canva')">🟣 Canva Pro</button>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label class="lbl">اسم العلامة (مثل Crunchyroll) *</label>
+            <input class="inp" id="np_brand" placeholder="Crunchyroll">
+          </div>
+          <div>
+            <label class="lbl">عنوان البطاقة وصفحة الهبوط *</label>
+            <input class="inp" id="np_title" placeholder="كرانشي رول حساب كامل">
+          </div>
+          <div>
+            <label class="lbl">القسم / التصنيف</label>
+            <input class="inp" id="np_cat" value="أنمي">
+          </div>
+          <div>
+            <label class="lbl">الشارة العلوية</label>
+            <input class="inp" id="np_bdg" value="⚡ فوري">
+          </div>
+          <div>
+            <label class="lbl">اللون الأساسي</label>
+            <input class="inp" id="np_c1" dir="ltr" value="#F47521">
+          </div>
+          <div>
+            <label class="lbl">اللون الثانوي</label>
+            <input class="inp" id="np_c2" dir="ltr" value="#8A3A0A">
+          </div>
+          <div>
+            <label class="lbl">حرف/رمز الأيقونة</label>
+            <input class="inp" id="np_ic" value="C">
+          </div>
+          <div>
+            <label class="lbl">رابط صورة مخصصة (اختياري)</label>
+            <input class="inp" id="np_img" dir="ltr" placeholder="https://...">
+          </div>
+        </div>
+        <label class="lbl">الوصف التفصيلي تحت العنوان في صفحة الهبوط</label>
+        <input class="inp" id="np_sub" placeholder="أكبر مكتبة أنمي عالمية بدون إعلانات وبأعلى جودة 4K">
+        <label class="lbl">الباقات والأسعار * (مثال: 1:600, 3:1650, 12:5500*)</label>
+        <input class="inp" id="np_plans" dir="ltr" placeholder="1:600, 3:1650, 6:3000, 12:5500*">
+        <label class="lbl">مميزات صفحة الهبوط (كل ميزة في سطر)</label>
+        <textarea class="inp" id="np_feats" placeholder="بدون إعلانات نهائياً&#10;شاشة خاصة مقفلة برمز PIN&#10;تسليم فوري للبيانات"></textarea>
+        <button class="btn-pri" onclick="createProduct()">🚀 نشر البطاقة وصفحة الهبوط في الموقع</button>
+      </div>
+      ${pList}`;
+  }
+
+  // ==================== 3. تبويب شكاوى الزبائن ====================
   else if (tab === 'complaints') {
     const cStatuses = ['', 'مفتوحة', 'تم الرد', 'مغلقة'];
     const cList = (d.complaints || []).map((c) => `
@@ -218,7 +363,7 @@ function renderMain(d) {
       ${cList || '<div class="card" style="text-align:center">لا توجد شكاوى أو تذاكر دعم حالياً</div>'}`;
   }
 
-  // ==================== 3. تبويب الزبائن وإدارة أرصدتهم ====================
+  // ==================== 4. تبويب الزبائن وإدارة أرصدتهم ====================
   else if (tab === 'customers') {
     const custList = (d.customers || []).map((c) => `
       <div class="card">
@@ -295,7 +440,7 @@ function renderMain(d) {
       ${custList || '<div class="card" style="text-align:center">لا يوجد زبائن مسجلون حالياً</div>'}`;
   }
 
-  // ==================== 4. تبويب إعدادات شارجيلي والأمان ====================
+  // ==================== 5. تبويب إعدادات شارجيلي والأمان ====================
   else if (tab === 'settings') {
     const ch = d.chargily || {};
     content = `
@@ -350,16 +495,87 @@ function renderMain(d) {
       <button class="btn-sm" onclick="loadPanel()">تحديث 🔄</button>
       <h2>لوحة إدارة OVIRA PLAY</h2>
     </div>
-    <div class="tabs">
+    <div class="tabs" style="grid-template-columns:repeat(5,1fr)">
       <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';qFilter='';loadPanel()">📋 الطلبات</button>
+      <button class="tab ${tab === 'products' ? 'on' : ''}" onclick="tab='products';loadPanel()">🛍️ البطاقات</button>
       <button class="tab ${tab === 'complaints' ? 'on' : ''}" onclick="tab='complaints';loadPanel()">🎫 الشكاوى ${openComplaintsCount ? `<span class="badge-cnt">${openComplaintsCount}</span>` : ''}</button>
-      <button class="tab ${tab === 'customers' ? 'on' : ''}" onclick="tab='customers';qFilter='';loadPanel()">👥 الزبائن والأرصدة</button>
+      <button class="tab ${tab === 'customers' ? 'on' : ''}" onclick="tab='customers';qFilter='';loadPanel()">👥 الزبائن</button>
       <button class="tab ${tab === 'settings' ? 'on' : ''}" onclick="tab='settings';loadPanel()">⚙️ الإعدادات</button>
     </div>
     ${content}`;
 }
 
 // ==================== العمليات والإجراءات ====================
+
+async function createProduct() {
+  const payload = {
+    brandName: document.getElementById('np_brand').value.trim(),
+    title: document.getElementById('np_title').value.trim(),
+    category: document.getElementById('np_cat').value.trim(),
+    badgeText: document.getElementById('np_bdg').value.trim(),
+    primaryColor: document.getElementById('np_c1').value.trim(),
+    secondaryColor: document.getElementById('np_c2').value.trim(),
+    iconText: document.getElementById('np_ic').value.trim(),
+    imageUrl: document.getElementById('np_img').value.trim(),
+    subtitle: document.getElementById('np_sub').value.trim(),
+    plansText: document.getElementById('np_plans').value.trim(),
+    featuresText: document.getElementById('np_feats').value.trim()
+  };
+  const r = await fetch(`${API}/products`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(payload)
+  });
+  const d = await r.json();
+  toast(d.message || 'تم الإنشاء ✓');
+  if (d.success) loadPanel();
+}
+
+async function updateProduct(id) {
+  const payload = {
+    brandName: document.getElementById('pr_br_' + id).value.trim(),
+    title: document.getElementById('pr_tl_' + id).value.trim(),
+    category: document.getElementById('pr_cat_' + id).value.trim(),
+    badgeText: document.getElementById('pr_bdg_' + id).value.trim(),
+    subtitle: document.getElementById('pr_sub_' + id).value.trim(),
+    primaryColor: document.getElementById('pr_c1_' + id).value.trim(),
+    secondaryColor: document.getElementById('pr_c2_' + id).value.trim(),
+    iconText: document.getElementById('pr_ic_' + id).value.trim(),
+    imageUrl: document.getElementById('pr_img_' + id).value.trim(),
+    plansText: document.getElementById('pr_pl_' + id).value.trim(),
+    featuresText: document.getElementById('pr_ft_' + id).value.trim(),
+    stepsText: document.getElementById('pr_st_' + id).value.trim()
+  };
+  const r = await fetch(`${API}/products/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(payload)
+  });
+  const d = await r.json();
+  toast(d.message || 'تم حفظ التعديلات ✓');
+  loadPanel();
+}
+
+async function toggleProduct(id, active) {
+  const r = await fetch(`${API}/products/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ active })
+  });
+  const d = await r.json();
+  toast(d.message || 'تم التحديث ✓');
+  loadPanel();
+}
+
+async function deleteProduct(id) {
+  if (!confirm('هل أنت متأكد من حذف هذه البطاقة وصفحة الهبوط نهائياً؟')) return;
+  await fetch(`${API}/products/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  toast('تم حذف البطاقة');
+  loadPanel();
+}
 
 async function deliverAccount(orderId) {
   const credentials = document.getElementById('dlv_cred_' + orderId).value.trim();

@@ -23,13 +23,25 @@ const I = {
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
 };
 
-const P = [
-  { id: 'netflix', n: 'Netflix', t: 'نتفلكس بروفايل خاص', cat: 'أفلام ومسلسلات', c: '#E50914', c2: '#5C060C', l: 'N', f: ['شاشة خاصة باسمك', 'رمز PIN سري خاص بك', 'جودة 4K Ultra HD', 'تسليم فوري للبيانات'], pl: [[1, 900], [3, 2700], [6, 4900], [12, 9500, 1]] },
-  { id: 'cr-mega', n: 'Crunchyroll', t: 'كرانشي رول Mega Fan', cat: 'أنمي', c: '#F47521', c2: '#8A3A0A', l: 'C', f: ['بدون إعلانات', 'حلقات بعد ساعة من اليابان', 'تحميل للمشاهدة بدون إنترنت', 'تسليم فوري للحساب'], pl: [[1, 600], [3, 1650], [6, 3000], [12, 5500, 1]] },
-  { id: 'cr-fan', n: 'Crunchyroll', t: 'كرانشي رول Fan', cat: 'أنمي', c: '#F47521', c2: '#8A3A0A', l: 'C', f: ['مشاهدة بدون إعلانات', 'مكتبة الأنمي كاملة', 'جودة 1080p', 'تسليم فوري للبيانات'], pl: [[1, 500], [3, 1350], [6, 2500], [12, 4500, 1]] },
-  { id: 'shahid', n: 'Shahid VIP', t: 'شاهد VIP (باقة شاملة)', cat: 'أفلام ومسلسلات', c: '#005FF9', c2: '#002E8A', l: 'S', f: ['الباقة الرياضية الشاملة', 'شاشة خاصة برقم سري', 'بدون إعلانات', 'تسليم فوري'], pl: [[1, 800], [12, 7500, 1]] },
-  { id: 'prime', n: 'Prime Video', t: 'أمازون برايم فيديو', cat: 'أفلام ومسلسلات', c: '#00A8E1', c2: '#005B7F', l: 'P', f: ['شاشة خاصة بك', 'مكتبة أفلام أمازون الحصرية', 'جودة 4K HDR', 'تسليم فوري'], pl: [[1, 600], [6, 3200], [12, 6000, 1]] }
+const DEFAULT_STEPS = [
+  { title: 'اختر باقتك وأضفها', desc: 'حدد المدة التي تناسبك ثم أكمل الطلب باسمك ورقم واتساب.' },
+  { title: 'ادفع إلكترونياً أو يدوياً', desc: 'ادفع فوراً بالبطاقة الذهبية/CIB عبر شارجيلي أو عبر بريدي موب وبينانس.' },
+  { title: 'استلم حسابك وشاشتك', desc: 'نسلّمك الإيميل وكلمة المرور مع شاشتك الخاصة المقفلة برمز PIN.' }
 ];
+
+// البطاقات الافتراضية للعرض الفوري قبل جلب التحديثات من السيرفر
+let P = [
+  { id: 'netflix', n: 'Netflix', t: 'نتفلكس بروفايل خاص', sub: 'مشاهدة بجودة 4K Ultra HD مع شاشة خاصة مقفلة برمز PIN سري', cat: 'أفلام ومسلسلات', c: '#E50914', c2: '#5C060C', l: 'N', badge: '⚡ فوري', f: ['شاشة خاصة باسمك', 'رمز PIN سري خاص بك', 'جودة 4K Ultra HD', 'تسليم فوري للبيانات'], steps: DEFAULT_STEPS, pl: [[1, 900], [3, 2700], [6, 4900], [12, 9500, 1]] },
+  { id: 'cr-mega', n: 'Crunchyroll', t: 'كرانشي رول Mega Fan', sub: 'أكبر مكتبة أنمي في العالم بدون إعلانات مع التحميل للمشاهدة بدون إنترنت', cat: 'أنمي', c: '#F47521', c2: '#8A3A0A', l: 'C', badge: '⚡ فوري', f: ['بدون إعلانات', 'حلقات بعد ساعة من اليابان', 'تحميل للمشاهدة بدون إنترنت', 'تسليم فوري للحساب'], steps: DEFAULT_STEPS, pl: [[1, 600], [3, 1650], [6, 3000], [12, 5500, 1]] },
+  { id: 'cr-fan', n: 'Crunchyroll', t: 'كرانشي رول Fan', sub: 'مشاهدة كافة حلقات الأنمي بجودة عالية 1080p وبدون إعلانات', cat: 'أنمي', c: '#F47521', c2: '#8A3A0A', l: 'C', badge: '⚡ فوري', f: ['مشاهدة بدون إعلانات', 'مكتبة الأنمي كاملة', 'جودة 1080p', 'تسليم فوري للبيانات'], steps: DEFAULT_STEPS, pl: [[1, 500], [3, 1350], [6, 2500], [12, 4500, 1]] },
+  { id: 'shahid', n: 'Shahid VIP', t: 'شاهد VIP (باقة شاملة)', sub: 'أحدث الأعمال العربية الحصرية والباقة الرياضية الشاملة بشاشة خاصة', cat: 'أفلام ومسلسلات', c: '#005FF9', c2: '#002E8A', l: 'S', badge: '⚡ فوري', f: ['الباقة الرياضية الشاملة', 'شاشة خاصة برقم سري', 'بدون إعلانات', 'تسليم فوري'], steps: DEFAULT_STEPS, pl: [[1, 800], [12, 7500, 1]] },
+  { id: 'prime', n: 'Prime Video', t: 'أمازون برايم فيديو', sub: 'أفلام ومسلسلات أمازون الحصرية بجودة 4K HDR وشاشة مخصصة لك', cat: 'أفلام ومسلسلات', c: '#00A8E1', c2: '#005B7F', l: 'P', badge: '⚡ فوري', f: ['شاشة خاصة بك', 'مكتبة أفلام أمازون الحصرية', 'جودة 4K HDR', 'تسليم فوري'], steps: DEFAULT_STEPS, pl: [[1, 600], [6, 3200], [12, 6000, 1]] }
+];
+
+try {
+  const cachedCatalog = JSON.parse(localStorage.getItem('ov_catalog') || 'null');
+  if (Array.isArray(cachedCatalog) && cachedCatalog.length) P = cachedCatalog;
+} catch (e) {}
 
 const PAY = [
   { id: 'chargily', n: 'Chargily Pay (الذهبية / CIB)', auto: true, desc: 'دفع إلكتروني فوري ومؤمّن 100% عبر البطاقة الذهبية أو CIB (يتم تأكيد طلبك تلقائياً)' },
@@ -95,7 +107,18 @@ function theme() {
 }
 try { const s = localStorage.getItem('ot'); if (s) document.documentElement.dataset.theme = s; } catch (e) {}
 
-// جلب إعدادات الدفع وحساب الزبون عند الإقلاع
+// جلب البطاقات الديناميكية من السيرفر (تحديث فوري لأي بطاقة أنشئت من تيليغرام أو لوحة التحكم)
+fetch(API_URL + '/catalog')
+  .then((r) => r.json())
+  .then((d) => {
+    if (d && d.success && Array.isArray(d.products) && d.products.length) {
+      P = d.products;
+      try { localStorage.setItem('ov_catalog', JSON.stringify(P)); } catch (e) {}
+      draw();
+    }
+  })
+  .catch(() => {});
+
 fetch(API_URL + '/payment-config').then((r) => r.json()).then((d) => {
   if (d && d.chargily) chargilyMode = d.chargily.mode;
 }).catch(() => {});
@@ -121,7 +144,6 @@ async function fetchCustomerProfile() {
 }
 if (custToken) fetchCustomerProfile();
 
-// عرض صندوق بيانات الحساب والشاشة المسلمة للزبون
 function renderDeliveredBox(da) {
   if (!da || !da.credentials) return '';
   return `
@@ -145,7 +167,6 @@ function renderDeliveredBox(da) {
     </div>`;
 }
 
-// عرض تفاصيل وصل الدفع الإلكتروني
 function renderPaymentReceiptBox(pd, total) {
   if (!pd || !pd.paidAtFormatted) return '';
   return `
@@ -160,17 +181,25 @@ function renderPaymentReceiptBox(pd, total) {
     </div>`;
 }
 
-const gc = (p) => `<div class="gc"><i class="ic" style="background:${p.c}">${p.l}</i><small>${p.n}</small></div>`;
+// رسم البطاقة الأيقونية (مع دعم صورة مخصصة إن وجدت)
+const gc = (p) => `
+  <div class="gc">
+    ${p.img
+      ? `<img src="${esc(p.img)}" alt="${esc(p.n)}" style="width:52px;height:52px;object-fit:contain;border-radius:12px">`
+      : `<i class="ic" style="background:${esc(p.c)}">${esc(p.l)}</i>`}
+    <small>${esc(p.n)}</small>
+  </div>`;
+
 const card = (p) => {
   const m = Math.max(...p.pl.map((x) => sv(p, x)));
-  return `<a class="pc" href="#/p/${p.id}" style="--c:${p.c};--c2:${p.c2}">
+  return `<a class="pc" href="#/p/${encodeURIComponent(p.id)}" style="--c:${esc(p.c)};--c2:${esc(p.c2)}">
     <div class="pv">
-      <div class="bds"><span class="bd fl">⚡ فوري</span>${m > 0 ? `<span class="bd sv">وفّر ${m}%</span>` : ''}</div>
+      <div class="bds"><span class="bd fl">${esc(p.badge || '⚡ فوري')}</span>${m > 0 ? `<span class="bd sv">وفّر ${m}%</span>` : ''}</div>
       ${gc(p)}
     </div>
     <div class="pi">
-      <small>${p.cat}</small>
-      <h3>${p.t}</h3>
+      <small>${esc(p.cat)}</small>
+      <h3>${esc(p.t)}</h3>
       <div class="pr">ابتداءً من <b>${fmt(Math.min(...p.pl.map((x) => x[1])))}</b></div>
       <div class="btn" style="margin:0">عرض الباقات</div>
     </div>
@@ -202,23 +231,33 @@ const shop = () => {
   const cs = ['الكل', ...new Set(P.map((p) => p.cat))];
   return `<div class="w">
     <h1 class="ttl">المتجر</h1>
-    <div class="chips">${cs.map((c) => `<button class="chip ${c == cat ? 'on' : ''}" onclick="setCat('${c}')">${c}</button>`).join('')}</div>
+    <div class="chips">${cs.map((c) => `<button class="chip ${c == cat ? 'on' : ''}" onclick="setCat('${esc(c)}')">${esc(c)}</button>`).join('')}</div>
     <div class="g" style="margin-top:8px">${P.filter((p) => cat == 'الكل' || p.cat == cat).map(card).join('')}</div>
   </div>`;
 };
 
+// صفحة الهبوط المخصصة لكل بطاقة عرض
 const prod = (p) => {
-  const x = p.pl[sel];
-  return `<div class="ph" style="--c:${p.c};--c2:${p.c2}">${gc(p)}<h1>${p.t}</h1><p>${p.cat}</p></div>
+  const x = p.pl[sel] || p.pl[0];
+  const stepsList = Array.isArray(p.steps) && p.steps.length ? p.steps : DEFAULT_STEPS;
+  return `<div class="ph" style="--c:${esc(p.c)};--c2:${esc(p.c2)}">
+    ${gc(p)}
+    <h1>${esc(p.t)}</h1>
+    <p style="max-width:520px;opacity:.92;font-size:14px">${esc(p.sub || p.cat)}</p>
+  </div>
   <div class="w">
     <h2 class="sh">ما ستحصل عليه</h2>
-    <ul class="ft">${p.f.map((f) => `<li><i>✓</i>${f}</li>`).join('')}</ul>
+    <ul class="ft">${(p.f || []).map((f) => `<li><i>✓</i>${esc(f)}</li>`).join('')}</ul>
     <h2 class="sh">اختر مدة الاشتراك</h2>
     ${p.pl.map((y, i) => `<button class="pl ${i == sel ? 'on' : ''}" onclick="pickPlan(${i})">${y[2] ? '<span class="tag">الأوفر</span>' : ''}<span class="rd"></span><span class="d">${dur(y[0])}${sv(p, y) > 0 ? `<em>وفّر ${sv(p, y)}%</em>` : ''}</span><b>${fmt(y[1])}</b></button>`).join('')}
+    <h2 class="sh">كيف يتم طلبك؟</h2>
+    <div class="tr">
+      ${stepsList.map((st, idx) => `<div><b>${idx + 1}. ${esc(st.title)}</b>${esc(st.desc)}</div>`).join('')}
+    </div>
   </div>
   <div class="bar">
-    <button class="btn o" onclick="add('${p.id}',${x[0]})">أضف للسلة</button>
-    <button class="btn" onclick="add('${p.id}',${x[0]},1)">اشترِ الآن · ${fmt(x[1])}</button>
+    <button class="btn o" onclick="add('${esc(p.id)}',${x[0]})">أضف للسلة</button>
+    <button class="btn" onclick="add('${esc(p.id)}',${x[0]},1)">اشترِ الآن · ${fmt(x[1])}</button>
   </div>`;
 };
 
@@ -232,9 +271,9 @@ const cartV = () => {
     ${cart.map((i, k) => {
       const p = pr(i.id), x = pl(i);
       return `<div class="ci">
-        <i class="ic" style="background:${p.c}">${p.l}</i>
+        <i class="ic" style="background:${esc(p.c)}">${esc(p.l)}</i>
         <div class="in">
-          <b>${p.t}</b>
+          <b>${esc(p.t)}</b>
           <select class="sel" onchange="chg(${k},+this.value)">${p.pl.map((y) => `<option value="${y[0]}" ${y[0] == i.m ? 'selected' : ''}>${dur(y[0])} — ${y[1]} DA</option>`).join('')}</select>
           <div class="q"><button onclick="qty(${k},-1)">−</button><span>${i.q}</span><button onclick="qty(${k},1)">+</button></div>
         </div>
@@ -270,7 +309,7 @@ const chk = () => {
   return `<div class="w">
     <h1 class="ttl">إتمام الطلب</h1>
     <div class="sm">
-      ${cart.map((i) => `<div class="row"><span>${pr(i.id).t} · ${dur(pl(i)[0])} × ${i.q}</span><b>${fmt(pl(i)[1] * i.q)}</b></div>`).join('')}
+      ${cart.map((i) => `<div class="row"><span>${esc(pr(i.id).t)} · ${dur(pl(i)[0])} × ${i.q}</span><b>${fmt(pl(i)[1] * i.q)}</b></div>`).join('')}
       <hr>
       <div class="tt"><span>الإجمالي المطلوب</span>${fmt(tot())}</div>
     </div>
@@ -325,7 +364,6 @@ const doneV = () => {
   </div>`;
 };
 
-// واجهة تتبع الطلب الذكية
 const trackV = () => `<div class="w">
   <h1 class="ttl">تتبع طلبي واستلام الحساب</h1>
   <div class="sm">
@@ -368,7 +406,6 @@ window.trackOrder = async () => {
   }
 };
 
-// واجهة حساب الزبون ومحفظته
 const accountV = () => {
   if (!custProfile) {
     return `<div class="w">
@@ -441,7 +478,6 @@ const accountV = () => {
   </div>`;
 };
 
-// واجهة الشكاوى والدعم الفني
 const supportV = () => {
   const u = me();
   return `<div class="w">
@@ -577,6 +613,7 @@ function view() {
   const [pathPart, queryPart] = rawHash.split('?');
   const h = (pathPart || 'home').split('/');
   const v = h[0] || 'home';
+  const prodSlug = decodeURIComponent(h[1] || '');
 
   if (v === 'done' && queryPart) {
     const params = new URLSearchParams(queryPart);
@@ -601,8 +638,8 @@ function view() {
     }
   }
 
-  document.body.className = v == 'p' && pr(h[1]) ? 'pp' : '';
-  if (v == 'p' && pr(h[1])) return prod(pr(h[1]));
+  document.body.className = v == 'p' && pr(prodSlug) ? 'pp' : '';
+  if (v == 'p' && pr(prodSlug)) return prod(pr(prodSlug));
   return v == 'shop' ? shop()
     : v == 'cart' ? cartV()
     : v == 'checkout' ? chk()
@@ -638,7 +675,8 @@ function chrome() {
 function draw() { clean(); app.innerHTML = view(); chrome(); }
 function route() {
   const h = location.hash.slice(2).split('?')[0].split('/');
-  if (h[0] == 'p' && pr(h[1])) sel = Math.max(0, pr(h[1]).pl.findIndex((x) => x[2]));
+  const slug = decodeURIComponent(h[1] || '');
+  if (h[0] == 'p' && pr(slug)) sel = Math.max(0, pr(slug).pl.findIndex((x) => x[2]));
   if (h[0] == 'account' && custToken) fetchCustomerProfile().then(() => { app.innerHTML = view(); chrome(); });
   draw();
   scrollTo(0, 0);
