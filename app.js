@@ -406,6 +406,77 @@ window.trackOrder = async () => {
   }
 };
 
+// ===== الخطوة 1: صفحة الحساب (شعار + شحن الرصيد + الشكاوى) =====
+let topupOpen = false, topupAmt = 1000;
+const CMP_COL = { 'مفتوحة': '#F59E0B', 'تم الرد': '#16A34A', 'مغلقة': '#64748B' };
+
+const brandFoot = () => `
+  <div class="brand-foot">
+    <a class="logo" href="#/"><i>▶</i>OVIRA <b>PLAY</b></a>
+    <p>متجر الاشتراكات الرقمية · تسليم سريع وآمن</p>
+    <div class="trust">
+      <span>🔒 بياناتك محمية</span>
+      <span>⚡ تسليم سريع</span>
+      <span>💬 دعم متواصل</span>
+    </div>
+  </div>`;
+
+const pwField = (id, ac) => `
+  <div class="pw">
+    <input class="in2" id="${id}" type="password" dir="ltr" placeholder="••••••••" autocomplete="${ac}">
+    <button type="button" class="eye" onclick="togglePw('${id}',this)" aria-label="إظهار كلمة السر">👁</button>
+  </div>`;
+
+window.togglePw = (id, btn) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+};
+
+window.openTopup = () => { topupOpen = !topupOpen; draw(); };
+window.setTopupAmt = (v) => { topupAmt = v; draw(); };
+window.sendTopup = () => {
+  const inp = document.getElementById('tp_amt');
+  const amt = Math.round(Number(inp ? inp.value : topupAmt));
+  if (!Number.isFinite(amt) || amt < 200) { toast('أدخل مبلغاً لا يقل عن 200 DA'); return; }
+  if (!CFG.wa) { toast('رقم الدعم غير متوفر حالياً'); return; }
+  const text = `مرحباً، أريد شحن رصيد محفظتي بمبلغ ${amt} DA.\nالاسم: ${custProfile.name}\nالهاتف: ${custProfile.phone}`;
+  window.open('https://wa.me/' + CFG.wa + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
+};
+
+const topupPanel = () => !topupOpen ? '' : `
+  <div class="sm topup">
+    <h3>➕ شحن رصيد المحفظة</h3>
+    <div class="chips" style="margin-bottom:8px">
+      ${[500, 1000, 2000, 5000].map((v) => `<button class="chip ${topupAmt === v ? 'on' : ''}" onclick="setTopupAmt(${v})">${fmt(v)}</button>`).join('')}
+    </div>
+    <label class="lb">أو أدخل مبلغاً آخر (DA)</label>
+    <input class="in2" id="tp_amt" type="number" inputmode="numeric" min="200" dir="ltr" value="${topupAmt}">
+    <button class="btn wa" style="margin-top:12px" onclick="sendTopup()">💬 اطلب الشحن عبر واتساب</button>
+    <p class="note" style="margin-top:8px">سيصلك الرصيد بعد تأكيد الإدارة للدفع. الشحن الآلي بالبطاقة قادم قريباً.</p>
+  </div>`;
+
+const complaintsBlock = () => `
+  <div class="sec-head">
+    <h2 class="sh" style="margin:0">🎫 شكاويّ وردود الإدارة (${custComplaints.length})</h2>
+    <a class="chip on" href="#/support">➕ شكوى جديدة</a>
+  </div>
+  ${custComplaints.length ? custComplaints.map((c) => `
+    <div class="sm">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <b>${esc(c.subject)} <span dir="ltr" style="color:var(--mut);font-size:12px">(${esc(c.ticketCode)})</span></b>
+        <span class="badge" style="background:${CMP_COL[c.status] || '#64748B'}">${esc(c.status)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--mut);margin:4px 0">${new Date(c.createdAt).toLocaleString('fr-DZ')}</div>
+      <p style="font-size:13px;color:var(--mut);margin-top:6px">${esc(c.message)}</p>
+      ${c.adminReply
+        ? `<div class="ok-box" style="margin-top:10px"><h4>💬 رد الإدارة:</h4><p style="font-size:13px;font-weight:700">${esc(c.adminReply)}</p></div>`
+        : '<div class="wait-box">⏳ بانتظار رد الإدارة…</div>'}
+    </div>`).join('')
+    : '<div class="sm"><p class="note">لا توجد شكاوى بعد. إذا واجهت أي مشكلة اضغط «شكوى جديدة» وسنرد عليك هنا وعبر تيليغرام.</p></div>'}`;
+
 const accountV = () => {
   if (!custProfile) {
     return `<div class="w">
@@ -417,43 +488,46 @@ const accountV = () => {
         </div>
         ${authTab === 'register' ? `
           <label class="lb">الاسم الكامل *</label>
-          <input class="in2" id="au_name" placeholder="اسمك الكامل">
+          <input class="in2" id="au_name" placeholder="اسمك الكامل" autocomplete="name">
           <label class="lb">رقم واتساب *</label>
-          <input class="in2" id="au_phone" type="tel" dir="ltr" placeholder="05XX XX XX XX">
+          <input class="in2" id="au_phone" type="tel" dir="ltr" placeholder="05XX XX XX XX" autocomplete="tel">
           <label class="lb">البريد الإلكتروني الشخصي *</label>
-          <input class="in2" id="au_email" type="email" dir="ltr" placeholder="example@gmail.com">
+          <input class="in2" id="au_email" type="email" dir="ltr" placeholder="example@gmail.com" autocomplete="email">
           <label class="lb">كلمة السر (6 أحرف فأكثر) *</label>
-          <input class="in2" id="au_pass" type="password" dir="ltr" placeholder="••••••••">
+          ${pwField('au_pass', 'new-password')}
           <button class="btn" onclick="doCustRegister()">إنشاء الحساب الآن</button>
         ` : `
           <label class="lb">رقم الهاتف أو البريد الإلكتروني</label>
-          <input class="in2" id="au_id" dir="ltr" placeholder="05XX XX XX XX">
+          <input class="in2" id="au_id" dir="ltr" placeholder="05XX XX XX XX" autocomplete="username">
           <label class="lb">كلمة السر</label>
-          <input class="in2" id="au_pass" type="password" dir="ltr" placeholder="••••••••">
+          ${pwField('au_pass', 'current-password')}
           <button class="btn" onclick="doCustLogin()">دخول إلى حسابي</button>
         `}
       </div>
+      ${brandFoot()}
     </div>`;
   }
 
   return `<div class="w">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:10px">
       <h1 class="ttl" style="margin:0">مرحباً، ${esc(custProfile.name)}</h1>
       <button class="chip" onclick="custLogout()">تسجيل الخروج</button>
     </div>
 
-    <div class="sm" style="background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff">
+    <div class="sm wallet-card">
       <div style="font-size:13px;opacity:.9">💰 رصيد محفظتك المتاح للشراء الفوري</div>
       <div style="font-size:28px;font-weight:900;margin:4px 0">${fmt(custProfile.balance || 0)}</div>
       <div style="font-size:12px;opacity:.85">📱 ${esc(custProfile.phone)} ${custProfile.email ? '· 📧 ' + esc(custProfile.email) : ''}</div>
+      <button class="topup-btn" onclick="openTopup()">➕ شحن الرصيد</button>
     </div>
+    ${topupPanel()}
 
     <h2 class="sh">📦 طلباتي وحساباتي المسلمة (${custOrders.length})</h2>
     ${custOrders.length ? custOrders.map((o) => `
       <div class="sm">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <b dir="ltr">${esc(o.orderCode)}</b>
-          <span style="background:${COL[o.status] || '#666'};color:#fff;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:800">${esc(o.status)}</span>
+          <span class="badge" style="background:${COL[o.status] || '#666'}">${esc(o.status)}</span>
         </div>
         <div style="font-size:12px;color:var(--mut);margin:4px 0">${new Date(o.createdAt).toLocaleString('fr-DZ')} · ${esc(o.paymentMethod)}</div>
         <div style="font-size:14px;font-weight:700;margin:6px 0">${o.items.map((i) => esc(i)).join(' | ')}</div>
@@ -462,19 +536,8 @@ const accountV = () => {
       </div>
     `).join('') : '<div class="sm"><p class="note">لا توجد طلبات سابقة بعد.</p></div>'}
 
-    ${custComplaints.length ? `
-      <h2 class="sh">🎫 تذاكر الدعم والشكاوى (${custComplaints.length})</h2>
-      ${custComplaints.map((c) => `
-        <div class="sm">
-          <div style="display:flex;justify-content:space-between">
-            <b>${esc(c.subject)} (${esc(c.ticketCode)})</b>
-            <span style="font-size:12px;font-weight:800;color:var(--pri2)">${esc(c.status)}</span>
-          </div>
-          <p style="font-size:13px;color:var(--mut);margin-top:6px">${esc(c.message)}</p>
-          ${c.adminReply ? `<div class="ok-box" style="margin-top:10px"><h4>💬 رد الإدارة:</h4><p style="font-size:13px;font-weight:700">${esc(c.adminReply)}</p></div>` : ''}
-        </div>
-      `).join('')}
-    ` : ''}
+    ${complaintsBlock()}
+    ${brandFoot()}
   </div>`;
 };
 
