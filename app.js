@@ -43,14 +43,29 @@ try {
   if (Array.isArray(cachedCatalog) && cachedCatalog.length) P = cachedCatalog;
 } catch (e) {}
 
-const PAY = [
-  { id: 'chargily', n: 'Chargily Pay (الذهبية / CIB)', auto: true, desc: 'دفع إلكتروني فوري ومؤمّن 100% عبر البطاقة الذهبية أو CIB (يتم تأكيد طلبك تلقائياً)' },
-  { id: 'wallet', n: 'رصيد المحفظة', wallet: true, desc: 'ادفع فوراً من رصيد حسابك في المتجر دون انتظار' },
-  { id: 'baridimob', n: 'بريدي موب', k: 'RIP', v: '00799999004244734853' },
-  { id: 'binance', n: 'Binance', k: 'Binance ID', v: '732478828' },
-  { id: 'redotpay', n: 'Redotpay', k: 'Redotpay ID', v: '1090594184' },
-  { id: 'bybit', n: 'Bybit', k: 'Bybit ID', v: '67421194' }
-];
+// طرق الدفع تأتي من الخادم (/payment-config) — المعطّلة لا تصل إلى هنا أبداً
+let PAY = [];
+let payLoaded = false, payFailed = false;
+const PAY_DESC = {
+  chargily: 'دفع إلكتروني فوري ومؤمّن 100% عبر البطاقة الذهبية أو CIB (يتم تأكيد طلبك تلقائياً)',
+  wallet: 'ادفع فوراً من رصيد حسابك في المتجر دون انتظار'
+};
+const mapPay = (m) => ({
+  id: m.id,
+  n: m.name,
+  auto: m.type === 'auto',
+  wallet: m.type === 'wallet',
+  k: m.label || '',
+  v: m.value || '',
+  desc: m.note || PAY_DESC[m.id] || ''
+});
+function applyPay(methods) {
+  PAY = (methods || []).map(mapPay);
+  payLoaded = true;
+  if (!PAY.some((x) => x.id == payId)) {
+    payId = ((PAY.find((x) => x.id == 'chargily') || PAY[0]) || {}).id || '';
+  }
+}
 
 const FAQ = [
   ['هل الحسابات رسمية وتعمل بدون انقطاع؟', 'نعم، جميع اشتراكاتنا يتم تفعيلها بطرق رسمية 100% لضمان مشاهدة مستقرة طوال فترة اشتراكك.'],
@@ -72,6 +87,7 @@ let authTab = 'login';
 let ord = { n: '', code: '', ids: [], claimToken: '', paid: false, paymentDetails: null };
 
 try { cart = JSON.parse(localStorage.getItem('oc') || '[]'); } catch (e) {}
+try { const cp0 = JSON.parse(localStorage.getItem('ov_pay') || 'null'); if (Array.isArray(cp0) && cp0.length) applyPay(cp0); } catch (e) {}
 if (!Array.isArray(cart)) cart = [];
 
 const clean = () => { cart = cart.filter((i) => i && pl(i) && i.q > 0); };
@@ -119,9 +135,23 @@ fetch(API_URL + '/catalog')
   })
   .catch(() => {});
 
-fetch(API_URL + '/payment-config').then((r) => r.json()).then((d) => {
-  if (d && d.chargily) chargilyMode = d.chargily.mode;
-}).catch(() => {});
+function loadPayConfig() {
+  return fetch(API_URL + '/payment-config').then((r) => r.json()).then((d) => {
+    if (d && d.chargily) chargilyMode = d.chargily.mode;
+    if (d && Array.isArray(d.methods)) {
+      try { localStorage.setItem('ov_pay', JSON.stringify(d.methods)); } catch (e) {}
+      payFailed = false;
+      applyPay(d.methods);
+      refreshPayUI();
+    } else if (!payLoaded) {
+      payFailed = true;
+      refreshPayUI();
+    }
+  }).catch(() => {
+    if (!payLoaded) { payFailed = true; refreshPayUI(); }
+  });
+}
+loadPayConfig();
 
 async function fetchCustomerProfile() {
   if (!custToken) { custProfile = null; return; }
@@ -291,16 +321,32 @@ const cartV = () => {
   </div>`;
 };
 
+const payButtons = () => PAY.map((m) => `<button class="pm ${m.auto ? 'full' : ''} ${m.id == payId ? 'on' : ''}" data-i="${esc(m.id)}" onclick="pick('${esc(m.id)}')">${m.auto ? '⚡ ' : m.wallet ? '💰 ' : ''}${esc(m.n)}</button>`).join('');
+
+const submitLabel = () => (payId === 'chargily' ? 'الدفع الآن عبر شارجيلي ⚡' : 'تأكيد وإنهاء الطلب');
+
+// يحدّث منطقة الدفع فقط (بدون مسح ما كتبه الزبون في الحقول)
+function refreshPayUI() {
+  const box = $('#pms');
+  if (!box) return;
+  box.innerHTML = payButtons();
+  $('#pbox').innerHTML = pbox();
+  const sb = $('#submitBtn');
+  if (sb && !sb.disabled) sb.textContent = submitLabel();
+}
+
 const pbox = () => {
+  if (!payLoaded) return payFailed ? '⚠️ تعذّر تحميل طرق الدفع، أعد تحميل الصفحة أو تواصل معنا عبر واتساب.' : '⏳ جاري تحميل طرق الدفع…';
   const m = PAY.find((x) => x.id == payId);
+  if (!m) return '⚠️ لا توجد طرق دفع متاحة حالياً، تواصل معنا عبر واتساب.';
   if (m.auto) {
-    return `💳 <b>الدفع التلقائي عبر Chargily Pay</b><p style="margin-top:6px">${m.desc}</p>${chargilyMode === 'test' ? '<span style="display:inline-block;margin-top:6px;background:#F59E0B;color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:800">وضع التجربة مفعل (Test Mode)</span>' : ''}`;
+    return `💳 <b>الدفع التلقائي عبر Chargily Pay</b><p style="margin-top:6px">${esc(m.desc)}</p>${chargilyMode === 'test' ? '<span style="display:inline-block;margin-top:6px;background:#F59E0B;color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:800">وضع التجربة مفعل (Test Mode)</span>' : ''}`;
   }
   if (m.wallet) {
     const bal = custProfile ? custProfile.balance || 0 : 0;
     return `💰 <b>الدفع من رصيد المحفظة</b><p style="margin-top:6px">رصيدك المتاح حالياً: <b>${fmt(bal)}</b></p>${!custProfile ? '<p style="color:var(--bad);margin-top:4px">يرجى تسجيل الدخول من تبويب (حسابي) لاستخدام المحفظة.</p>' : ''}`;
   }
-  return `حوّل المبلغ إلى ${m.k}:<b class="num">${m.v}</b><button class="cp" onclick="cp('${m.v}')">${ico(I.copy)} نسخ الرقم</button>`;
+  return `حوّل المبلغ إلى ${esc(m.k || 'الحساب')}:<b class="num">${esc(m.v)}</b><button class="cp" data-v="${esc(m.v)}" onclick="cp(this.dataset.v)">${ico(I.copy)} نسخ الرقم</button>${m.desc ? `<p style="margin-top:8px;font-size:13px">${esc(m.desc).replace(/\n/g, '<br>')}</p>` : ''}`;
 };
 
 const chk = () => {
@@ -324,11 +370,9 @@ const chk = () => {
     <input class="in2" id="fe" type="email" value="${esc(u.e || '')}" dir="ltr" placeholder="example@gmail.com" required>
 
     <label class="lb">اختر طريقة الدفع</label>
-    <div class="pms">
-      ${PAY.map((m) => `<button class="pm ${m.auto ? 'full' : ''} ${m.id == payId ? 'on' : ''}" data-i="${m.id}" onclick="pick('${m.id}')">${m.auto ? '⚡ ' : m.wallet ? '💰 ' : ''}${m.n}</button>`).join('')}
-    </div>
+    <div class="pms" id="pms">${payButtons()}</div>
     <div class="box" id="pbox">${pbox()}</div>
-    <button class="btn" id="submitBtn" onclick="send()">${payId === 'chargily' ? 'الدفع الآن عبر شارجيلي ⚡' : 'تأكيد وإنهاء الطلب'}</button>
+    <button class="btn" id="submitBtn" onclick="send()">${submitLabel()}</button>
   </div>`;
 };
 
@@ -764,7 +808,7 @@ function pick(id) {
   document.querySelectorAll('.pm').forEach((b) => b.classList.toggle('on', b.dataset.i == id));
   $('#pbox').innerHTML = pbox();
   const sb = $('#submitBtn');
-  if (sb) sb.textContent = id === 'chargily' ? 'الدفع الآن عبر شارجيلي ⚡' : 'تأكيد وإنهاء الطلب';
+  if (sb) sb.textContent = submitLabel();
 }
 
 async function send() {
@@ -777,6 +821,7 @@ async function send() {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { $('#fe').focus(); return toast('أدخل بريدك الإلكتروني الشخصي بشكل صحيح'); }
 
   const pm = PAY.find((x) => x.id == payId);
+  if (!pm) return toast('اختر طريقة دفع متاحة أولاً');
   const submitBtn = $('#submitBtn');
   submitBtn.disabled = true;
   submitBtn.textContent = 'جاري معالجة الطلب...';
@@ -835,12 +880,14 @@ async function send() {
     } else {
       toast(data.message || 'حدث خطأ أثناء معالجة الطلب.');
       submitBtn.disabled = false;
-      submitBtn.textContent = 'تأكيد وإنهاء الطلب';
+      submitBtn.textContent = submitLabel();
+      // الإدارة عطّلت هذه الطريقة قبل لحظات: حدّث القائمة
+      if (data.code === 'PAYMENT_UNAVAILABLE') loadPayConfig();
     }
   } catch (error) {
     toast('تعذّر الاتصال بالخادم، حاول مجدداً.');
     submitBtn.disabled = false;
-    submitBtn.textContent = 'تأكيد وإنهاء الطلب';
+    submitBtn.textContent = submitLabel();
   }
 }
 

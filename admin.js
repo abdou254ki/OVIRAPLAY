@@ -2,6 +2,7 @@ const API = 'https://ovira-api.onrender.com/api/admin';
 let token = sessionStorage.getItem('adm_tk') || '';
 let tab = 'orders', stFilter = '', qFilter = '', compFilter = '';
 let openComplaintsCount = 0;
+let payList = [];
 
 const COL = {
   'قيد المراجعة': '#F59E0B',
@@ -92,6 +93,8 @@ async function loadPanel() {
   } else if (tab === 'customers') {
     if (qFilter) params.set('q', qFilter);
     endpoint = 'customers?' + params.toString();
+  } else if (tab === 'payments') {
+    endpoint = 'payment-methods';
   } else {
     endpoint = 'settings';
   }
@@ -440,6 +443,41 @@ function renderMain(d) {
       ${custList || '<div class="card" style="text-align:center">لا يوجد زبائن مسجلون حالياً</div>'}`;
   }
 
+  // ==================== 4.5 تبويب طرق الدفع ====================
+  else if (tab === 'payments') {
+    payList = d.methods || [];
+    content = `
+      <div class="card">
+        <h3>💳 طرق الدفع</h3>
+        <p style="font-size:13px;color:var(--mut);margin:8px 0 0">فعّل أو أطفئ كل طريقة، وعدّل معرّفات الاستلام. الطريقة المعطّلة تختفي فوراً من صفحة إتمام الطلب عند الزبائن ولا يمكن استعمالها.</p>
+      </div>
+      ${payList.map((m) => `
+        <div class="card pm-card">
+          <div class="pm-head">
+            <b>${m.icon} ${esc(m.name)}</b>
+            <label class="sw" aria-label="تفعيل ${esc(m.name)}">
+              <input type="checkbox" id="pm_en_${m.id}" ${m.enabled ? 'checked' : ''}>
+              <span></span>
+            </label>
+          </div>
+          <div class="pm-state ${m.available ? 'ok' : (m.enabled ? 'warn' : 'off')}">
+            ${m.available ? '✅ ظاهرة للزبائن' : (m.enabled ? '⚠️ مفعّلة لكنها مخفية: ' + esc(m.reason) : '⛔ مخفية عن الزبائن (معطّلة)')}
+          </div>
+          ${m.type === 'manual' ? `
+            <label class="lbl">اسم المعرّف كما يراه الزبون</label>
+            <input class="inp" id="pm_lb_${m.id}" value="${esc(m.label)}" placeholder="مثال: RIP">
+            <label class="lbl">المعرّف / الرقم / العنوان</label>
+            <input class="inp" id="pm_v_${m.id}" dir="ltr" value="${esc(m.value)}">
+            <label class="lbl">تعليمات إضافية للزبون (اختياري)</label>
+            <textarea class="inp" id="pm_nt_${m.id}" placeholder="مثال: أرسل صورة الإيصال على واتساب بعد التحويل">${esc(m.note)}</textarea>
+          ` : (m.type === 'auto'
+            ? '<p class="pm-hint">مفاتيح شارجيلي ووضع التجربة/الحقيقي في تبويب ⚙️ الإعدادات.</p>'
+            : '<p class="pm-hint">يدفع الزبون من رصيد محفظته، ويجب أن يكون مسجّل الدخول.</p>')}
+        </div>
+      `).join('')}
+      <button class="btn-pri" onclick="savePayMethods()">💾 حفظ طرق الدفع</button>`;
+  }
+
   // ==================== 5. تبويب إعدادات شارجيلي والأمان ====================
   else if (tab === 'settings') {
     const ch = d.chargily || {};
@@ -495,11 +533,12 @@ function renderMain(d) {
       <button class="btn-sm" onclick="loadPanel()">تحديث 🔄</button>
       <h2>لوحة إدارة OVIRA PLAY</h2>
     </div>
-    <div class="tabs" style="grid-template-columns:repeat(5,1fr)">
+    <div class="tabs" style="grid-template-columns:repeat(3,1fr)">
       <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';qFilter='';loadPanel()">📋 الطلبات</button>
       <button class="tab ${tab === 'products' ? 'on' : ''}" onclick="tab='products';loadPanel()">🛍️ البطاقات</button>
       <button class="tab ${tab === 'complaints' ? 'on' : ''}" onclick="tab='complaints';loadPanel()">🎫 الشكاوى ${openComplaintsCount ? `<span class="badge-cnt">${openComplaintsCount}</span>` : ''}</button>
       <button class="tab ${tab === 'customers' ? 'on' : ''}" onclick="tab='customers';qFilter='';loadPanel()">👥 الزبائن</button>
+      <button class="tab ${tab === 'payments' ? 'on' : ''}" onclick="tab='payments';loadPanel()">💳 الدفع</button>
       <button class="tab ${tab === 'settings' ? 'on' : ''}" onclick="tab='settings';loadPanel()">⚙️ الإعدادات</button>
     </div>
     ${content}`;
@@ -701,6 +740,32 @@ async function toggleBlockCust(id, blocked) {
   const d = await r.json();
   toast(d.message || 'تم التحديث ✓');
   loadPanel();
+}
+
+async function savePayMethods() {
+  const val = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const methods = payList.map((m) => {
+    const o = { id: m.id, enabled: !!document.getElementById('pm_en_' + m.id).checked };
+    if (m.type === 'manual') {
+      o.label = val('pm_lb_' + m.id);
+      o.value = val('pm_v_' + m.id);
+      o.note = val('pm_nt_' + m.id);
+    }
+    return o;
+  });
+  try {
+    const r = await fetch(`${API}/payment-methods`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ methods })
+    });
+    const d = await r.json();
+    if (!d.success) return toast(d.message || 'تعذّر حفظ طرق الدفع');
+    toast(d.message || 'تم حفظ طرق الدفع ✓');
+    loadPanel();
+  } catch (e) {
+    toast('تعذّر الاتصال بالخادم.');
+  }
 }
 
 async function saveChargily() {

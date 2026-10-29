@@ -396,3 +396,56 @@ textarea.inp {
 .toast.on {
   opacity: 1;
 }
+
+/* ===== الخطوة 2: طرق الدفع ===== */
+.pm-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+}
+.pm-state {
+  margin: 10px 0 2px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.pm-state.ok { background: rgba(22, 163, 74, .12); color: var(--ok); }
+.pm-state.warn { background: rgba(245, 158, 11, .14); color: #B45309; }
+.pm-state.off { background: rgba(239, 68, 68, .1); color: var(--bad); }
+.pm-hint { font-size: 13px; color: var(--mut); font-weight: 700; margin-top: 10px; }
+
+.sw {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  flex: none;
+}
+.sw input { opacity: 0; width: 0; height: 0; position: absolute; }
+.sw span {
+  position: absolute;
+  inset: 0;
+  background: #CBD2E1;
+  border-radius: 999px;
+  transition: background .2s;
+  cursor: pointer;
+}
+.sw span::before {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  top: 3px;
+  inset-inline-start: 3px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+  transition: transform .2s;
+}
+.sw input:checked + span { background: var(--ok); }
+.sw input:checked + span::before { transform: translateX(-22px); }
+[dir="ltr"] .sw input:checked + span::before { transform: translateX(22px); }
+.sw input:focus-visible + span { outline: 2px solid var(--pri2); outline-offset: 2px; }
