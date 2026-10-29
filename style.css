@@ -91,7 +91,7 @@ header {
 header .w {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   height: 62px;
 }
 
@@ -102,6 +102,8 @@ header .w {
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .logo b {
@@ -121,16 +123,54 @@ header .w {
 }
 
 .wallet-pill {
-  background: rgba(22, 163, 74, .12);
-  color: var(--ok);
-  border: 1px solid rgba(22, 163, 74, .3);
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 800;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 7px;
+  height: 40px;
+  padding-inline: 11px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  color: var(--pri2);
+  white-space: nowrap;
+}
+
+.wallet-pill svg {
+  flex: none;
+}
+
+.wallet-pill .wt {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.wallet-pill small {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mut);
+}
+
+.wallet-pill b {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.wallet-pill:active {
+  background: var(--line);
+}
+
+@media (max-width: 400px) {
+  header .w { gap: 4px; }
+  header .logo { font-size: 18px; gap: 6px; }
+  header .logo i { width: 28px; height: 28px; }
+  header .ib { width: 36px; height: 36px; }
+  .wallet-pill { height: 38px; padding-inline: 9px; gap: 5px; }
+  /* صفحة داخلية + رصيد ظاهر: نكتفي بشارة ▶ ليتسع الرصيد في سطر واحد */
+  header .w.tight .lt { display: none; }
 }
 
 .ib {
@@ -1038,4 +1078,168 @@ pre {
   color: #B45309;
   font-size: 13px;
   font-weight: 800;
+}
+
+/* ===== تعديلات: السلة ومراجعة الطلب قبل الدفع ===== */
+.cart-note {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(76, 125, 255, .1);
+  border: 1px solid rgba(76, 125, 255, .35);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.ci .ic {
+  cursor: pointer;
+}
+
+.ci-t {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  text-align: start;
+}
+
+.ci-t b {
+  font-size: 15px;
+}
+
+.ci-t em {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--pri2);
+}
+
+.rv-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.rv-h h3 {
+  margin: 0;
+}
+
+.rv-a {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--pri2);
+  white-space: nowrap;
+}
+
+.rv-i {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+
+.rv-i .ic {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  font-size: 17px;
+  flex: none;
+  box-shadow: none;
+}
+
+.rv-d {
+  flex: 1;
+  min-width: 0;
+}
+
+.rv-d b {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.rv-d > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mut);
+}
+
+.rv-i.multi .qx {
+  background: rgba(245, 158, 11, .16);
+  color: var(--warn);
+  padding: 0 8px;
+  border-radius: 10px;
+  font-weight: 900;
+}
+
+.rv-p {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.rv-p button {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--pri2);
+}
+
+.rv-n {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mut);
+}
+
+/* ===== تعديل اشتراك من السلة (صفحة المنتج) ===== */
+.edit-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(76, 125, 255, .1);
+  border: 1px solid rgba(76, 125, 255, .35);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.edit-note svg {
+  flex: none;
+  color: var(--pri2);
+}
+
+.qrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.q.lg button {
+  width: 46px;
+  height: 42px;
+  font-size: 22px;
+}
+
+.q.lg span {
+  min-width: 40px;
+  font-size: 18px;
+}
+
+.qtot {
+  font-size: 18px;
+  font-weight: 900;
 }

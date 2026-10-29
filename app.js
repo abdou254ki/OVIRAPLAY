@@ -9,7 +9,7 @@ const app = $('#app');
 const fmt = (n) => '<bdi>' + Number(n || 0).toLocaleString('en-US') + ' DA</bdi>';
 const dur = (m) => (m == 1 ? 'شهر واحد' : m < 11 ? m + ' أشهر' : m + ' شهر');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
-const ico = (d) => `<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ico = (d, z = 21) => `<svg viewBox="0 0 24 24" width="${z}" height="${z}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 
 const I = {
   home: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
@@ -20,8 +20,11 @@ const I = {
   cart: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>',
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
   back: '<path d="M9 18l6-6-6-6"/>',
-  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+  edit: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>'
 };
+I.account = I.user; // تبويب «حسابي» يبحث عن المفتاح account (كان مفقوداً فتختفي الأيقونة)
 
 const DEFAULT_STEPS = [
   { title: 'اختر باقتك وأضفها', desc: 'حدد المدة التي تناسبك ثم أكمل الطلب باسمك ورقم واتساب.' },
@@ -79,6 +82,10 @@ const pl = (i) => { const p = pr(i.id); return p && p.pl.find((x) => x[0] == i.m
 const sv = (p, x) => Math.round((1 - x[1] / (p.pl[0][1] * x[0])) * 100);
 
 let cart = [], sel = 0, cat = 'الكل', payId = 'chargily', msg = '', chargilyMode = 'test';
+let editK = -1;          // فهرس الاشتراك الذي يُعدَّل الآن من صفحة المنتج (-1 = لا تعديل)
+let editBack = false;    // وصلنا لصفحة التعديل من السلة/الدفع، فالرجوع يعيدنا إليها
+let cartNote = '';       // تنبيه يظهر أعلى السلة بعد «اشترِ الآن»
+let chkDraft = { n: null, p: null, e: null }; // ما كتبه الزبون في صفحة الدفع (لا يضيع عند تعديل السلة)
 let custToken = localStorage.getItem('ov_ctk') || '';
 let custProfile = null;
 let custOrders = [];
@@ -90,7 +97,21 @@ try { cart = JSON.parse(localStorage.getItem('oc') || '[]'); } catch (e) {}
 try { const cp0 = JSON.parse(localStorage.getItem('ov_pay') || 'null'); if (Array.isArray(cp0) && cp0.length) applyPay(cp0); } catch (e) {}
 if (!Array.isArray(cart)) cart = [];
 
-const clean = () => { cart = cart.filter((i) => i && pl(i) && i.q > 0); };
+const clean = () => {
+  const n0 = cart.length;
+  cart = cart.filter((i) => i && pl(i) && i.q > 0);
+  // نفس الاشتراك بنفس المدة مرتين → يُدمجان في سطر واحد (إلا أثناء التعديل حتى لا تتغير الفهارس)
+  if (editK < 0) {
+    const seen = {};
+    cart = cart.filter((i) => {
+      const k = i.id + '|' + i.m;
+      if (seen[k]) { seen[k].q = Math.min(9, seen[k].q + i.q); return false; }
+      seen[k] = i;
+      return true;
+    });
+  }
+  if (cart.length !== n0) save();
+};
 const save = () => { try { localStorage.setItem('oc', JSON.stringify(cart)); } catch (e) {} };
 const tot = () => cart.reduce((s, i) => s + pl(i)[1] * i.q, 0);
 const saved = () => cart.reduce((s, i) => s + (pr(i.id).pl[0][1] * pl(i)[0] - pl(i)[1]) * i.q, 0);
@@ -266,29 +287,40 @@ const shop = () => {
   </div>`;
 };
 
-// صفحة الهبوط المخصصة لكل بطاقة عرض
+// صفحة الهبوط المخصصة لكل بطاقة عرض (ووضع «تعديل اشتراك من السلة» عند وجود editK)
 const prod = (p) => {
   const x = p.pl[sel] || p.pl[0];
+  const it = editK >= 0 ? cart[editK] : null;
   const stepsList = Array.isArray(p.steps) && p.steps.length ? p.steps : DEFAULT_STEPS;
+  const featBlock = `<h2 class="sh">ما ستحصل عليه</h2>
+    <ul class="ft">${(p.f || []).map((f) => `<li><i>✓</i>${esc(f)}</li>`).join('')}</ul>`;
+  const plansBlock = `<h2 class="sh">اختر مدة الاشتراك</h2>
+    ${p.pl.map((y, i) => `<button class="pl ${i == sel ? 'on' : ''}" onclick="pickPlan(${i})">${y[2] ? '<span class="tag">الأوفر</span>' : ''}<span class="rd"></span><span class="d">${dur(y[0])}${sv(p, y) > 0 ? `<em>وفّر ${sv(p, y)}%</em>` : ''}</span><b>${fmt(y[1])}</b></button>`).join('')}`;
+  const qtyBlock = it ? `<h2 class="sh">الكمية</h2>
+    <div class="qrow">
+      <div class="q lg"><button onclick="editQty(-1)" aria-label="إنقاص">−</button><span>${it.q}</span><button onclick="editQty(1)" aria-label="زيادة">+</button></div>
+      <b class="qtot">${fmt(x[1] * it.q)}</b>
+    </div>` : '';
   return `<div class="ph" style="--c:${esc(p.c)};--c2:${esc(p.c2)}">
     ${gc(p)}
     <h1>${esc(p.t)}</h1>
     <p style="max-width:520px;opacity:.92;font-size:14px">${esc(p.sub || p.cat)}</p>
   </div>
   <div class="w">
-    <h2 class="sh">ما ستحصل عليه</h2>
-    <ul class="ft">${(p.f || []).map((f) => `<li><i>✓</i>${esc(f)}</li>`).join('')}</ul>
-    <h2 class="sh">اختر مدة الاشتراك</h2>
-    ${p.pl.map((y, i) => `<button class="pl ${i == sel ? 'on' : ''}" onclick="pickPlan(${i})">${y[2] ? '<span class="tag">الأوفر</span>' : ''}<span class="rd"></span><span class="d">${dur(y[0])}${sv(p, y) > 0 ? `<em>وفّر ${sv(p, y)}%</em>` : ''}</span><b>${fmt(y[1])}</b></button>`).join('')}
+    ${it ? `<div class="edit-note">${ico(I.edit, 16)}<span>أنت تعدّل اشتراكاً من سلتك — كل تغيير يُحفظ مباشرة، ويمكنك الرجوع في أي وقت.</span></div>` : ''}
+    ${it ? plansBlock + qtyBlock + featBlock : featBlock + plansBlock}
     <h2 class="sh">كيف يتم طلبك؟</h2>
     <div class="tr">
       ${stepsList.map((st, idx) => `<div><b>${idx + 1}. ${esc(st.title)}</b>${esc(st.desc)}</div>`).join('')}
     </div>
   </div>
-  <div class="bar">
+  ${it ? `<div class="bar">
+    <button class="btn o" onclick="editRemove()">حذف</button>
+    <button class="btn" onclick="editDone()">حفظ · ${fmt(x[1] * it.q)}</button>
+  </div>` : `<div class="bar">
     <button class="btn o" onclick="add('${esc(p.id)}',${x[0]})">أضف للسلة</button>
     <button class="btn" onclick="add('${esc(p.id)}',${x[0]},1)">اشترِ الآن · ${fmt(x[1])}</button>
-  </div>`;
+  </div>`}`;
 };
 
 const cartV = () => {
@@ -298,13 +330,14 @@ const cartV = () => {
   const sv2 = saved();
   return `<div class="w">
     <h1 class="ttl">سلة التسوق</h1>
+    ${cartNote ? `<div class="cart-note">${esc(cartNote)}</div>` : ''}
     ${cart.map((i, k) => {
       const p = pr(i.id), x = pl(i);
       return `<div class="ci">
-        <i class="ic" style="background:${esc(p.c)}">${esc(p.l)}</i>
+        <i class="ic" style="background:${esc(p.c)}" onclick="editItem(${k})">${esc(p.l)}</i>
         <div class="in">
-          <b>${esc(p.t)}</b>
-          <select class="sel" onchange="chg(${k},+this.value)">${p.pl.map((y) => `<option value="${y[0]}" ${y[0] == i.m ? 'selected' : ''}>${dur(y[0])} — ${y[1]} DA</option>`).join('')}</select>
+          <button class="ci-t" onclick="editItem(${k})" aria-label="فتح الاشتراك وتعديله"><b>${esc(p.t)}</b><em>${ico(I.edit, 13)} فتح الاشتراك وتعديله</em></button>
+          <select class="sel" onchange="chg(${k},+this.value)">${p.pl.map((y) => `<option value="${y[0]}" ${y[0] == i.m ? 'selected' : ''}>${dur(y[0])} — \u2066${y[1]} DA\u2069</option>`).join('')}</select>
           <div class="q"><button onclick="qty(${k},-1)">−</button><span>${i.q}</span><button onclick="qty(${k},1)">+</button></div>
         </div>
         <div class="cr"><button onclick="del(${k})">✕</button><b>${fmt(x[1] * i.q)}</b></div>
@@ -354,20 +387,29 @@ const chk = () => {
   const u = me();
   return `<div class="w">
     <h1 class="ttl">إتمام الطلب</h1>
-    <div class="sm">
-      ${cart.map((i) => `<div class="row"><span>${esc(pr(i.id).t)} · ${dur(pl(i)[0])} × ${i.q}</span><b>${fmt(pl(i)[1] * i.q)}</b></div>`).join('')}
+    <div class="sm rv">
+      <div class="rv-h"><h3>راجع سلتك قبل الدفع</h3><a class="rv-a" href="#/cart">تعديل السلة</a></div>
+      ${cart.map((i, k) => {
+        const p = pr(i.id), x = pl(i);
+        return `<div class="rv-i ${i.q > 1 ? 'multi' : ''}">
+          <i class="ic" style="background:${esc(p.c)}">${esc(p.l)}</i>
+          <div class="rv-d"><b>${esc(p.t)}</b><span>${dur(x[0])} <span class="qx">× ${i.q}</span></span></div>
+          <div class="rv-p">${fmt(x[1] * i.q)}<button onclick="editItem(${k})">تعديل</button></div>
+        </div>`;
+      }).join('')}
       <hr>
       <div class="tt"><span>الإجمالي المطلوب</span>${fmt(tot())}</div>
+      ${cart.length > 1 || cart[0].q > 1 ? `<p class="rv-n">في سلتك ${cart.reduce((a, i) => a + i.q, 0)} اشتراكات — تأكد من الأعداد والمدد قبل الدفع.</p>` : ''}
     </div>
 
     <label class="lb" for="fn">الاسم الكامل *</label>
-    <input class="in2" id="fn" autocomplete="name" value="${esc(u.n || '')}" placeholder="اكتب اسمك الكامل" required>
+    <input class="in2" id="fn" autocomplete="name" value="${esc(chkDraft.n ?? u.n ?? '')}" oninput="chkDraft.n=this.value" placeholder="اكتب اسمك الكامل" required>
 
     <label class="lb" for="fp">رقم واتساب لاستلام الإشعارات *</label>
-    <input class="in2" id="fp" type="tel" value="${esc(u.p || '')}" dir="ltr" placeholder="05XX XX XX XX" required>
+    <input class="in2" id="fp" type="tel" value="${esc(chkDraft.p ?? u.p ?? '')}" oninput="chkDraft.p=this.value" dir="ltr" placeholder="05XX XX XX XX" required>
 
     <label class="lb" for="fe">البريد الإلكتروني الشخصي للتواصل والضمان *</label>
-    <input class="in2" id="fe" type="email" value="${esc(u.e || '')}" dir="ltr" placeholder="example@gmail.com" required>
+    <input class="in2" id="fe" type="email" value="${esc(chkDraft.e ?? u.e ?? '')}" oninput="chkDraft.e=this.value" dir="ltr" placeholder="example@gmail.com" required>
 
     <label class="lb">اختر طريقة الدفع</label>
     <div class="pms" id="pms">${payButtons()}</div>
@@ -499,7 +541,7 @@ const topupPanel = () => !topupOpen ? '' : `
     <label class="lb">أو أدخل مبلغاً آخر (DA)</label>
     <input class="in2" id="tp_amt" type="number" inputmode="numeric" min="200" dir="ltr" value="${topupAmt}">
     <button class="btn wa" style="margin-top:12px" onclick="sendTopup()">💬 اطلب الشحن عبر واتساب</button>
-    <p class="note" style="margin-top:8px">سيصلك الرصيد بعد تأكيد الإدارة للدفع. الشحن الآلي بالبطاقة قادم قريباً.</p>
+    <p class="note" style="margin-top:8px">سيصلك الرصيد في حسابك بعد تأكيد الإدارة للدفع.</p>
   </div>`;
 
 const complaintsBlock = () => `
@@ -762,10 +804,11 @@ function chrome() {
   const v = h[0] || 'home';
   const n = cart.reduce((s, i) => s + i.q, 0);
 
+  $('#hd').classList.toggle('tight', v != 'home' && !!custProfile);
   $('#hd').innerHTML = `
     ${v != 'home' ? `<button class="ib" onclick="back()" aria-label="رجوع">${ico(I.back)}</button>` : ''}
-    <a class="logo" href="#/"><i>▶</i>OVIRA <b>PLAY</b></a>
-    ${custProfile ? `<a class="wallet-pill" href="#/account">💰 ${fmt(custProfile.balance || 0)}</a>` : ''}
+    <a class="logo" href="#/"><i>▶</i><span class="lt">OVIRA <b>PLAY</b></span></a>
+    ${custProfile ? `<a class="wallet-pill" href="#/account" aria-label="رصيد محفظتك">${ico(I.wallet, 18)}<span class="wt"><small>رصيدك</small><b>${fmt(custProfile.balance || 0)}</b></span></a>` : ''}
     <button class="ib" onclick="theme()" aria-label="تغيير المظهر">${ico(I.moon)}</button>
     <a class="ib" href="#/cart" aria-label="السلة">${ico(I.cart)}${n ? `<span class="cnt">${n}</span>` : ''}</a>`;
 
@@ -776,14 +819,28 @@ function chrome() {
     ['account', 'حسابي', '/account'],
     ['support', 'شكوى/دعم', '/support']
   ];
-  $('#nv').innerHTML = tabs.map((x) => `<a href="#${x[2]}" class="${x[0] == v ? 'on' : ''}">${ico(I[x[0]])}${x[1]}</a>`).join('');
+  $('#nv').innerHTML = tabs.map((x) => `<a href="#${x[2]}" class="${x[0] == v ? 'on' : ''}">${ico(I[x[0]] || I.user)}${x[1]}</a>`).join('');
 }
 
 function draw() { clean(); app.innerHTML = view(); chrome(); }
 function route() {
   const h = location.hash.slice(2).split('?')[0].split('/');
   const slug = decodeURIComponent(h[1] || '');
-  if (h[0] == 'p' && pr(slug)) sel = Math.max(0, pr(slug).pl.findIndex((x) => x[2]));
+  editK = -1;
+  if (h[0] != 'p') editBack = false;
+  if (h[0] != 'cart') cartNote = '';
+  if (h[0] == 'p' && pr(slug)) {
+    // ‎#/p/<id>?edit=<k>‎ : فتح اشتراك من السلة للتعديل (تُحدَّد مدته الحالية)
+    const q = new URLSearchParams(location.hash.split('?')[1] || '').get('edit');
+    const k = q === null ? -1 : parseInt(q, 10);
+    const it = k >= 0 ? cart[k] : null;
+    if (it && it.id == slug && pl(it)) {
+      editK = k;
+      sel = Math.max(0, pr(slug).pl.findIndex((x) => x[0] == it.m));
+    } else {
+      sel = Math.max(0, pr(slug).pl.findIndex((x) => x[2]));
+    }
+  }
   if (h[0] == 'account' && custToken) fetchCustomerProfile().then(() => { app.innerHTML = view(); chrome(); });
   draw();
   scrollTo(0, 0);
@@ -791,15 +848,57 @@ function route() {
 
 function back() { history.length > 1 ? history.back() : (location.hash = '#/'); }
 function setCat(c) { cat = c; draw(); }
-function pickPlan(i) { sel = i; draw(); }
+function pickPlan(i) {
+  sel = i;
+  // أثناء تعديل اشتراك من السلة يُحفظ اختيار المدة مباشرة
+  if (editK >= 0 && cart[editK]) { cart[editK].m = pr(cart[editK].id).pl[i][0]; save(); }
+  draw();
+}
 function add(id, m, go) {
   const e = cart.find((i) => i.id == id && i.m == m);
+  const had = !!e;
   if (e) e.q = Math.min(9, e.q + 1);
   else cart.push({ id, m, q: 1 });
   save();
-  if (go) location.hash = '#/checkout';
-  else { draw(); toast('تمت الإضافة إلى السلة ✓'); }
+  const cur = cart.find((i) => i.id == id && i.m == m);
+  if (go) {
+    // سلة فيها هذا الاشتراك فقط وبكمية 1 → دفع مباشر. غير ذلك → نعرض السلة أولاً للمراجعة
+    if (cart.length === 1 && cur.q === 1) { location.hash = '#/checkout'; return; }
+    const t = pr(id).t + ' — ' + dur(m);
+    cartNote = had
+      ? `«${t}» كان في سلتك أصلاً فأصبحت كميته ${cur.q}. إن لم تقصد ذلك فعدّل الكمية قبل المتابعة.`
+      : `تمت إضافة «${t}». راجع كل ما في سلتك ثم تابع للدفع.`;
+    location.hash = '#/cart';
+  } else {
+    draw();
+    toast(had ? `في سلتك الآن ${cur.q} من هذا الاشتراك — عدّل الكمية من السلة إن لزم` : 'تمت الإضافة إلى السلة ✓');
+  }
 }
+
+// ===== تعديل اشتراك موجود في السلة (من السلة أو من صفحة الدفع) =====
+window.editItem = (k) => {
+  const it = cart[k];
+  if (!it) return;
+  editBack = true;
+  location.hash = '#/p/' + encodeURIComponent(it.id) + '?edit=' + k;
+};
+function leaveEdit() {
+  if (editBack) { editBack = false; history.back(); }   // نعود لنفس الصفحة التي جئنا منها (السلة أو الدفع)
+  else location.hash = '#/cart';
+}
+window.editQty = (d) => {
+  if (editK < 0 || !cart[editK]) return;
+  cart[editK].q = Math.min(9, Math.max(1, cart[editK].q + d));
+  save();
+  draw();
+};
+window.editDone = () => { toast('تم حفظ التعديل ✓'); leaveEdit(); };
+window.editRemove = () => {
+  if (editK >= 0) { cart.splice(editK, 1); save(); }
+  editK = -1;
+  toast('تم حذف الاشتراك من السلة');
+  leaveEdit();
+};
 function qty(k, d) { cart[k].q = Math.min(9, Math.max(1, cart[k].q + d)); save(); draw(); }
 function del(k) { cart.splice(k, 1); save(); draw(); toast('تم الحذف من السلة'); }
 function chg(k, m) { cart[k].m = m; save(); draw(); }
@@ -876,7 +975,7 @@ async function send() {
       }
 
       if (custToken) fetchCustomerProfile();
-      cart = []; save(); location.hash = '#/done';
+      cart = []; save(); chkDraft = { n: null, p: null, e: null }; location.hash = '#/done';
     } else {
       toast(data.message || 'حدث خطأ أثناء معالجة الطلب.');
       submitBtn.disabled = false;
