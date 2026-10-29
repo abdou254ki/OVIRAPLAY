@@ -1,8 +1,11 @@
 const API = 'https://ovira-api.onrender.com/api/admin';
-let token = sessionStorage.getItem('adm_tk') || '';
+let token = localStorage.getItem('adm_tk') || sessionStorage.getItem('adm_tk') || '';
 let tab = 'orders', stFilter = '', qFilter = '', compFilter = '';
 let openComplaintsCount = 0;
-let payList = [];
+let isLoggingIn = false;
+let adm2FaPending = null; // { tempToken, method, message }
+let adm2FaSetup = null;   // { method, secret, otpauthUrl, message }
+let payMethodsState = [];
 
 const COL = {
   'قيد المراجعة': '#F59E0B',
@@ -32,27 +35,66 @@ function toast(msg) {
   el.textContent = msg;
   el.classList.add('on');
   clearTimeout(tt);
-  tt = setTimeout(() => el.classList.remove('on'), 2600);
+  tt = setTimeout(() => el.classList.remove('on'), 2800);
 }
 
 function renderLogin(err = '') {
+  // إذا كان المدير في خطوة إدخال كود التحقق بخطوتين (2FA)
+  if (adm2FaPending) {
+    document.getElementById('root').innerHTML = `
+      <form class="card login-box" onsubmit="event.preventDefault(); verifyAdmin2FALogin();">
+        <div style="font-size:42px;margin-bottom:6px">${adm2FaPending.method === 'telegram' ? '📲' : '🔑'}</div>
+        <h1>التحقق بخطوتين (2FA)</h1>
+        <p>${esc(adm2FaPending.message)}</p>
+        <label class="lbl" for="adm_otp">رمز التحقق (6 أرقام)</label>
+        <input class="inp otp-inp" id="adm_otp" type="text" inputmode="numeric" maxlength="6" dir="ltr" placeholder="000000" required autofocus>
+        <button class="btn-pri" id="verify2faBtn" type="submit">تأكيد الرمز والدخول</button>
+        <button class="btn-sm" type="button" style="width:100%;margin-top:8px" onclick="adm2FaPending=null;document.getElementById('root').innerHTML='';renderLogin();">العودة لتسجيل الدخول</button>
+        ${err ? `<div class="err-msg">${esc(err)}</div>` : ''}
+      </form>`;
+    return;
+  }
+
+  const existingErr = document.getElementById('loginErrBox');
+  if (existingErr && document.getElementById('em')) {
+    existingErr.textContent = err;
+    existingErr.style.display = err ? 'block' : 'none';
+    return;
+  }
+
   document.getElementById('root').innerHTML = `
-    <div class="card login-box">
+    <form class="card login-box" onsubmit="event.preventDefault(); doLogin();">
       <h1>🔒 لوحة الإدارة</h1>
       <p>OVIRA PLAY — تسجيل الدخول المحمي</p>
-      <label class="lbl">البريد الإلكتروني</label>
-      <input class="inp" id="em" type="email" dir="ltr" placeholder="admin@ovira">
-      <label class="lbl">كلمة السر</label>
-      <input class="inp" id="pw" type="password" dir="ltr" placeholder="••••••••">
-      <button class="btn-pri" onclick="doLogin()">تسجيل الدخول</button>
-      ${err ? `<div class="err-msg">${esc(err)}</div>` : ''}
-    </div>`;
+      <label class="lbl" for="em">البريد الإلكتروني</label>
+      <input class="inp" id="em" name="username" type="email" autocomplete="username" dir="ltr" placeholder="admin@oviraplaydz.com" required>
+      <label class="lbl" for="pw">كلمة السر</label>
+      <input class="inp" id="pw" name="password" type="password" autocomplete="current-password" dir="ltr" placeholder="••••••••" required>
+      <button class="btn-pri" id="loginBtn" type="submit">تسجيل الدخول</button>
+      <div class="err-msg" id="loginErrBox" style="display:${err ? 'block' : 'none'}">${esc(err)}</div>
+    </form>`;
 }
 
 async function doLogin() {
-  const email = document.getElementById('em').value.trim();
-  const password = document.getElementById('pw').value;
-  if (!email || !password) return renderLogin('أدخل البريد الإلكتروني وكلمة السر.');
+  if (isLoggingIn) return;
+  const emEl = document.getElementById('em');
+  const pwEl = document.getElementById('pw');
+  const btn = document.getElementById('loginBtn');
+
+  const email = (emEl ? emEl.value : '').trim();
+  const password = (pwEl ? pwEl.value : '').trim();
+
+  if (!email || !password) {
+    return renderLogin('أدخل البريد الإلكتروني وكلمة السر.');
+  }
+
+  isLoggingIn = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'جاري التحقق والدخول...';
+  }
+  renderLogin('');
+
   try {
     const r = await fetch(API + '/login', {
       method: 'POST',
@@ -60,18 +102,87 @@ async function doLogin() {
       body: JSON.stringify({ email, password })
     });
     const d = await r.json();
-    if (!r.ok || !d.success || !d.token) return renderLogin(d.message || 'بيانات الدخول غير صحيحة.');
+    isLoggingIn = false;
+
+    if (!r.ok || !d.success) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'تسجيل الدخول';
+      }
+      return renderLogin(d.message || 'بيانات الدخول غير صحيحة.');
+    }
+
+    if (d.requires2FA) {
+      adm2FaPending = {
+        tempToken: d.tempToken,
+        method: d.method,
+        message: d.message
+      };
+      document.getElementById('root').innerHTML = '';
+      return renderLogin();
+    }
+
     token = d.token;
+    localStorage.setItem('adm_tk', token);
     sessionStorage.setItem('adm_tk', token);
     loadPanel();
   } catch (e) {
-    renderLogin('تعذّر الاتصال بالخادم، تأكد أن السيرفر يعمل.');
+    isLoggingIn = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'تسجيل الدخول';
+    }
+    renderLogin('الخادم يستيقظ الآن، اضغط تسجيل الدخول مرة أخرى بعد ثانيتين.');
+  }
+}
+
+async function verifyAdmin2FALogin() {
+  const codeEl = document.getElementById('adm_otp');
+  const btn = document.getElementById('verify2faBtn');
+  const code = (codeEl ? codeEl.value : '').trim();
+  if (code.length !== 6) return renderLogin('أدخل الرمز المكون من 6 أرقام.');
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'جاري التحقق...';
+  }
+
+  try {
+    const r = await fetch(API + '/2fa/verify-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tempToken: adm2FaPending.tempToken, code })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success || !d.token) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'تأكيد الرمز والدخول';
+      }
+      return renderLogin(d.message || 'رمز التحقق غير صحيح.');
+    }
+
+    adm2FaPending = null;
+    token = d.token;
+    localStorage.setItem('adm_tk', token);
+    sessionStorage.setItem('adm_tk', token);
+    loadPanel();
+  } catch (e) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'تأكيد الرمز والدخول';
+    }
+    renderLogin('تعذّر الاتصال بالخادم، حاول مرة أخرى.');
   }
 }
 
 function logout() {
   token = '';
+  adm2FaPending = null;
+  adm2FaSetup = null;
+  localStorage.removeItem('adm_tk');
   sessionStorage.removeItem('adm_tk');
+  document.getElementById('root').innerHTML = '';
   renderLogin();
 }
 
@@ -87,14 +198,14 @@ async function loadPanel() {
     endpoint = 'orders?' + params.toString();
   } else if (tab === 'products') {
     endpoint = 'products';
+  } else if (tab === 'payments') {
+    endpoint = 'payment-methods';
   } else if (tab === 'complaints') {
     if (compFilter) params.set('status', compFilter);
     endpoint = 'complaints?' + params.toString();
   } else if (tab === 'customers') {
     if (qFilter) params.set('q', qFilter);
     endpoint = 'customers?' + params.toString();
-  } else if (tab === 'payments') {
-    endpoint = 'payment-methods';
   } else {
     endpoint = 'settings';
   }
@@ -103,13 +214,18 @@ async function loadPanel() {
     const r = await fetch(`${API}/${endpoint}`, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
-    if (r.status === 401 || r.status === 403) return logout();
+    if (r.status === 401) return logout();
     const d = await r.json();
-    if (!d.success) return logout();
+    if (!d.success) {
+      return toast(d.message || 'تعذّر جلب البيانات، أعد المحاولة.');
+    }
     if (typeof d.openComplaints === 'number') openComplaintsCount = d.openComplaints;
+    if (tab === 'payments' && Array.isArray(d.methods)) {
+      payMethodsState = d.methods;
+    }
     renderMain(d);
   } catch (e) {
-    renderLogin('تعذّر الاتصال بالخادم.');
+    toast('جاري إعادة الاتصال بالخادم...');
   }
 }
 
@@ -332,7 +448,57 @@ function renderMain(d) {
       ${pList}`;
   }
 
-  // ==================== 3. تبويب شكاوى الزبائن ====================
+  // ==================== 3. تبويب طرق الدفع (الخطوة 2) ====================
+  else if (tab === 'payments') {
+    const methodsHtml = (payMethodsState || []).map((m, idx) => {
+      const stateBadge = m.visible
+        ? '<span class="vis-state ok">🟢 ظاهرة للعملاء</span>'
+        : !m.enabled
+        ? '<span class="vis-state off">⚪ معطّلة (مخفية)</span>'
+        : `<span class="vis-state warn">⚠️ مفعّلة لكن مخفية: ${esc(m.hiddenReason || '')}</span>`;
+
+      const isManual = m.type === 'manual';
+      return `
+      <div class="card pm-card ${m.enabled ? 'enabled' : ''}">
+        <div class="pm-head">
+          <div class="pm-title">
+            <span>${m.type === 'auto' ? '⚡' : m.type === 'wallet' ? '💰' : '🏦'} ${esc(m.name)}</span>
+            ${stateBadge}
+          </div>
+          <label class="pm-toggle">
+            <input type="checkbox" id="pm_en_${idx}" ${m.enabled ? 'checked' : ''}>
+            <span>تفعيل للزبائن</span>
+          </label>
+        </div>
+
+        ${isManual ? `
+          <div class="grid-2">
+            <div>
+              <label class="lbl">تسمية المعرّف (مثل RIP أو Binance ID)</label>
+              <input class="inp" id="pm_lbl_${idx}" value="${esc(m.label || '')}" placeholder="مثال: RIP">
+            </div>
+            <div>
+              <label class="lbl">رقم الحساب / المعرّف الذي ينسخه الزبون *</label>
+              <input class="inp" id="pm_val_${idx}" dir="ltr" value="${esc(m.value || '')}" placeholder="00799999...">
+            </div>
+          </div>
+        ` : ''}
+
+        <label class="lbl">ملاحظة أو تعليمات تظهر للزبون عند اختيار هذه الطريقة (اختياري)</label>
+        <input class="inp" id="pm_note_${idx}" value="${esc(m.note || '')}" placeholder="مثال: أرسل صورة الوصل في البوت بعد التحويل">
+      </div>`;
+    }).join('');
+
+    content = `
+      <div class="card" style="background:rgba(30,64,175,.06);border-color:rgba(30,64,175,.25)">
+        <h3>💳 التحكم بطرق الدفع الظاهرة في المتجر</h3>
+        <p style="font-size:13px;color:var(--mut);margin-top:4px">أي طريقة توقف تفعيلها هنا تختفي فوراً من صفحة إتمام الطلب عند الزبائن، ويرفض الخادم أي طلب بها.</p>
+      </div>
+      ${methodsHtml}
+      <button class="btn-pri" onclick="savePaymentMethodsAll()">💾 حفظ جميع إعدادات طرق الدفع</button>`;
+  }
+
+  // ==================== 4. تبويب شكاوى الزبائن ====================
   else if (tab === 'complaints') {
     const cStatuses = ['', 'مفتوحة', 'تم الرد', 'مغلقة'];
     const cList = (d.complaints || []).map((c) => `
@@ -366,7 +532,7 @@ function renderMain(d) {
       ${cList || '<div class="card" style="text-align:center">لا توجد شكاوى أو تذاكر دعم حالياً</div>'}`;
   }
 
-  // ==================== 4. تبويب الزبائن وإدارة أرصدتهم ====================
+  // ==================== 5. تبويب الزبائن وإدارة أرصدتهم ====================
   else if (tab === 'customers') {
     const custList = (d.customers || []).map((c) => `
       <div class="card">
@@ -374,11 +540,12 @@ function renderMain(d) {
           <div>
             <b style="font-size:16px">${esc(c.name)}</b>
             ${c.blocked ? '<span class="badge" style="background:var(--bad);margin-right:6px">محظور</span>' : ''}
+            ${c.twoFactorEnabled ? '<span class="badge" style="background:var(--ok);margin-right:6px">🔐 2FA</span>' : ''}
           </div>
           <span class="wallet-badge">💰 الرصيد: ${fmt(c.balance || 0)}</span>
         </div>
         <div class="cust-box">
-          <div>📱 <b>الهاتف:</b> <a href="https://wa.me/213${esc(String(c.phone || '').replace(/^0/, ''))}" target="_blank" dir="ltr">${esc(c.phone)}</a></div>
+          <div>📱 <b>الهاتف:</b> ${c.phone ? `<a href="https://wa.me/213${esc(String(c.phone || '').replace(/^0/, ''))}" target="_blank" dir="ltr">${esc(c.phone)}</a>` : 'غير مضاف'}</div>
           <div>📧 <b>الإيميل:</b> <span dir="ltr">${esc(c.email || 'غير محدد')}</span></div>
           <div>📦 <b>عدد الطلبات:</b> ${c.ordersCount || 0} طلب · <b>إجمالي المشتريات:</b> ${fmt(c.totalSpent || 0)}</div>
         </div>
@@ -400,7 +567,7 @@ function renderMain(d) {
           </div>
         </div>
 
-        <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="btn-sm" onclick="addQuickBalance('${c._id}', 500)">+500 DA</button>
           <button class="btn-sm" onclick="addQuickBalance('${c._id}', 1000)">+1000 DA</button>
           <button class="btn-sm" onclick="addQuickBalance('${c._id}', -500)">-500 DA</button>
@@ -443,45 +610,51 @@ function renderMain(d) {
       ${custList || '<div class="card" style="text-align:center">لا يوجد زبائن مسجلون حالياً</div>'}`;
   }
 
-  // ==================== 4.5 تبويب طرق الدفع ====================
-  else if (tab === 'payments') {
-    payList = d.methods || [];
-    content = `
-      <div class="card">
-        <h3>💳 طرق الدفع</h3>
-        <p style="font-size:13px;color:var(--mut);margin:8px 0 0">فعّل أو أطفئ كل طريقة، وعدّل معرّفات الاستلام. الطريقة المعطّلة تختفي فوراً من صفحة إتمام الطلب عند الزبائن ولا يمكن استعمالها.</p>
-      </div>
-      ${payList.map((m) => `
-        <div class="card pm-card">
-          <div class="pm-head">
-            <b>${m.icon} ${esc(m.name)}</b>
-            <label class="sw" aria-label="تفعيل ${esc(m.name)}">
-              <input type="checkbox" id="pm_en_${m.id}" ${m.enabled ? 'checked' : ''}>
-              <span></span>
-            </label>
-          </div>
-          <div class="pm-state ${m.available ? 'ok' : (m.enabled ? 'warn' : 'off')}">
-            ${m.available ? '✅ ظاهرة للزبائن' : (m.enabled ? '⚠️ مفعّلة لكنها مخفية: ' + esc(m.reason) : '⛔ مخفية عن الزبائن (معطّلة)')}
-          </div>
-          ${m.type === 'manual' ? `
-            <label class="lbl">اسم المعرّف كما يراه الزبون</label>
-            <input class="inp" id="pm_lb_${m.id}" value="${esc(m.label)}" placeholder="مثال: RIP">
-            <label class="lbl">المعرّف / الرقم / العنوان</label>
-            <input class="inp" id="pm_v_${m.id}" dir="ltr" value="${esc(m.value)}">
-            <label class="lbl">تعليمات إضافية للزبون (اختياري)</label>
-            <textarea class="inp" id="pm_nt_${m.id}" placeholder="مثال: أرسل صورة الإيصال على واتساب بعد التحويل">${esc(m.note)}</textarea>
-          ` : (m.type === 'auto'
-            ? '<p class="pm-hint">مفاتيح شارجيلي ووضع التجربة/الحقيقي في تبويب ⚙️ الإعدادات.</p>'
-            : '<p class="pm-hint">يدفع الزبون من رصيد محفظته، ويجب أن يكون مسجّل الدخول.</p>')}
-        </div>
-      `).join('')}
-      <button class="btn-pri" onclick="savePayMethods()">💾 حفظ طرق الدفع</button>`;
-  }
-
-  // ==================== 5. تبويب إعدادات شارجيلي والأمان ====================
+  // ==================== 6. تبويب الإعدادات والتحقق بخطوتين (2FA) وشارجيلي ====================
   else if (tab === 'settings') {
     const ch = d.chargily || {};
+    const sec = d.adminSecurity || {};
+    const is2FA = !!sec.twoFactorEnabled;
+    const methodText = sec.twoFactorMethod === 'telegram' ? 'عبر بوت تيليغرام 📲' : 'عبر Google Authenticator 🔑';
+
     content = `
+      <div class="card" style="border:2px solid var(--pri2)">
+        <div class="ord-head">
+          <h3>🔐 التحقق بخطوتين (2FA) للوحة الإدارة</h3>
+          <span class="badge" style="background:${is2FA ? 'var(--ok)' : '#64748B'}">${is2FA ? `🟢 مفعّل (${methodText})` : '⚪ غير مفعّل (اختياري)'}</span>
+        </div>
+        <p style="font-size:13px;color:var(--mut);margin:6px 0">أضف طبقة حماية إضافية عند دخولك للوحة التحكم عبر كود يصلك في بوت تيليغرام أو عبر تطبيق Google Authenticator.</p>
+
+        ${is2FA ? `
+          <button class="btn-bad" onclick="disableAdmin2FA()">🔓 إيقاف التحقق بخطوتين للوحة التحكم</button>
+        ` : `
+          <div class="grid-2" style="margin-top:10px">
+            <button class="btn-pri" style="margin:0;background:#229ED9" onclick="startAdmin2FASetup('telegram')">📲 تفعيل عبر بوت تيليغرام</button>
+            <button class="btn-pri" style="margin:0" onclick="startAdmin2FASetup('totp')">🔑 تفعيل عبر Google Authenticator</button>
+          </div>
+        `}
+
+        ${adm2FaSetup ? `
+          <div class="deliver-box" style="margin-top:14px;text-align:center">
+            <h4>${adm2FaSetup.method === 'totp' ? '🔑 مسح باركود Google Authenticator' : '📲 إدخال كود تيليغرام'}</h4>
+            ${adm2FaSetup.method === 'totp' ? `
+              <p style="font-size:13px;color:var(--mut)">امسح الباركود بتطبيق <b>Google Authenticator</b> أو أدخل المفتاح يدوياً:</p>
+              <div class="qr-wrap">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(adm2FaSetup.otpauthUrl)}" width="190" height="190" alt="QR Code">
+              </div>
+              <div style="font-size:13px;font-weight:800;margin-bottom:8px" dir="ltr">Secret: <code>${esc(adm2FaSetup.secret)}</code></div>
+            ` : `
+              <p style="font-size:13px;color:var(--mut);margin-bottom:8px">${esc(adm2FaSetup.message)}</p>
+            `}
+            <input class="inp otp-inp" id="adm_setup_code" type="text" inputmode="numeric" maxlength="6" dir="ltr" placeholder="000000">
+            <div class="grid-2" style="margin-top:10px">
+              <button class="btn-ok" style="margin:0" onclick="confirmAdmin2FAEnable('${adm2FaSetup.method}')">✅ تأكيد وتفعيل 2FA</button>
+              <button class="btn-sm" onclick="adm2FaSetup=null;loadPanel()">إلغاء</button>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+
       <div class="card">
         <h3>⚡ إعدادات الدفع التلقائي (Chargily Pay V2)</h3>
         <label class="lbl">وضع التشغيل الحالي</label>
@@ -513,7 +686,7 @@ function renderMain(d) {
       <div class="card">
         <h3>🔑 تغيير البريد الإلكتروني وكلمة السر للمدير</h3>
         <label class="lbl">البريد الإلكتروني الجديد</label>
-        <input class="inp" id="new_em" dir="ltr" placeholder="admin@rioxstore.shop">
+        <input class="inp" id="new_em" dir="ltr" value="${esc(sec.email || '')}" placeholder="admin@oviraplaydz.com">
         <label class="lbl">كلمة السر الجديدة (6 أحرف فأكثر)</label>
         <input class="inp" id="new_pw" type="password" dir="ltr" placeholder="••••••••">
         <button class="btn-pri" onclick="saveCreds()">تحديث بيانات الدخول</button>
@@ -533,18 +706,102 @@ function renderMain(d) {
       <button class="btn-sm" onclick="loadPanel()">تحديث 🔄</button>
       <h2>لوحة إدارة OVIRA PLAY</h2>
     </div>
-    <div class="tabs" style="grid-template-columns:repeat(3,1fr)">
+    <div class="tabs">
       <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';qFilter='';loadPanel()">📋 الطلبات</button>
       <button class="tab ${tab === 'products' ? 'on' : ''}" onclick="tab='products';loadPanel()">🛍️ البطاقات</button>
+      <button class="tab ${tab === 'payments' ? 'on' : ''}" onclick="tab='payments';loadPanel()">💳 الدفع</button>
       <button class="tab ${tab === 'complaints' ? 'on' : ''}" onclick="tab='complaints';loadPanel()">🎫 الشكاوى ${openComplaintsCount ? `<span class="badge-cnt">${openComplaintsCount}</span>` : ''}</button>
       <button class="tab ${tab === 'customers' ? 'on' : ''}" onclick="tab='customers';qFilter='';loadPanel()">👥 الزبائن</button>
-      <button class="tab ${tab === 'payments' ? 'on' : ''}" onclick="tab='payments';loadPanel()">💳 الدفع</button>
       <button class="tab ${tab === 'settings' ? 'on' : ''}" onclick="tab='settings';loadPanel()">⚙️ الإعدادات</button>
     </div>
     ${content}`;
 }
 
-// ==================== العمليات والإجراءات ====================
+// ==================== إجراءات التحقق بخطوتين (2FA) للمدير ====================
+
+async function startAdmin2FASetup(method) {
+  try {
+    const r = await fetch(`${API}/2fa/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ method })
+    });
+    const d = await r.json();
+    if (!d.success) return toast(d.message || 'تعذّر بدء الإعداد');
+    adm2FaSetup = d;
+    loadPanel();
+  } catch (e) {
+    toast('تعذّر الاتصال بالخادم');
+  }
+}
+
+async function confirmAdmin2FAEnable(method) {
+  const codeEl = document.getElementById('adm_setup_code');
+  const code = (codeEl ? codeEl.value : '').trim();
+  if (code.length !== 6) return toast('أدخل الرمز المكون من 6 أرقام');
+  try {
+    const r = await fetch(`${API}/2fa/enable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ method, code })
+    });
+    const d = await r.json();
+    if (!d.success) return toast(d.message || 'الرمز غير صحيح');
+    adm2FaSetup = null;
+    toast(d.message);
+    loadPanel();
+  } catch (e) {
+    toast('تعذّر الاتصال بالخادم');
+  }
+}
+
+async function disableAdmin2FA() {
+  if (!confirm('هل تريد إيقاف التحقق بخطوتين للوحة التحكم؟')) return;
+  try {
+    const r = await fetch(`${API}/2fa/disable`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const d = await r.json();
+    toast(d.message || 'تم الإيقاف');
+    loadPanel();
+  } catch (e) {
+    toast('تعذّر الاتصال بالخادم');
+  }
+}
+
+// ==================== حفظ طرق الدفع (الخطوة 2) ====================
+
+async function savePaymentMethodsAll() {
+  const updated = (payMethodsState || []).map((m, idx) => {
+    const enEl = document.getElementById('pm_en_' + idx);
+    const lblEl = document.getElementById('pm_lbl_' + idx);
+    const valEl = document.getElementById('pm_val_' + idx);
+    const noteEl = document.getElementById('pm_note_' + idx);
+    return {
+      id: m.id,
+      enabled: enEl ? !!enEl.checked : m.enabled,
+      label: lblEl ? lblEl.value.trim() : (m.label || ''),
+      value: valEl ? valEl.value.trim() : (m.value || ''),
+      note: noteEl ? noteEl.value.trim() : (m.note || '')
+    };
+  });
+
+  try {
+    const r = await fetch(`${API}/payment-methods`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ methods: updated })
+    });
+    const d = await r.json();
+    toast(d.message || 'تم الحفظ ✓');
+    if (d.success) loadPanel();
+  } catch (e) {
+    toast('تعذّر حفظ طرق الدفع');
+  }
+}
+
+// ==================== باقي العمليات الإدارية ====================
 
 async function createProduct() {
   const payload = {
@@ -588,7 +845,7 @@ async function updateProduct(id) {
   const r = await fetch(`${API}/products/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({ ...payload })
   });
   const d = await r.json();
   toast(d.message || 'تم حفظ التعديلات ✓');
@@ -742,32 +999,6 @@ async function toggleBlockCust(id, blocked) {
   loadPanel();
 }
 
-async function savePayMethods() {
-  const val = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
-  const methods = payList.map((m) => {
-    const o = { id: m.id, enabled: !!document.getElementById('pm_en_' + m.id).checked };
-    if (m.type === 'manual') {
-      o.label = val('pm_lb_' + m.id);
-      o.value = val('pm_v_' + m.id);
-      o.note = val('pm_nt_' + m.id);
-    }
-    return o;
-  });
-  try {
-    const r = await fetch(`${API}/payment-methods`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ methods })
-    });
-    const d = await r.json();
-    if (!d.success) return toast(d.message || 'تعذّر حفظ طرق الدفع');
-    toast(d.message || 'تم حفظ طرق الدفع ✓');
-    loadPanel();
-  } catch (e) {
-    toast('تعذّر الاتصال بالخادم.');
-  }
-}
-
 async function saveChargily() {
   const payload = {
     mode: document.getElementById('ch_mode').value,
@@ -810,4 +1041,8 @@ async function cleanDb(deleteOrders) {
   loadPanel();
 }
 
-loadPanel();
+if (token) {
+  loadPanel();
+} else {
+  renderLogin();
+}
