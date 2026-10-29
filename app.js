@@ -2,7 +2,11 @@ const API_BASE = 'https://ovira-api.onrender.com';
 const API_URL = API_BASE + '/api/orders';
 const ACC_URL = API_BASE + '/api/account';
 
-const CFG = { wa: '213557235850', tg: 'oviraplay_bot' };
+const CFG = {
+  wa: '213557235850',
+  tg: 'oviraplay_bot',
+  googleClientId: '79336176422-fohod45r2nvme8st2kdcreb53fh8q426.apps.googleusercontent.com'
+};
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
 
@@ -24,7 +28,7 @@ const I = {
   wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
   edit: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>'
 };
-I.account = I.user; // تبويب «حسابي» يبحث عن المفتاح account (كان مفقوداً فتختفي الأيقونة)
+I.account = I.user;
 
 const DEFAULT_STEPS = [
   { title: 'اختر باقتك وأضفها', desc: 'حدد المدة التي تناسبك ثم أكمل الطلب باسمك ورقم واتساب.' },
@@ -32,7 +36,6 @@ const DEFAULT_STEPS = [
   { title: 'استلم حسابك وشاشتك', desc: 'نسلّمك الإيميل وكلمة المرور مع شاشتك الخاصة المقفلة برمز PIN.' }
 ];
 
-// البطاقات الافتراضية للعرض الفوري قبل جلب التحديثات من السيرفر
 let P = [
   { id: 'netflix', n: 'Netflix', t: 'نتفلكس بروفايل خاص', sub: 'مشاهدة بجودة 4K Ultra HD مع شاشة خاصة مقفلة برمز PIN سري', cat: 'أفلام ومسلسلات', c: '#E50914', c2: '#5C060C', l: 'N', badge: '⚡ فوري', f: ['شاشة خاصة باسمك', 'رمز PIN سري خاص بك', 'جودة 4K Ultra HD', 'تسليم فوري للبيانات'], steps: DEFAULT_STEPS, pl: [[1, 900], [3, 2700], [6, 4900], [12, 9500, 1]] },
   { id: 'cr-mega', n: 'Crunchyroll', t: 'كرانشي رول Mega Fan', sub: 'أكبر مكتبة أنمي في العالم بدون إعلانات مع التحميل للمشاهدة بدون إنترنت', cat: 'أنمي', c: '#F47521', c2: '#8A3A0A', l: 'C', badge: '⚡ فوري', f: ['بدون إعلانات', 'حلقات بعد ساعة من اليابان', 'تحميل للمشاهدة بدون إنترنت', 'تسليم فوري للحساب'], steps: DEFAULT_STEPS, pl: [[1, 600], [3, 1650], [6, 3000], [12, 5500, 1]] },
@@ -46,7 +49,6 @@ try {
   if (Array.isArray(cachedCatalog) && cachedCatalog.length) P = cachedCatalog;
 } catch (e) {}
 
-// طرق الدفع تأتي من الخادم (/payment-config) — المعطّلة لا تصل إلى هنا أبداً
 let PAY = [];
 let payLoaded = false, payFailed = false;
 const PAY_DESC = {
@@ -82,15 +84,17 @@ const pl = (i) => { const p = pr(i.id); return p && p.pl.find((x) => x[0] == i.m
 const sv = (p, x) => Math.round((1 - x[1] / (p.pl[0][1] * x[0])) * 100);
 
 let cart = [], sel = 0, cat = 'الكل', payId = 'chargily', msg = '', chargilyMode = 'test';
-let editK = -1;          // فهرس الاشتراك الذي يُعدَّل الآن من صفحة المنتج (-1 = لا تعديل)
-let editBack = false;    // وصلنا لصفحة التعديل من السلة/الدفع، فالرجوع يعيدنا إليها
-let cartNote = '';       // تنبيه يظهر أعلى السلة بعد «اشترِ الآن»
-let chkDraft = { n: null, p: null, e: null }; // ما كتبه الزبون في صفحة الدفع (لا يضيع عند تعديل السلة)
+let editK = -1;
+let editBack = false;
+let cartNote = '';
+let chkDraft = { n: null, p: null, e: null };
 let custToken = localStorage.getItem('ov_ctk') || '';
 let custProfile = null;
 let custOrders = [];
 let custComplaints = [];
 let authTab = 'login';
+let twoFaPending = null; // { tempToken, method, message }
+let twoFaSetup = null;   // { method, secret, otpauthUrl, message }
 let ord = { n: '', code: '', ids: [], claimToken: '', paid: false, paymentDetails: null };
 
 try { cart = JSON.parse(localStorage.getItem('oc') || '[]'); } catch (e) {}
@@ -100,7 +104,6 @@ if (!Array.isArray(cart)) cart = [];
 const clean = () => {
   const n0 = cart.length;
   cart = cart.filter((i) => i && pl(i) && i.q > 0);
-  // نفس الاشتراك بنفس المدة مرتين → يُدمجان في سطر واحد (إلا أثناء التعديل حتى لا تتغير الفهارس)
   if (editK < 0) {
     const seen = {};
     cart = cart.filter((i) => {
@@ -144,7 +147,17 @@ function theme() {
 }
 try { const s = localStorage.getItem('ot'); if (s) document.documentElement.dataset.theme = s; } catch (e) {}
 
-// جلب البطاقات الديناميكية من السيرفر (تحديث فوري لأي بطاقة أنشئت من تيليغرام أو لوحة التحكم)
+// جلب إعدادات المصادقة (Google Client ID + Bot Name)
+fetch(ACC_URL + '/auth-config')
+  .then((r) => r.json())
+  .then((d) => {
+    if (d && d.success) {
+      if (d.googleClientId) CFG.googleClientId = d.googleClientId;
+      if (d.telegramBotName) CFG.tg = d.telegramBotName;
+    }
+  })
+  .catch(() => {});
+
 fetch(API_URL + '/catalog')
   .then((r) => r.json())
   .then((d) => {
@@ -232,7 +245,6 @@ function renderPaymentReceiptBox(pd, total) {
     </div>`;
 }
 
-// رسم البطاقة الأيقونية (مع دعم صورة مخصصة إن وجدت)
 const gc = (p) => `
   <div class="gc">
     ${p.img
@@ -287,7 +299,6 @@ const shop = () => {
   </div>`;
 };
 
-// صفحة الهبوط المخصصة لكل بطاقة عرض (ووضع «تعديل اشتراك من السلة» عند وجود editK)
 const prod = (p) => {
   const x = p.pl[sel] || p.pl[0];
   const it = editK >= 0 ? cart[editK] : null;
@@ -358,7 +369,6 @@ const payButtons = () => PAY.map((m) => `<button class="pm ${m.auto ? 'full' : '
 
 const submitLabel = () => (payId === 'chargily' ? 'الدفع الآن عبر شارجيلي ⚡' : 'تأكيد وإنهاء الطلب');
 
-// يحدّث منطقة الدفع فقط (بدون مسح ما كتبه الزبون في الحقول)
 function refreshPayUI() {
   const box = $('#pms');
   if (!box) return;
@@ -492,7 +502,7 @@ window.trackOrder = async () => {
   }
 };
 
-// ===== الخطوة 1: صفحة الحساب (شعار + شحن الرصيد + الشكاوى) =====
+// ===== صفحة الحساب + شحن الرصيد + الشكاوى + قوقل وتيليغرام و2FA =====
 let topupOpen = false, topupAmt = 1000;
 const CMP_COL = { 'مفتوحة': '#F59E0B', 'تم الرد': '#16A34A', 'مغلقة': '#64748B' };
 
@@ -501,7 +511,7 @@ const brandFoot = () => `
     <a class="logo" href="#/"><i>▶</i>OVIRA <b>PLAY</b></a>
     <p>متجر الاشتراكات الرقمية · تسليم سريع وآمن</p>
     <div class="trust">
-      <span>🔒 بياناتك محمية</span>
+      <span>🔒 بياناتك محمية بـ 2FA</span>
       <span>⚡ تسليم سريع</span>
       <span>💬 دعم متواصل</span>
     </div>
@@ -528,7 +538,7 @@ window.sendTopup = () => {
   const amt = Math.round(Number(inp ? inp.value : topupAmt));
   if (!Number.isFinite(amt) || amt < 200) { toast('أدخل مبلغاً لا يقل عن 200 DA'); return; }
   if (!CFG.wa) { toast('رقم الدعم غير متوفر حالياً'); return; }
-  const text = `مرحباً، أريد شحن رصيد محفظتي بمبلغ ${amt} DA.\nالاسم: ${custProfile.name}\nالهاتف: ${custProfile.phone}`;
+  const text = `مرحباً، أريد شحن رصيد محفظتي بمبلغ ${amt} DA.\nالاسم: ${custProfile.name}\nالهاتف: ${custProfile.phone || 'غير مضاف'}`;
   window.open('https://wa.me/' + CFG.wa + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
 };
 
@@ -563,7 +573,99 @@ const complaintsBlock = () => `
     </div>`).join('')
     : '<div class="sm"><p class="note">لا توجد شكاوى بعد. إذا واجهت أي مشكلة اضغط «شكوى جديدة» وسنرد عليك هنا وعبر تيليغرام.</p></div>'}`;
 
+// بطاقة الأمان والتحقق بخطوتين (2FA) وربط تيليغرام داخل حساب الزبون
+const securityBlock = () => {
+  if (!custProfile) return '';
+  const is2FA = !!custProfile.twoFactorEnabled;
+  const methodLabel = custProfile.twoFactorMethod === 'telegram' ? 'عبر بوت تيليغرام 📲' : 'عبر Google Authenticator 🔑';
+
+  return `
+    <h2 class="sh">🔐 الأمان والتحقق بخطوتين (2FA)</h2>
+    <div class="sec-card">
+      ${!custProfile.phone ? `
+        <div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);padding:12px;border-radius:14px;margin-bottom:14px">
+          <b style="font-size:13px;color:#B45309">📱 أضف رقم واتساب لحسابك لتسهيل الطلبات:</b>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input class="in2" id="prof_ph" type="tel" dir="ltr" placeholder="05XX XX XX XX" style="padding:9px 12px">
+            <button class="chip on" onclick="saveCustPhone()">حفظ الرقم</button>
+          </div>
+        </div>
+      ` : ''}
+
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div>
+          <b style="font-size:15px">ربط الحساب ببوت تيليغرام</b>
+          <p style="font-size:12px;color:var(--mut)">لاستلام أكواد التحقق 2FA وإشعارات الطلبات والشاشات فوراً</p>
+        </div>
+        ${custProfile.telegramLinked
+          ? `<span class="badge" style="background:var(--ok)">✅ مربوط ${custProfile.telegramUsername ? '(@' + esc(custProfile.telegramUsername) + ')' : ''}</span>`
+          : `<button class="chip on" onclick="linkTelegramAccount()">🔗 ربط تيليغرام الآن</button>`}
+      </div>
+
+      <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <b style="font-size:15px">التحقق بخطوتين (2FA) عند الدخول</b>
+          <p style="font-size:12px;color:var(--mut)">${is2FA ? `الحماية مفعّلة حالياً (${methodLabel})` : 'حماية اختيارية إضافية لحسابك ومحفظتك'}</p>
+        </div>
+        <span class="badge" style="background:${is2FA ? 'var(--ok)' : '#64748B'}">${is2FA ? '🟢 مفعّل' : '⚪ غير مفعّل'}</span>
+      </div>
+
+      ${is2FA ? `
+        <button class="btn o" style="margin-top:12px;color:var(--bad);border-color:rgba(239,68,68,.35)" onclick="disableCustomer2FA()">🔓 إيقاف التحقق بخطوتين</button>
+      ` : `
+        <div class="sec-grid">
+          <button class="btn tg" style="margin:0;font-size:13px" onclick="start2FASetup('telegram')">📲 تفعيل عبر بوت تيليغرام</button>
+          <button class="btn" style="margin:0;font-size:13px" onclick="start2FASetup('totp')">🔑 تفعيل عبر Google Authenticator</button>
+        </div>
+      `}
+
+      ${twoFaSetup ? `
+        <div class="ok-box" style="margin-top:14px;border-color:var(--pri2);background:rgba(36,71,201,.06)">
+          <h4 style="color:var(--pri2)">${twoFaSetup.method === 'totp' ? '🔑 إعداد تطبيق Google Authenticator' : '📲 تأكيد كود بوت تيليغرام'}</h4>
+          ${twoFaSetup.method === 'totp' ? `
+            <p style="font-size:13px;color:var(--mut)">1. امسح رمز الباركود التالي بتطبيق <b>Google Authenticator</b> أو انسخ المفتاح السري:</p>
+            <div style="text-align:center">
+              <div class="qr-wrap">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(twoFaSetup.otpauthUrl)}" width="190" height="190" alt="QR Code">
+              </div>
+            </div>
+            <div class="cred-row">
+              <span>المفتاح: <code>${esc(twoFaSetup.secret)}</code></span>
+              <button class="cp" onclick="cp('${esc(twoFaSetup.secret)}')">${ico(I.copy)} نسخ</button>
+            </div>
+            <p style="font-size:13px;color:var(--mut);margin-top:8px">2. أدخل الرمز المكون من 6 أرقام الظاهر في التطبيق لتأكيد التفعيل:</p>
+          ` : `
+            <p style="font-size:13px;color:var(--mut)">${esc(twoFaSetup.message)}</p>
+          `}
+          <input class="in2 otp-inp" id="setup_2fa_code" type="text" inputmode="numeric" maxlength="6" dir="ltr" placeholder="000000" style="margin-top:8px">
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn" style="margin:0" onclick="confirm2FAEnable('${twoFaSetup.method}')">✅ تأكيد وتفعيل</button>
+            <button class="btn o" style="margin:0;flex:0 0 35%" onclick="twoFaSetup=null;draw()">إلغاء</button>
+          </div>
+        </div>
+      ` : ''}
+    </div>`;
+};
+
 const accountV = () => {
+  // إذا كان الزبون في مرحلة إدخال كود التحقق بخطوتين (2FA) لإتمام الدخول
+  if (twoFaPending) {
+    return `<div class="w">
+      <h1 class="ttl">🔐 التحقق بخطوتين (2FA)</h1>
+      <div class="sm" style="text-align:center">
+        <div style="font-size:40px;margin-bottom:8px">${twoFaPending.method === 'telegram' ? '📲' : '🔑'}</div>
+        <h3>تأكيد هويتك للدخول</h3>
+        <p style="font-size:13px;color:var(--mut);margin-bottom:14px">${esc(twoFaPending.message)}</p>
+        <input class="in2 otp-inp" id="login_2fa_code" type="text" inputmode="numeric" maxlength="6" dir="ltr" placeholder="000000">
+        <button class="btn" onclick="verifyCustomer2FALogin()">تأكيد الكود والدخول</button>
+        <button class="btn o" onclick="twoFaPending=null;draw()">العودة لتسجيل الدخول</button>
+      </div>
+      ${brandFoot()}
+    </div>`;
+  }
+
   if (!custProfile) {
     return `<div class="w">
       <h1 class="ttl">حسابي ومحفظتي</h1>
@@ -584,11 +686,17 @@ const accountV = () => {
           <button class="btn" onclick="doCustRegister()">إنشاء الحساب الآن</button>
         ` : `
           <label class="lb">رقم الهاتف أو البريد الإلكتروني</label>
-          <input class="in2" id="au_id" dir="ltr" placeholder="05XX XX XX XX" autocomplete="username">
+          <input class="in2" id="au_id" dir="ltr" placeholder="05XX XX XX XX أو الإيميل" autocomplete="username">
           <label class="lb">كلمة السر</label>
           ${pwField('au_pass', 'current-password')}
           <button class="btn" onclick="doCustLogin()">دخول إلى حسابي</button>
         `}
+
+        <div class="social-divider">أو الدخول السريع بضغطة زر عبر</div>
+        <div class="social-box">
+          <div id="g_id_btn" class="social-slot"></div>
+          <div id="tg_login_btn" class="social-slot"></div>
+        </div>
       </div>
       ${brandFoot()}
     </div>`;
@@ -603,10 +711,12 @@ const accountV = () => {
     <div class="sm wallet-card">
       <div style="font-size:13px;opacity:.9">💰 رصيد محفظتك المتاح للشراء الفوري</div>
       <div style="font-size:28px;font-weight:900;margin:4px 0">${fmt(custProfile.balance || 0)}</div>
-      <div style="font-size:12px;opacity:.85">📱 ${esc(custProfile.phone)} ${custProfile.email ? '· 📧 ' + esc(custProfile.email) : ''}</div>
+      <div style="font-size:12px;opacity:.85">📱 ${esc(custProfile.phone || 'لم يُضف رقم بعد')} ${custProfile.email ? '· 📧 ' + esc(custProfile.email) : ''}</div>
       <button class="topup-btn" onclick="openTopup()">➕ شحن الرصيد</button>
     </div>
     ${topupPanel()}
+
+    ${securityBlock()}
 
     <h2 class="sh">📦 طلباتي وحساباتي المسلمة (${custOrders.length})</h2>
     ${custOrders.length ? custOrders.map((o) => `
@@ -625,6 +735,205 @@ const accountV = () => {
     ${complaintsBlock()}
     ${brandFoot()}
   </div>`;
+};
+
+// تهيئة أزرار Google وTelegram بعد رسم صفحة الدخول
+function mountSocialButtons() {
+  const gBox = document.getElementById('g_id_btn');
+  if (gBox && CFG.googleClientId) {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: CFG.googleClientId,
+          callback: window.handleGoogleCredential
+        });
+        window.google.accounts.id.renderButton(gBox, {
+          theme: 'outline',
+          size: 'large',
+          shape: 'pill',
+          text: 'continue_with',
+          locale: 'ar',
+          width: 280
+        });
+      } catch (e) {}
+    } else {
+      setTimeout(mountSocialButtons, 500);
+    }
+  }
+
+  const tgBox = document.getElementById('tg_login_btn');
+  if (tgBox && CFG.tg && !tgBox.hasChildNodes()) {
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://telegram.org/js/telegram-widget.js?22';
+    s.setAttribute('data-telegram-login', CFG.tg);
+    s.setAttribute('data-size', 'large');
+    s.setAttribute('data-radius', '20');
+    s.setAttribute('data-onauth', 'onTelegramAuth(user)');
+    s.setAttribute('data-request-access', 'write');
+    tgBox.appendChild(s);
+  }
+}
+
+async function processAuthResult(d, welcomeMsg = 'مرحباً بك ✓') {
+  if (d.requires2FA) {
+    twoFaPending = {
+      tempToken: d.tempToken,
+      method: d.method,
+      message: d.message
+    };
+    toast(d.message);
+    draw();
+    return;
+  }
+  twoFaPending = null;
+  custToken = d.token;
+  localStorage.setItem('ov_ctk', custToken);
+  await fetchCustomerProfile();
+  toast(welcomeMsg);
+  draw();
+}
+
+window.handleGoogleCredential = async (response) => {
+  try {
+    const r = await fetch(ACC_URL + '/oauth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: response.credential })
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message);
+    await processAuthResult(d, 'تم تسجيل الدخول عبر Google بنجاح ✓');
+  } catch (e) {
+    toast(e.message || 'تعذّر الدخول عبر قوقل');
+  }
+};
+
+window.onTelegramAuth = async (user) => {
+  try {
+    const r = await fetch(ACC_URL + '/oauth/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user)
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message);
+    await processAuthResult(d, 'تم تسجيل الدخول عبر تيليغرام بنجاح ✓');
+  } catch (e) {
+    toast(e.message || 'تعذّر الدخول عبر تيليغرام');
+  }
+};
+
+window.verifyCustomer2FALogin = async () => {
+  const codeEl = document.getElementById('login_2fa_code');
+  const code = (codeEl ? codeEl.value : '').trim();
+  if (code.length !== 6) return toast('أدخل الكود المكون من 6 أرقام');
+  try {
+    const r = await fetch(ACC_URL + '/2fa/verify-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tempToken: twoFaPending.tempToken, code })
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message);
+    await processAuthResult(d, 'تم التحقق وتسجيل الدخول بنجاح 🎉');
+  } catch (e) {
+    toast(e.message);
+  }
+};
+
+window.linkTelegramAccount = async () => {
+  try {
+    const r = await fetch(ACC_URL + '/telegram-link-code', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + custToken }
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message);
+    window.open(d.botUrl, '_blank', 'noopener');
+    toast('اضغط Start في بوت تيليغرام ثم حدّث الصفحة ✓');
+  } catch (e) {
+    toast(e.message);
+  }
+};
+
+window.start2FASetup = async (method) => {
+  try {
+    const r = await fetch(ACC_URL + '/2fa/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + custToken },
+      body: JSON.stringify({ method })
+    });
+    const d = await r.json();
+    if (!d.success) {
+      if (d.needsTelegramLink && d.linkCode) {
+        window.open(`https://t.me/${CFG.tg}?start=${d.linkCode}`, '_blank', 'noopener');
+      }
+      throw new Error(d.message);
+    }
+    twoFaSetup = d;
+    draw();
+  } catch (e) {
+    toast(e.message);
+  }
+};
+
+window.confirm2FAEnable = async (method) => {
+  const codeEl = document.getElementById('setup_2fa_code');
+  const code = (codeEl ? codeEl.value : '').trim();
+  if (code.length !== 6) return toast('أدخل الرمز المكون من 6 أرقام');
+  try {
+    const r = await fetch(ACC_URL + '/2fa/enable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + custToken },
+      body: JSON.stringify({ method, code })
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message);
+    twoFaSetup = null;
+    await fetchCustomerProfile();
+    toast(d.message);
+    draw();
+  } catch (e) {
+    toast(e.message);
+  }
+};
+
+window.disableCustomer2FA = async () => {
+  if (!confirm('هل تريد إيقاف التحقق بخطوتين (2FA) لحسابك؟')) return;
+  try {
+    const r = await fetch(ACC_URL + '/2fa/disable', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + custToken }
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message);
+    await fetchCustomerProfile();
+    toast(d.message);
+    draw();
+  } catch (e) {
+    toast(e.message);
+  }
+};
+
+window.saveCustPhone = async () => {
+  const phEl = document.getElementById('prof_ph');
+  const phone = phEl ? phEl.value.trim() : '';
+  if (!phone) return toast('أدخل رقم الواتساب');
+  try {
+    const r = await fetch(ACC_URL + '/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + custToken },
+      body: JSON.stringify({ phone })
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message);
+    await fetchCustomerProfile();
+    toast(d.message);
+    draw();
+  } catch (e) {
+    toast(e.message);
+  }
 };
 
 const supportV = () => {
@@ -691,11 +1000,7 @@ window.doCustLogin = async () => {
     });
     const d = await r.json();
     if (!d.success) throw new Error(d.message);
-    custToken = d.token;
-    localStorage.setItem('ov_ctk', custToken);
-    await fetchCustomerProfile();
-    toast('مرحباً بك مجدداً ✓');
-    draw();
+    await processAuthResult(d, 'مرحباً بك مجدداً ✓');
   } catch (e) {
     toast(e.message);
   }
@@ -714,12 +1019,8 @@ window.doCustRegister = async () => {
     });
     const d = await r.json();
     if (!d.success) throw new Error(d.message);
-    custToken = d.token;
-    localStorage.setItem('ov_ctk', custToken);
     try { localStorage.setItem('oi', JSON.stringify({ n: name, p: phone, e: email })); } catch (e) {}
-    await fetchCustomerProfile();
-    toast(d.message);
-    draw();
+    await processAuthResult(d, d.message);
   } catch (e) {
     toast(e.message);
   }
@@ -730,6 +1031,8 @@ window.custLogout = () => {
   custProfile = null;
   custOrders = [];
   custComplaints = [];
+  twoFaPending = null;
+  twoFaSetup = null;
   localStorage.removeItem('ov_ctk');
   toast('تم تسجيل الخروج');
   draw();
@@ -822,7 +1125,13 @@ function chrome() {
   $('#nv').innerHTML = tabs.map((x) => `<a href="#${x[2]}" class="${x[0] == v ? 'on' : ''}">${ico(I[x[0]] || I.user)}${x[1]}</a>`).join('');
 }
 
-function draw() { clean(); app.innerHTML = view(); chrome(); }
+function draw() {
+  clean();
+  app.innerHTML = view();
+  chrome();
+  mountSocialButtons();
+}
+
 function route() {
   const h = location.hash.slice(2).split('?')[0].split('/');
   const slug = decodeURIComponent(h[1] || '');
@@ -830,7 +1139,6 @@ function route() {
   if (h[0] != 'p') editBack = false;
   if (h[0] != 'cart') cartNote = '';
   if (h[0] == 'p' && pr(slug)) {
-    // ‎#/p/<id>?edit=<k>‎ : فتح اشتراك من السلة للتعديل (تُحدَّد مدته الحالية)
     const q = new URLSearchParams(location.hash.split('?')[1] || '').get('edit');
     const k = q === null ? -1 : parseInt(q, 10);
     const it = k >= 0 ? cart[k] : null;
@@ -850,7 +1158,6 @@ function back() { history.length > 1 ? history.back() : (location.hash = '#/'); 
 function setCat(c) { cat = c; draw(); }
 function pickPlan(i) {
   sel = i;
-  // أثناء تعديل اشتراك من السلة يُحفظ اختيار المدة مباشرة
   if (editK >= 0 && cart[editK]) { cart[editK].m = pr(cart[editK].id).pl[i][0]; save(); }
   draw();
 }
@@ -862,7 +1169,6 @@ function add(id, m, go) {
   save();
   const cur = cart.find((i) => i.id == id && i.m == m);
   if (go) {
-    // سلة فيها هذا الاشتراك فقط وبكمية 1 → دفع مباشر. غير ذلك → نعرض السلة أولاً للمراجعة
     if (cart.length === 1 && cur.q === 1) { location.hash = '#/checkout'; return; }
     const t = pr(id).t + ' — ' + dur(m);
     cartNote = had
@@ -875,7 +1181,6 @@ function add(id, m, go) {
   }
 }
 
-// ===== تعديل اشتراك موجود في السلة (من السلة أو من صفحة الدفع) =====
 window.editItem = (k) => {
   const it = cart[k];
   if (!it) return;
@@ -883,7 +1188,7 @@ window.editItem = (k) => {
   location.hash = '#/p/' + encodeURIComponent(it.id) + '?edit=' + k;
 };
 function leaveEdit() {
-  if (editBack) { editBack = false; history.back(); }   // نعود لنفس الصفحة التي جئنا منها (السلة أو الدفع)
+  if (editBack) { editBack = false; history.back(); }
   else location.hash = '#/cart';
 }
 window.editQty = (d) => {
@@ -980,7 +1285,6 @@ async function send() {
       toast(data.message || 'حدث خطأ أثناء معالجة الطلب.');
       submitBtn.disabled = false;
       submitBtn.textContent = submitLabel();
-      // الإدارة عطّلت هذه الطريقة قبل لحظات: حدّث القائمة
       if (data.code === 'PAYMENT_UNAVAILABLE') loadPayConfig();
     }
   } catch (error) {
