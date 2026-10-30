@@ -1305,3 +1305,5 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+.plan-label { display:block;font-size:12px;color:var(--mut);font-weight:600;margin-top:5px;}

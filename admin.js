@@ -8,6 +8,7 @@ let adm2FaSetup = null;   // { method, secret, otpauthUrl, message }
 let payMethodsState = [];
 let ordersPage = 1;
 let renewalFilter = 'urgent';
+let openProductId = null;
 
 const COL = {
   'قيد المراجعة': '#F59E0B',
@@ -194,8 +195,9 @@ async function loadPanel() {
   let endpoint = '';
   const params = new URLSearchParams();
 
-  if (tab === 'orders') {
-    if (stFilter) params.set('status', stFilter);
+  if (tab === 'orders' || tab === 'delivered') {
+    if (tab === 'delivered') params.set('scope', 'delivered');
+    if (stFilter && tab === 'orders') params.set('status', stFilter);
     if (qFilter) params.set('q', qFilter);
     params.set('page', String(ordersPage));
     endpoint = 'orders?' + params.toString();
@@ -203,6 +205,8 @@ async function loadPanel() {
     endpoint = 'products';
   } else if (tab === 'renewals') {
     endpoint = 'renewals?filter=' + encodeURIComponent(renewalFilter);
+  } else if (tab === 'reviews') {
+    endpoint = 'reviews';
   } else if (tab === 'payments') {
     endpoint = 'payment-methods';
   } else if (tab === 'complaints') {
@@ -242,6 +246,12 @@ async function loadPanel() {
   }
 }
 
+function onProductToggle(node, id) {
+  if (!node.open) return;
+  openProductId = id;
+  document.querySelectorAll('details.compact-product').forEach((other) => { if (other !== node) other.open = false; });
+}
+
 window.applyPreset = (key) => {
   const p = PRESETS[key];
   if (!p) return;
@@ -256,14 +266,15 @@ function renderMain(d) {
   let content = '';
 
   // ==================== 1. تبويب الطلبات وتسليم الشاشات ====================
-  if (tab === 'orders') {
-    const statuses = ['', 'قيد المراجعة', 'مؤكد', 'تم التسليم', 'ملغي'];
+  if (tab === 'orders' || tab === 'delivered') {
+    const statuses = ['', 'قيد المراجعة', 'مؤكد', 'ملغي'];
     const list = (d.orders || []).map((o) => {
       const pd = o.paymentDetails || {};
       const da = o.deliveredAccount || {};
       return `
-      <div class="card">
-        <div class="ord-head">
+      <details class="card compact-order">
+        <summary class="order-summary"><span class="badge" style="background:${COL[o.status] || '#666'}">${esc(o.status)}</span><b dir="ltr">${esc(o.orderCode)}</b><span>${esc(o.customerName)}</span><b>${fmt(o.totalPrice)}</b><span class="summary-hint">فتح التفاصيل ▾</span></summary>
+        <div class="order-detail"><div class="ord-head">
           <span class="badge" style="background:${COL[o.status] || '#666'}">${esc(o.status)}</span>
           <b style="font-size:17px" dir="ltr">${esc(o.orderCode)} ${o.isPaidOnline ? '⚡' : ''} ${o.telegram ? '📲' : ''}</b>
         </div>
@@ -276,7 +287,7 @@ function renderMain(d) {
         </div>
 
         <div class="items">
-          ${o.cartItems.map((i) => `• ${esc(i.productName)} — ${i.months} شهر × ${i.quantity}`).join('<br>')}
+          ${o.cartItems.map((i) => `• ${esc(i.productName)} — ${i.months} شهر ${i.planLabel ? `(${esc(i.planLabel)})` : ''} × ${i.quantity}`).join('<br>')}
         </div>
 
         <div class="tot-row">
@@ -294,7 +305,18 @@ function renderMain(d) {
         </div>` : ''}
 
         <div class="deliver-box">
-          <h4>🔑 تسليم الحساب والشاشة للعميل (يُرسل تلقائياً لتيليغرام والموقع)</h4>
+          <h4>🔑 تسليم الطلب (حساب / شاشة / رابط تفعيل)</h4>
+          <label class="lbl">نوع التسليم</label>
+          <select class="inp" id="dlv_type_${o._id}" onchange="toggleDeliveryFields('${o._id}')">
+            <option value="screen" ${(!da.type || da.type === 'screen') ? 'selected' : ''}>📺 شاشة / بروفايل</option>
+            <option value="account" ${da.type === 'account' ? 'selected' : ''}>🔐 حساب كامل</option>
+            <option value="invite" ${da.type === 'invite' ? 'selected' : ''}>🔗 رابط تفعيل / دعوة</option>
+          </select>
+          <div id="dlv_invite_wrap_${o._id}" ${da.type === 'invite' ? '' : 'hidden'}>
+            <label class="lbl">رابط التفعيل (https://)</label>
+            <input class="inp" id="dlv_invite_${o._id}" dir="ltr" type="url" value="${esc(da.invitationUrl || '')}" placeholder="https://example.com/invite/...">
+          </div>
+          <div id="dlv_account_wrap_${o._id}" ${da.type === 'invite' ? 'hidden' : ''}>
           <label class="lbl">بيانات الحساب (البريد وكلمة المرور) *</label>
           <input class="inp" id="dlv_cred_${o._id}" dir="ltr" value="${esc(da.credentials || '')}" placeholder="email@domain.com : password123">
           <div class="grid-2">
@@ -307,9 +329,15 @@ function renderMain(d) {
               <input class="inp" id="dlv_pin_${o._id}" dir="ltr" value="${esc(da.pinCode || '')}" placeholder="مثال: 4455">
             </div>
           </div>
+          </div>
           <label class="lbl">📌 ملاحظة أو تعليمات إضافية للزبون (اختياري)</label>
           <input class="inp" id="dlv_note_${o._id}" value="${esc(da.extraNote || '')}" placeholder="مثال: ممنوع تغيير كلمة السر أو الدخول لشاشة أخرى">
-          <button class="btn-ok" onclick="deliverAccount('${o._id}')">🚀 حفظ وتسليم الحساب للعميل الآن</button>
+          <button class="btn-ok" onclick="deliverAccount('${o._id}')">🚀 حفظ وتسليم بيانات الطلب</button>
+          <details style="margin-top:12px"><summary>🔐 إرسال رمز مصادقة مؤقت عند الحاجة</summary>
+            <p class="meta">يرسل مباشرة إلى Telegram المرتبط بالزبون، ولا يتم حفظ الرمز في قاعدة البيانات.</p>
+            <input class="inp" type="text" id="tempcode_${o._id}" autocomplete="off" placeholder="رمز لمرة واحدة" dir="ltr" maxlength="12">
+            <button class="btn-sm" onclick="sendTemporaryCode('${o._id}')">📲 إرسال الرمز للزبون</button>
+          </details>
         </div>
 
         <div class="note-row">
@@ -324,12 +352,12 @@ function renderMain(d) {
           <button class="act-btn bad" onclick="upStatus('${o._id}','ملغي')">ملغي</button>
         </div>
         <button class="btn-sm" style="margin-top:8px;color:var(--bad);width:100%" onclick="delOrder('${o._id}')">🗑️ حذف الطلب نهائياً</button>
-      </div>`;
+      </div></details>`;
     }).join('');
 
     content = `
       <div class="chips">
-        ${statuses.map((s) => `<button class="chip ${stFilter === s ? 'on' : ''}" onclick="stFilter='${s}';ordersPage=1;loadPanel()">${s || 'كل الطلبات'}</button>`).join('')}
+        ${tab === 'orders' ? statuses.map((s) => `<button class="chip ${stFilter === s ? 'on' : ''}" onclick="stFilter='${s}';ordersPage=1;loadPanel()">${s || 'كل الطلبات'}</button>`).join('') : '<span class="chip on">✅ سجل الطلبات المسلّمة</span>'}
       </div>
       <div class="search-row">
         <input class="inp" placeholder="ابحث بالاسم أو الهاتف أو الإيميل أو رمز الطلب..." value="${esc(qFilter)}" onchange="qFilter=this.value;ordersPage=1;loadPanel()">
@@ -348,12 +376,13 @@ function renderMain(d) {
   // ==================== 2. تبويب بطاقات العرض وصفحات الهبوط ====================
   else if (tab === 'products') {
     const pList = (d.products || []).map((p) => {
-      const plansStr = (p.plans || []).map((pl) => `${pl.months}:${pl.price}${pl.best ? '*' : ''}`).join(', ');
+      const plansStr = (p.plans || []).map((pl) => `${pl.months}:${pl.price}${pl.best ? '*' : ''}${pl.label ? '|' + pl.label : ''}`).join(', ');
       const featsStr = (p.features || []).join('\n');
       const stepsStr = (p.steps || []).map((s) => `${s.title} | ${s.desc}`).join('\n');
       return `
-      <div class="card">
-        <div class="ord-head">
+      <details class="card compact-product" ${openProductId === String(p._id) ? 'open' : ''} ontoggle="onProductToggle(this,'${p._id}')">
+        <summary class="product-summary"><b>${esc(p.title)}</b><small>${esc(p.brandName)} · ${(p.plans || []).length} باقات</small><span class="badge" style="background:${p.active ? '#16A34A' : '#EF4444'}">${p.active ? 'منشورة' : 'مخفية'}</span><span>تعديل ▾</span></summary>
+        <div class="product-detail"><div class="ord-head">
           <span class="badge" style="background:${p.active ? '#16A34A' : '#EF4444'}">${p.active ? '🟢 معروضة في الموقع' : '🔴 مخفية'}</span>
           <b dir="ltr">#/p/${esc(p.productId)}</b>
         </div>
@@ -395,7 +424,7 @@ function renderMain(d) {
             <input class="inp" id="pr_img_${p._id}" dir="ltr" value="${esc(p.imageUrl || '')}" placeholder="https://...">
           </div>
         </div>
-        <label class="lbl">الباقات والأسعار (الأشهر:السعر، ضع * للأوفر)</label>
+        <label class="lbl">الباقات والأسعار (الأشهر:السعر*|وصف الباقة، مثال 1:1500|حساب خاص)</label>
         <input class="inp" id="pr_pl_${p._id}" dir="ltr" value="${esc(plansStr)}">
         <label class="lbl">مميزات صفحة الهبوط (كل ميزة في سطر)</label>
         <textarea class="inp" id="pr_ft_${p._id}">${esc(featsStr)}</textarea>
@@ -406,12 +435,13 @@ function renderMain(d) {
           <button class="btn-sm" onclick="toggleProduct('${p._id}', ${!p.active})">${p.active ? '🙈 إخفاء من الموقع' : '👁️ إظهار في الموقع'}</button>
         </div>
         <button class="btn-bad" onclick="deleteProduct('${p._id}')">🗑️ حذف البطاقة نهائياً</button>
-      </div>`;
+      </div></details>`;
     }).join('');
 
     content = `
-      <div class="card" style="border:2px solid var(--pri2)">
-        <h3>➕ إنشاء بطاقة عرض وصفحة هبوط كاملة جديدة</h3>
+      <details class="card compact-product" style="border:2px solid var(--pri2)">
+        <summary class="product-summary"><b>➕ إنشاء منتج جديد</b><span>فتح النموذج ▾</span></summary>
+        <div class="product-detail"><h3>إنشاء بطاقة عرض وصفحة هبوط كاملة جديدة</h3>
         <p style="font-size:12px;color:var(--mut);margin:6px 0">اختر قالباً جاهزاً لتعبئة الألوان والتصميم تلقائياً (أو خصصه كما تشاء):</p>
         <div class="chips">
           <button class="chip" onclick="applyPreset('crunchyroll')">🟠 Crunchyroll</button>
@@ -459,13 +489,19 @@ function renderMain(d) {
         </div>
         <label class="lbl">الوصف التفصيلي تحت العنوان في صفحة الهبوط</label>
         <input class="inp" id="np_sub" placeholder="أكبر مكتبة أنمي عالمية بدون إعلانات وبأعلى جودة 4K">
-        <label class="lbl">الباقات والأسعار * (مثال: 1:600, 3:1650, 12:5500*)</label>
+        <label class="lbl">الباقات والأسعار * (مثال: 1:1500|مشترك, 1:5000*|حساب خاص)</label>
         <input class="inp" id="np_plans" dir="ltr" placeholder="1:600, 3:1650, 6:3000, 12:5500*">
         <label class="lbl">مميزات صفحة الهبوط (كل ميزة في سطر)</label>
         <textarea class="inp" id="np_feats" placeholder="بدون إعلانات نهائياً&#10;شاشة خاصة مقفلة برمز PIN&#10;تسليم فوري للبيانات"></textarea>
         <button class="btn-pri" onclick="createProduct()">🚀 نشر البطاقة وصفحة الهبوط في الموقع</button>
-      </div>
+      </div></details>
       ${pList}`;
+  }
+
+  // ==================== تقييمات الزبائن ====================
+  else if (tab === 'reviews') {
+    content = `<div class="card"><h3>⭐ تقييمات حقيقية بعد التسليم</h3><p>تظهر للزوار فقط بعد موافقة الإدارة؛ لا يظهر هاتف أو بريد الزبون.</p></div>` +
+      (d.reviews || []).map((r) => `<details class="card compact-product"><summary class="product-summary"><b>${esc(r.displayName)}</b><span>${'⭐'.repeat(r.stars)} · ${esc(r.productId)}</span><span>${r.approved ? '✅ منشور' : '⏳ للمراجعة'}</span></summary><div class="product-detail"><p>${esc(r.comment)}</p><button class="btn-sm" onclick="moderateReview('${r._id}',${!r.approved})">${r.approved ? 'إخفاء التقييم' : 'نشر التقييم'}</button></div></details>`).join('');
   }
 
   // ==================== 2.5 الاشتراكات والتجديدات ====================
@@ -642,7 +678,7 @@ function renderMain(d) {
           <div>
             <label class="lbl">🔑 تعيين كلمة سر جديدة للزبون</label>
             <div style="display:flex;gap:6px">
-              <input class="inp" id="cpw_${c._id}" type="text" dir="ltr" placeholder="6 أحرف فأكثر">
+              <input class="inp" id="cpw_${c._id}" type="password" dir="ltr" placeholder="6 أحرف فأكثر">
               <button class="btn-sm" onclick="setCustPass('${c._id}')">تحديث</button>
             </div>
           </div>
@@ -760,7 +796,9 @@ function renderMain(d) {
       <h2>لوحة إدارة OVIRA PLAY</h2>
     </div>
     <div class="tabs">
-      <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';qFilter='';loadPanel()">📋 الطلبات</button>
+      <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';ordersPage=1;qFilter='';stFilter='';loadPanel()">📋 الطلبات</button>
+      <button class="tab ${tab === 'delivered' ? 'on' : ''}" onclick="tab='delivered';ordersPage=1;qFilter='';loadPanel()">✅ تم التسليم</button>
+      <button class="tab ${tab === 'reviews' ? 'on' : ''}" onclick="tab='reviews';loadPanel()">⭐ التقييمات</button>
       <button class="tab ${tab === 'products' ? 'on' : ''}" onclick="tab='products';loadPanel()">🛍️ البطاقات</button>
       <button class="tab ${tab === 'payments' ? 'on' : ''}" onclick="tab='payments';loadPanel()">💳 الدفع</button>
       <button class="tab ${tab === 'renewals' ? 'on' : ''}" onclick="tab='renewals';loadPanel()">🔔 التجديدات</button>
@@ -868,6 +906,14 @@ async function savePaymentMethodsAll() {
 
 // ==================== باقي العمليات الإدارية ====================
 
+async function moderateReview(id, approved) {
+  const r = await fetch(`${API}/reviews/${id}`, { method:'PATCH',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }, body:JSON.stringify({approved}) });
+  const d = await r.json();
+  toast(d.success ? 'تم تحديث التقييم' : (d.message || 'تعذّر تحديث التقييم'));
+  if(d.success)loadPanel();
+}
+
 async function createProduct() {
   const payload = {
     brandName: document.getElementById('np_brand').value.trim(),
@@ -938,18 +984,39 @@ async function deleteProduct(id) {
   loadPanel();
 }
 
+async function sendTemporaryCode(orderId) {
+  const field = document.getElementById('tempcode_' + orderId);
+  const code = field?.value.trim() || '';
+  if (!/^[a-zA-Z0-9]{4,12}$/.test(code)) return toast('أدخل رمزًا مؤقتًا صالحًا (4–12)');
+  const r = await fetch(`${API}/orders/${orderId}/temporary-code`, { method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({code}) });
+  field.value = '';
+  const d = await r.json(); toast(d.message || 'تعذر إرسال الرمز');
+}
+
+function toggleDeliveryFields(orderId) {
+  const t = document.getElementById('dlv_type_' + orderId).value;
+  document.getElementById('dlv_invite_wrap_' + orderId).hidden = t !== 'invite';
+  document.getElementById('dlv_account_wrap_' + orderId).hidden = t === 'invite';
+  const profile = document.getElementById('dlv_prof_' + orderId)?.closest('.grid-2');
+  if (profile) profile.hidden = t !== 'screen';
+}
+
 async function deliverAccount(orderId) {
+  const type = document.getElementById('dlv_type_' + orderId).value;
+  const invitationUrl = document.getElementById('dlv_invite_' + orderId).value.trim();
   const credentials = document.getElementById('dlv_cred_' + orderId).value.trim();
   const profileName = document.getElementById('dlv_prof_' + orderId).value.trim();
   const pinCode = document.getElementById('dlv_pin_' + orderId).value.trim();
   const extraNote = document.getElementById('dlv_note_' + orderId).value.trim();
 
-  if (!credentials) return toast('أدخل بيانات الحساب (الإيميل وكلمة السر) أولاً');
+  if (type !== 'invite' && !credentials) return toast('أدخل بيانات الحساب أولاً');
+  if (type === 'invite' && !/^https:\/\/\S+$/i.test(invitationUrl)) return toast('أدخل رابط تفعيل يبدأ بـ https://');
 
   const r = await fetch(`${API}/orders/${orderId}/deliver`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify({ credentials, profileName, pinCode, extraNote })
+    body: JSON.stringify({ type, credentials, invitationUrl, profileName, pinCode, extraNote })
   });
   const d = await r.json();
   toast(d.message || 'تم تسليم الحساب بنجاح ✓');

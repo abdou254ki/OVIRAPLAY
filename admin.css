@@ -488,3 +488,14 @@ button:disabled {opacity:.45;cursor:not-allowed}
 .renewal-stats p {font-size:12px;color:var(--mut)}
 .link-btn {display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 @media(max-width:500px){.tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.tabs .tab{font-size:12px;padding:9px 5px}.renewal-card .grid-2{grid-template-columns:1fr}}
+
+/* OVIRA phase 2: compact lists and product editor */
+.compact-order,.compact-product { padding: 12px 14px; }
+.order-summary,.product-summary { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; cursor:pointer; list-style:none; padding:8px 3px; }
+.order-summary::-webkit-details-marker,.product-summary::-webkit-details-marker { display:none; }
+.order-summary b,.product-summary b { overflow-wrap:anywhere; }
+.order-summary span,.product-summary small { font-size:13px; }
+.order-detail,.product-detail { padding-top:15px; border-top:1px solid #d8dce7; margin-top:8px; }
+.compact-product[open],.compact-order[open] { border-color:#2447c9; }
+.deliver-box [hidden],.compact-order [hidden] { display:none!important; }
+@media(max-width:570px){ .summary-hint { margin-inline-start:auto; } .product-summary,.order-summary { gap:7px; } }

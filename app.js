@@ -80,7 +80,7 @@ const FAQ = [
 
 const COL = { 'قيد المراجعة': '#F59E0B', 'مؤكد': '#2447C9', 'تم التسليم': '#16A34A', 'ملغي': '#EF4444' };
 const pr = (id) => P.find((p) => p.id == id);
-const pl = (i) => { const p = pr(i.id); return p && p.pl.find((x) => x[0] == i.m); };
+const pl = (i) => { const p = pr(i.id); return p && (p.pl.find((x) => i.k && x[4] === i.k) || p.pl.find((x) => x[0] == i.m)); };
 const sv = (p, x) => Math.round((1 - x[1] / (p.pl[0][1] * x[0])) * 100);
 
 let cart = [], sel = 0, cat = 'الكل', payId = 'chargily', msg = '', chargilyMode = 'test';
@@ -107,7 +107,7 @@ const clean = () => {
   if (editK < 0) {
     const seen = {};
     cart = cart.filter((i) => {
-      const k = i.id + '|' + i.m;
+      const k = i.id + '|' + (i.k || i.m);
       if (seen[k]) { seen[k].q = Math.min(9, seen[k].q + i.q); return false; }
       seen[k] = i;
       return true;
@@ -209,23 +209,23 @@ async function fetchCustomerProfile() {
 if (custToken) fetchCustomerProfile();
 
 function renderDeliveredBox(da) {
-  if (!da || !da.credentials) return '';
+  if (!da || (!da.credentials && !da.invitationUrl)) return '';
   return `
     <div class="ok-box">
       <h4>🔐 بيانات الحساب والشاشة الخاصة بك:</h4>
-      <div class="cred-row">
+      ${da.type === 'invite' ? `<div class="cred-row"><span>🔗 رابط الدعوة: <a href="${esc(da.invitationUrl)}" target="_blank" rel="noopener noreferrer">فتح الرابط</a></span></div>` : `<div class="cred-row">
         <span>بيانات الحساب: <code>${esc(da.credentials)}</code></span>
-        <button class="cp" onclick="cp('${esc(da.credentials)}')">${ico(I.copy)} نسخ</button>
-      </div>
+        <button class="cp" onclick="cp(this.dataset.copy)" data-copy="${esc(da.credentials)}">${ico(I.copy)} نسخ</button>
+      </div>`}
       ${da.profileName ? `
       <div class="cred-row">
         <span>👤 اسم الشاشة: <code>${esc(da.profileName)}</code></span>
-        <button class="cp" onclick="cp('${esc(da.profileName)}')">${ico(I.copy)} نسخ</button>
+        <button class="cp" onclick="cp(this.dataset.copy)" data-copy="${esc(da.profileName)}">${ico(I.copy)} نسخ</button>
       </div>` : ''}
       ${da.pinCode ? `
       <div class="cred-row">
         <span>🔢 كود الشاشة (PIN): <code>${esc(da.pinCode)}</code></span>
-        <button class="cp" onclick="cp('${esc(da.pinCode)}')">${ico(I.copy)} نسخ</button>
+        <button class="cp" onclick="cp(this.dataset.copy)" data-copy="${esc(da.pinCode)}">${ico(I.copy)} نسخ</button>
       </div>` : ''}
       ${da.extraNote ? `<p style="font-size:12px;color:var(--mut);margin-top:6px">📌 <b>ملاحظة:</b> ${esc(da.extraNote)}</p>` : ''}
     </div>`;
@@ -306,7 +306,7 @@ const prod = (p) => {
   const featBlock = `<h2 class="sh">ما ستحصل عليه</h2>
     <ul class="ft">${(p.f || []).map((f) => `<li><i>✓</i>${esc(f)}</li>`).join('')}</ul>`;
   const plansBlock = `<h2 class="sh">اختر مدة الاشتراك</h2>
-    ${p.pl.map((y, i) => `<button class="pl ${i == sel ? 'on' : ''}" onclick="pickPlan(${i})">${y[2] ? '<span class="tag">الأوفر</span>' : ''}<span class="rd"></span><span class="d">${dur(y[0])}${sv(p, y) > 0 ? `<em>وفّر ${sv(p, y)}%</em>` : ''}</span><b>${fmt(y[1])}</b></button>`).join('')}`;
+    ${p.pl.map((y, i) => `<button class="pl ${i == sel ? 'on' : ''}" onclick="pickPlan(${i})">${y[2] ? '<span class="tag">الأوفر</span>' : ''}<span class="rd"></span><span class="d">${dur(y[0])}${y[3] ? `<small class="plan-label">${esc(y[3])}</small>` : ''}${sv(p, y) > 0 ? `<em>وفّر ${sv(p, y)}%</em>` : ''}</span><b>${fmt(y[1])}</b></button>`).join('')}`;
   const qtyBlock = it ? `<h2 class="sh">الكمية</h2>
     <div class="qrow">
       <div class="q lg"><button onclick="editQty(-1)" aria-label="إنقاص">−</button><span>${it.q}</span><button onclick="editQty(1)" aria-label="زيادة">+</button></div>
@@ -324,6 +324,9 @@ const prod = (p) => {
     <div class="tr">
       ${stepsList.map((st, idx) => `<div><b>${idx + 1}. ${esc(st.title)}</b>${esc(st.desc)}</div>`).join('')}
     </div>
+  </div>
+  <div class="w"><h2 class="sh">⭐ آراء المشترين</h2><div id="productReviews" data-product="${esc(p.id)}"><p class="note">جاري تحميل التقييمات…</p></div>
+    ${custToken ? `<div class="sm"><label class="lb">تقييمك (بعد استلام الطلب)</label><select id="reviewStars" class="in2">${[5,4,3,2,1].map(n=>`<option value="${n}">${n} ⭐</option>`).join('')}</select><textarea class="in2" id="reviewText" rows="3" maxlength="800" placeholder="شارك تجربتك الحقيقية مع المنتج"></textarea><button class="btn" onclick="submitReview('${esc(p.id)}')">إرسال التقييم للمراجعة</button></div>` : `<p class="note">سجّل الدخول لتقييم مشترياتك بعد التسليم.</p>`}
   </div>
   ${it ? `<div class="bar">
     <button class="btn o" onclick="editRemove()">حذف</button>
@@ -348,7 +351,7 @@ const cartV = () => {
         <i class="ic" style="background:${esc(p.c)}" onclick="editItem(${k})">${esc(p.l)}</i>
         <div class="in">
           <button class="ci-t" onclick="editItem(${k})" aria-label="فتح الاشتراك وتعديله"><b>${esc(p.t)}</b><em>${ico(I.edit, 13)} فتح الاشتراك وتعديله</em></button>
-          <select class="sel" onchange="chg(${k},+this.value)">${p.pl.map((y) => `<option value="${y[0]}" ${y[0] == i.m ? 'selected' : ''}>${dur(y[0])} — \u2066${y[1]} DA\u2069</option>`).join('')}</select>
+          <select class="sel" onchange="chg(${k},this.value)">${p.pl.map((y) => `<option value="${esc(y[4] || y[0])}" ${(y[4] ? y[4] === i.k : y[0] == i.m) ? 'selected' : ''}>${dur(y[0])} · ${esc(y[3] || '')} — \u2066${y[1]} DA\u2069</option>`).join('')}</select>
           <div class="q"><button onclick="qty(${k},-1)">−</button><span>${i.q}</span><button onclick="qty(${k},1)">+</button></div>
         </div>
         <div class="cr"><button onclick="del(${k})">✕</button><b>${fmt(x[1] * i.q)}</b></div>
@@ -447,8 +450,10 @@ const doneV = () => {
     ${showClaim ? `
     <div class="sm" id="claimBox" style="text-align:start;margin-top:20px;border:2px solid var(--pri2)">
       <h3 style="color:var(--pri2)">🎁 احفظ طلبك وأنشئ حسابك الآن</h3>
-      <p style="font-size:13px;color:var(--mut);margin-bottom:10px">ضع كلمة سر لحسابك لتتمكن من رؤية بيانات الشاشة والـ PIN واستخدام المحفظة مستقبلاً.</p>
-      <label class="lb">اختر كلمة سر لحسابك (6 أحرف فأكثر)</label>
+      <p style="font-size:13px;color:var(--mut);margin-bottom:10px">أنشئ حسابًا باستخدام بيانات طلبك لتتابع الاشتراك والتسليم. إذا كنت مستعجلاً يمكنك التخطي الآن أو استخدام الدخول عبر Google أو Telegram من صفحة حسابي.</p>
+      <div class="note" style="margin:10px 0">👤 ${esc(me().n || '')} · 📱 ${esc(me().p || '')} · 📧 ${esc(me().e || '')}</div>
+      <a class="chip" href="#/account">الدخول عبر Google / Telegram</a>
+      <label class="lb">اختر كلمة سر لحسابك (8 أحرف فأكثر)</label>
       <input class="in2" id="cl_pw" type="password" dir="ltr" placeholder="••••••••">
       <label style="display:flex;gap:8px;font-size:12px;font-weight:700;margin-top:10px;align-items:center">
         <input type="checkbox" id="cl_ok" checked> أوافق على حفظ بياناتي لمتابعة طلباتي
@@ -495,6 +500,8 @@ window.trackOrder = async () => {
         <hr>
         <div class="tt"><span>الإجمالي</span>${fmt(t.totalPrice)}</div>
         ${renderDeliveredBox(t.deliveredAccount)}
+        ${t.deliveryNotice ? `<p class="note">${esc(t.deliveryNotice)}</p>` : ''}
+        ${t.deliveryNotice ? `<p class="note">${esc(t.deliveryNotice)}</p>` : ''}
       </div>
       ${renderPaymentReceiptBox(t.paymentDetails, t.totalPrice)}`;
   } catch (e) {
@@ -522,6 +529,23 @@ const pwField = (id, ac) => `
     <input class="in2" id="${id}" type="password" dir="ltr" placeholder="••••••••" autocomplete="${ac}">
     <button type="button" class="eye" onclick="togglePw('${id}',this)" aria-label="إظهار كلمة السر">👁</button>
   </div>`;
+
+window.requestPasswordOtp = async () => {
+  try { const r = await fetch(ACC_URL+'/password/request-code',{method:'POST',headers:{Authorization:'Bearer '+custToken}});
+    const d = await r.json(); toast(d.message || 'تم طلب رمز التحقق');
+  } catch(e){toast('تعذّر طلب الرمز');}
+};
+window.changeCustomerPassword = async () => {
+  const old = document.getElementById('changeOldPw')?.value || '';
+  const code = document.getElementById('changeOtp')?.value || '';
+  const newPassword = document.getElementById('changeNewPw')?.value || '';
+  try {
+    const r = await fetch(ACC_URL+'/password/change',{method:'POST',headers:{Authorization:'Bearer '+custToken,'Content-Type':'application/json'},
+      body:JSON.stringify({currentPassword:old,code,newPassword})});
+    const d = await r.json(); toast(d.message || 'تم التحديث');
+    if(d.success)custLogout();
+  }catch(e){toast('تعذّر تحديث كلمة المرور');}
+};
 
 window.togglePw = (id, btn) => {
   const el = document.getElementById(id);
@@ -582,6 +606,15 @@ const securityBlock = () => {
   return `
     <h2 class="sh">🔐 الأمان والتحقق بخطوتين (2FA)</h2>
     <div class="sec-card">
+      <b>🔑 تعيين أو تغيير كلمة المرور</b>
+      <p class="note">يلزم كلمة المرور الحالية أو رمز تحقق Telegram/تطبيق المصادقة. عند النجاح تنتهي الجلسات القديمة.</p>
+      <input class="in2" id="changeOldPw" type="password" autocomplete="current-password" placeholder="كلمة المرور الحالية (إن وُجدت)">
+      <input class="in2" id="changeOtp" inputmode="numeric" maxlength="6" placeholder="رمز 2FA أو Telegram" dir="ltr">
+      <input class="in2" id="changeNewPw" type="password" autocomplete="new-password" placeholder="كلمة مرور جديدة (8 أحرف فأكثر)">
+      <button class="btn o" onclick="requestPasswordOtp()">📲 إرسال رمز تأكيد إلى Telegram</button>
+      <button class="btn" onclick="changeCustomerPassword()">حفظ كلمة المرور</button>
+    </div>
+    <div class="sec-card">
       ${!custProfile.phone ? `
         <div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);padding:12px;border-radius:14px;margin-bottom:14px">
           <b style="font-size:13px;color:#B45309">📱 أضف رقم واتساب لحسابك لتسهيل الطلبات:</b>
@@ -628,7 +661,7 @@ const securityBlock = () => {
             <p style="font-size:13px;color:var(--mut)">1. في تطبيق المصادقة اختر إضافة مفتاح يدوياً، ثم انسخ المفتاح أدناه. حفاظاً على سر التحقق لا نرسله إلى أي خادم لتوليد QR.</p>
             <div class="cred-row">
               <span>المفتاح: <code>${esc(twoFaSetup.secret)}</code></span>
-              <button class="cp" onclick="cp('${esc(twoFaSetup.secret)}')">${ico(I.copy)} نسخ</button>
+              <button class="cp" onclick="cp(this.dataset.copy)" data-copy="${esc(twoFaSetup.secret)}">${ico(I.copy)} نسخ</button>
             </div>
             <p style="font-size:13px;color:var(--mut);margin-top:8px">2. أدخل الرمز المكون من 6 أرقام الظاهر في التطبيق لتأكيد التفعيل:</p>
           ` : `
@@ -676,7 +709,7 @@ const accountV = () => {
           <input class="in2" id="au_phone" type="tel" dir="ltr" placeholder="05XX XX XX XX" autocomplete="tel">
           <label class="lb">البريد الإلكتروني الشخصي *</label>
           <input class="in2" id="au_email" type="email" dir="ltr" placeholder="example@gmail.com" autocomplete="email">
-          <label class="lb">كلمة السر (6 أحرف فأكثر) *</label>
+          <label class="lb">كلمة السر (8 أحرف فأكثر) *</label>
           ${pwField('au_pass', 'new-password')}
           <button class="btn" onclick="doCustRegister()">إنشاء الحساب الآن</button>
         ` : `
@@ -1045,6 +1078,7 @@ window.claimAccount = async () => {
     const d = await r.json();
     if (!d.success) throw new Error(d.message);
     custToken = d.token;
+    try { sessionStorage.removeItem('ov_claim_' + ord.code); } catch(e) {}
     localStorage.setItem('ov_ctk', custToken);
     await fetchCustomerProfile();
     toast('تم إنشاء حسابك وربط طلبك بنجاح 🎉');
@@ -1067,6 +1101,7 @@ function view() {
     const orderFromUrl = params.get('order');
     if (orderFromUrl) {
       ord.code = orderFromUrl;
+      try { ord.claimToken = sessionStorage.getItem('ov_claim_' + orderFromUrl) || ''; } catch(e) {}
       ord.paid = params.get('paid') === '1';
       cart = []; save();
       fetch(`${API_URL}/verify-chargily/${encodeURIComponent(orderFromUrl)}`, { method: 'POST' })
@@ -1125,7 +1160,30 @@ function draw() {
   app.innerHTML = view();
   chrome();
   mountSocialButtons();
+  if (document.getElementById('productReviews')) loadProductReviews();
 }
+
+async function loadProductReviews() {
+  const target = document.getElementById('productReviews');
+  if (!target) return;
+  const id = target.dataset.product;
+  try {
+    const r = await fetch(`${API_URL}/reviews/${encodeURIComponent(id)}`);
+    const d = await r.json();
+    if (!d.success || !target.isConnected || target.dataset.product !== id) return;
+    target.innerHTML = `<p class="note">${d.count ? `متوسط التقييم: ${d.average}/5 من ${d.count} تقييم` : 'لا توجد تقييمات منشورة بعد.'}</p>` +
+      (d.reviews || []).map((v) => `<div class="sm"><b>${esc(v.displayName)}</b> <span>${'⭐'.repeat(v.stars)}</span><p>${esc(v.comment)}</p></div>`).join('');
+  } catch(e) { if(target.isConnected)target.textContent='تعذّر تحميل التقييمات حالياً.'; }
+}
+window.submitReview = async (productId) => {
+  const stars = Number(document.getElementById('reviewStars')?.value);
+  const comment = document.getElementById('reviewText')?.value || '';
+  try {
+    const r = await fetch(ACC_URL+'/reviews', {method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer '+custToken},
+      body:JSON.stringify({productId,stars,comment})});
+    const d = await r.json();toast(d.message || 'تم إرسال التقييم');
+  } catch(e){toast('تعذر إرسال التقييم');}
+};
 
 function route() {
   const h = location.hash.slice(2).split('?')[0].split('/');
@@ -1139,7 +1197,7 @@ function route() {
     const it = k >= 0 ? cart[k] : null;
     if (it && it.id == slug && pl(it)) {
       editK = k;
-      sel = Math.max(0, pr(slug).pl.findIndex((x) => x[0] == it.m));
+      sel = Math.max(0, pr(slug).pl.findIndex((x) => it.k ? x[4] === it.k : x[0] == it.m));
     } else {
       sel = Math.max(0, pr(slug).pl.findIndex((x) => x[2]));
     }
@@ -1153,16 +1211,18 @@ function back() { history.length > 1 ? history.back() : (location.hash = '#/'); 
 function setCat(c) { cat = c; draw(); }
 function pickPlan(i) {
   sel = i;
-  if (editK >= 0 && cart[editK]) { cart[editK].m = pr(cart[editK].id).pl[i][0]; save(); }
+  if (editK >= 0 && cart[editK]) { const v = pr(cart[editK].id).pl[i]; cart[editK].m = v[0]; cart[editK].k = v[4] || ''; save(); }
   draw();
 }
 function add(id, m, go) {
-  const e = cart.find((i) => i.id == id && i.m == m);
+  const chosen = pr(id)?.pl[sel] || pr(id)?.pl.find((x) => x[0] == m);
+  const key = chosen?.[4] || '';
+  const e = cart.find((i) => i.id == id && (key ? i.k === key : i.m == m));
   const had = !!e;
   if (e) e.q = Math.min(9, e.q + 1);
-  else cart.push({ id, m, q: 1 });
+  else cart.push({ id, m, k: key, q: 1 });
   save();
-  const cur = cart.find((i) => i.id == id && i.m == m);
+  const cur = cart.find((i) => i.id == id && (key ? i.k === key : i.m == m));
   if (go) {
     if (cart.length === 1 && cur.q === 1) { location.hash = '#/checkout'; return; }
     const t = pr(id).t + ' — ' + dur(m);
@@ -1201,7 +1261,7 @@ window.editRemove = () => {
 };
 function qty(k, d) { cart[k].q = Math.min(9, Math.max(1, cart[k].q + d)); save(); draw(); }
 function del(k) { cart.splice(k, 1); save(); draw(); toast('تم الحذف من السلة'); }
-function chg(k, m) { cart[k].m = m; save(); draw(); }
+function chg(k, v) { const chosen = pr(cart[k].id)?.pl.find((x) => x[4] ? x[4] === String(v) : x[0] == v); if(chosen){cart[k].m=chosen[0];cart[k].k=chosen[4] || '';} save(); draw(); }
 function pick(id) {
   payId = id;
   document.querySelectorAll('.pm').forEach((b) => b.classList.toggle('on', b.dataset.i == id));
@@ -1232,7 +1292,7 @@ async function send() {
     customerEmail: em,
     paymentMethod: pm.n,
     totalPrice: tot(),
-    cartItems: cart.map((i) => ({ id: i.id, m: i.m, q: i.q })),
+    cartItems: cart.map((i) => ({ id: i.id, m: i.m, k: i.k || '', q: i.q })),
     returnOrigin
   };
 
@@ -1267,7 +1327,8 @@ async function send() {
         paymentDetails: null
       };
 
-      try { localStorage.setItem('oi', JSON.stringify({ n, p: ph, e: em })); } catch (e) {}
+      try { localStorage.setItem('oi', JSON.stringify({ n, p: ph, e: em }));
+        if (data.claimToken) sessionStorage.setItem('ov_claim_' + code, data.claimToken); } catch (e) {}
 
       if (data.checkoutUrl) {
         location.href = data.checkoutUrl;
