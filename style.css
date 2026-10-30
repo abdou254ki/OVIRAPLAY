@@ -1307,3 +1307,27 @@ pre {
 }
 
 .plan-label { display:block;font-size:12px;color:var(--mut);font-weight:600;margin-top:5px;}
+
+/* OVIRA UI 3 — وضوح الشراء على الهاتف دون تغيير بوابة الدفع */
+.checkout-steps { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 5px; margin: 0 0 18px; padding: 11px 8px; background: #eef2fa; border-radius: 14px; }
+.checkout-steps span { flex: 1; min-width: 85px; text-align: center; font-weight: 800; font-size: 11px; padding: 9px 5px; color: #64748b; border-radius: 10px; }
+.checkout-steps .done { background: #dcfce7; color: #166534; }
+.checkout-steps .current { background: #2144ad; color: #fff; }
+.checkout-trust, .checkout-help { background: #eff6ff; border: 1px solid #d6e4ff; border-radius: 14px; padding: 12px; font-size: 12px; font-weight: 700; line-height: 1.8; margin-bottom: 14px; }
+.checkout-help { margin-top: 15px; }
+.checkout-help p { margin: 5px 0 0; font-size: 12px; font-weight: 500; }
+.checkout-total { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; padding: 14px; border-radius: 14px; border: 1px solid #d9e2f1; font-weight: 900; }
+.checkout-total strong { font-size: 19px; white-space: nowrap; }
+.checkout-confirmation { font-size: 12px; line-height: 1.8; color: var(--mut); margin: 10px 0; }
+.order-copy { padding: 5px 11px; font-size: 11px; background: #eef2ff; border-radius: 9px; color: #17369e; }
+@media (max-width: 370px) { .checkout-steps span { min-width: 72px; font-size: 10px; } }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .checkout-steps,
+  :root:not([data-theme="light"]) .checkout-trust,
+  :root:not([data-theme="light"]) .checkout-help { background: #17213a; border-color: #354767; color: #e1e8f8; }
+  :root:not([data-theme="light"]) .checkout-total { border-color: #354767; }
+}
+:root[data-theme="dark"] .checkout-steps,
+:root[data-theme="dark"] .checkout-trust,
+:root[data-theme="dark"] .checkout-help { background: #17213a; border-color: #354767; color: #e1e8f8; }
+:root[data-theme="dark"] .checkout-total { border-color: #354767; }

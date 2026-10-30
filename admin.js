@@ -1,6 +1,11 @@
 const API = 'https://ovira-api.onrender.com/api/admin';
 let token = localStorage.getItem('adm_tk') || sessionStorage.getItem('adm_tk') || '';
-let tab = 'orders', stFilter = '', qFilter = '', compFilter = '';
+let tab = 'overview', stFilter = '', qFilter = '', compFilter = '';
+let orderFrom = '', orderTo = '', productQuery = '';
+let activityLimit = 30;
+let globalSearch = '';
+let panelRequestSerial = 0;
+let createAfterLoad = false;
 let openComplaintsCount = 0;
 let isLoggingIn = false;
 let adm2FaPending = null; // { tempToken, method, message }
@@ -25,7 +30,8 @@ const PRESETS = {
   youtube: { brand: 'YouTube', cat: 'ترفيه وموسيقى', c1: '#FF0000', c2: '#7A0000', ic: '▶' },
   spotify: { brand: 'Spotify', cat: 'ترفيه وموسيقى', c1: '#1DB954', c2: '#0B5E28', ic: 'S' },
   chatgpt: { brand: 'ChatGPT Plus', cat: 'ذكاء اصطناعي وبرامج', c1: '#10A37F', c2: '#074F3D', ic: 'AI' },
-  canva: { brand: 'Canva Pro', cat: 'ذكاء اصطناعي وبرامج', c1: '#7D2AE8', c2: '#3B1078', ic: 'C' }
+  canva: { brand: 'Canva Pro', cat: 'ذكاء اصطناعي وبرامج', c1: '#7D2AE8', c2: '#3B1078', ic: 'C' },
+  gemini: { brand: 'Gemini Pro', cat: 'ذكاء اصطناعي وبرامج', c1: '#4285F4', c2: '#8E44AD', ic: '✦' }
 };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
@@ -191,16 +197,25 @@ function logout() {
 
 async function loadPanel() {
   if (!token) return renderLogin();
+  const requestSerial = ++panelRequestSerial;
 
   let endpoint = '';
   const params = new URLSearchParams();
 
   if (tab === 'orders' || tab === 'delivered') {
+    if (orderFrom) params.set('from', orderFrom);
+    if (orderTo) params.set('to', orderTo);
     if (tab === 'delivered') params.set('scope', 'delivered');
     if (stFilter && tab === 'orders') params.set('status', stFilter);
     if (qFilter) params.set('q', qFilter);
     params.set('page', String(ordersPage));
     endpoint = 'orders?' + params.toString();
+  } else if (tab === 'overview') {
+    endpoint = 'overview';
+  } else if (tab === 'activity') {
+    endpoint = 'activity?limit=' + activityLimit;
+  } else if (tab === 'search') {
+    endpoint = 'search?q=' + encodeURIComponent(globalSearch);
   } else if (tab === 'products') {
     endpoint = 'products';
   } else if (tab === 'renewals') {
@@ -225,6 +240,7 @@ async function loadPanel() {
     });
     if (r.status === 401) return logout();
     const d = await r.json();
+    if (requestSerial !== panelRequestSerial) return;
     if (!d.success) {
       return toast(d.message || 'تعذّر جلب البيانات، أعد المحاولة.');
     }
@@ -240,9 +256,10 @@ async function loadPanel() {
         }
       } catch (err) { console.warn('تعذّر تحميل إعدادات Chargily'); }
     }
+    if (requestSerial !== panelRequestSerial) return;
     renderMain(d);
   } catch (e) {
-    toast('جاري إعادة الاتصال بالخادم...');
+    if (requestSerial === panelRequestSerial) toast('جاري إعادة الاتصال بالخادم...');
   }
 }
 
@@ -265,8 +282,54 @@ window.applyPreset = (key) => {
 function renderMain(d) {
   let content = '';
 
+  // لوحة رئيسية: لا توجد أرقام ثابتة، جميع القيم من API بعد المصادقة.
+  if (tab === 'overview') {
+    const v = d.overview || {};
+    const bars = (v.series || []).map((day) => {
+      const max = Math.max(1, ...(v.series || []).map((s) => Number(s.value) || 0));
+      return `<div class="ov-chart-col" title="${esc(day.day)}: ${fmt(day.value)}"><b>${Number(day.value) ? Math.round(Number(day.value) / 1000) + 'k' : '0'}</b><span style="height:${Math.max(5, (Number(day.value) || 0) / max * 98)}px"></span><small>${esc(day.day.slice(5))}</small></div>`;
+    }).join('');
+    const tasks = (v.recentOrders || []).map((o) => `<button class="ov-task" onclick="goAdmin('orders','${esc(o.orderCode)}')"><span class="status-dot ${o.status === 'مؤكد' ? 'confirmed' : 'review'}"></span><span><b dir="ltr">${esc(o.orderCode)}</b><small>${esc(o.customerName)} · ${esc(o.status)}</small></span><b>${fmt(o.totalPrice)}</b></button>`).join('');
+    content = `<section class="ov-hero"><div><span class="ov-eyebrow">مركز الإدارة · OVIRA PLAY</span><h2>مرحبًا بك 👋</h2><p>نظرة مباشرة على العمليات التي تحتاج اهتمامك، دون أرقام تجريبية.</p></div><button class="btn-sm" onclick="loadPanel()">⟳ تحديث</button></section>
+      <div class="ov-kpis">
+        <button class="ov-kpi" onclick="goAdmin('orders','', 'قيد المراجعة')"><small>🧾 تنتظر المراجعة</small><strong>${Number(v.review) || 0}</strong><span>عرض الطلبات</span></button>
+        <button class="ov-kpi" onclick="goAdmin('orders','', 'مؤكد')"><small>📦 جاهزة للتسليم</small><strong>${Number(v.confirmed) || 0}</strong><span>عرض المؤكدة</span></button>
+        <button class="ov-kpi" onclick="goAdmin('delivered')"><small>✅ تم التسليم</small><strong>${Number(v.delivered) || 0}</strong><span>أرشيف مستقل</span></button>
+        <button class="ov-kpi" onclick="goAdmin('payments')"><small>💳 مدفوعات إلكترونية اليوم</small><strong>${fmt(v.paidToday)}</strong><span>${Number(v.paidTodayCount) || 0} عملية موثقة</span></button>
+        <button class="ov-kpi" onclick="goAdmin('complaints')"><small>🎫 شكاوى مفتوحة</small><strong>${Number(v.complaints) || 0}</strong><span>تحتاج المتابعة</span></button>
+        <button class="ov-kpi" onclick="goAdmin('reviews')"><small>⭐ تقييمات للمراجعة</small><strong>${Number(v.pendingReviews) || 0}</strong><span>قبل النشر</span></button>
+      </div>
+      <div class="card ov-actions"><h3>⚡ إجراءات سريعة</h3><div class="ov-action-grid">
+        <button onclick="goAdmin('orders','', 'مؤكد')">🚀 تسليم طلب</button>
+        <button onclick="startCreateProduct()">➕ منتج جديد</button>
+        <button onclick="goAdmin('renewals')">🔔 التجديدات</button>
+        <button onclick="goAdmin('payments')">💳 مراجعة الدفع</button>
+        <button onclick="goAdmin('customers')">👥 إدارة الزبائن</button>
+        <button onclick="goAdmin('activity')">🛡️ سجل النشاط</button>
+      </div></div>
+      ${Number(v.riskCount) ? `<div class="card ov-alert"><b>⚠️ ${Number(v.riskCount)} طلبات تحتاج مراجعة مخاطر</b><p>لا تُلغِ طلبًا تلقائيًا بناءً على درجة المخاطر؛ راجع الطلب وطريقة الدفع أولًا.</p><button class="btn-sm" onclick="goAdmin('orders','', 'قيد المراجعة')">عرض الطلبات</button></div>` : ''}
+      <div class="card"><h3>📈 المدفوعات الإلكترونية الموثقة — آخر 7 أيام</h3><p class="ov-caption">إجمالي المدفوعات الإلكترونية المسجلة حسب وقت الدفع؛ لا يشمل التحويلات اليدوية غير المؤكدة.</p><div class="ov-chart">${bars}</div></div>
+      <div class="card"><h3>📌 طلبات تحتاج معالجة</h3>${tasks || '<p class="ov-empty">لا توجد طلبات بانتظار المعالجة حاليًا 🎉</p>'}</div>
+      <div class="card"><h3>🏆 المنتجات الأكثر طلبًا خلال 30 يومًا</h3><p class="ov-caption">عدد الوحدات ضمن الطلبات المؤكدة أو المسلّمة، وليس تقرير أرباح.</p>${(v.topProducts || []).map((item, i) => `<div class="preview-row"><span>${i+1}. ${esc(item._id)}</span><b>${Number(item.quantity) || 0} اشتراك</b></div>`).join('') || '<p class="ov-caption">لا توجد بيانات كافية.</p>'}</div>`;
+  }
+  else if (tab === 'search') {
+    const results = d.results || {};
+    const orders = (results.orders || []).map(o => `<button class="ov-task" onclick="goAdmin('${o.status === 'تم التسليم' ? 'delivered' : 'orders'}','${esc(o.orderCode)}')"><span>📦</span><span><b>${esc(o.orderCode)}</b><small>${esc(o.customerName)} · ${esc(o.status)}</small></span><b>${fmt(o.totalPrice)}</b></button>`).join('');
+    const customers = (results.customers || []).map(c => `<button class="ov-task" data-customer-key="${esc(c.phone || c.name)}" onclick="goAdmin('customers',this.dataset.customerKey)"><span>👤</span><span><b>${esc(c.name)}</b><small>${esc(c.phone || c.email || '')}</small></span></button>`).join('');
+    const products = (results.products || []).map(p => `<button class="ov-task" data-product-title="${esc(p.title)}" onclick="searchProduct(this.dataset.productTitle)"><span>🛍️</span><span><b>${esc(p.title)}</b><small>${esc(p.brandName)}</small></span></button>`).join('');
+    content = `<div class="card"><h3>🔍 نتائج البحث عن: ${esc(globalSearch)}</h3><p class="ov-caption">يُظهر حتى 8 نتائج من كل قسم. اضغط على النتيجة لفتح تفاصيلها.</p></div>
+      <div class="card"><h3>📦 الطلبات</h3>${orders || '<p class="ov-caption">لا توجد نتائج.</p>'}</div>
+      <div class="card"><h3>👥 الزبائن</h3>${customers || '<p class="ov-caption">لا توجد نتائج.</p>'}</div>
+      <div class="card"><h3>🛍️ المنتجات</h3>${products || '<p class="ov-caption">لا توجد نتائج.</p>'}</div>`;
+  }
+  else if (tab === 'activity') {
+    content = `<div class="card"><h3>🛡️ سجل نشاط الإدارة</h3><p class="ov-caption">آخر الأحداث المسجلة على الخادم. للمالك فقط، ويحتفظ الخادم بالأحداث وفق إعدادات قاعدة البيانات.</p>
+      <div class="chips"><button class="chip ${activityLimit === 30 ? 'on' : ''}" onclick="activityLimit=30;loadPanel()">آخر 30</button><button class="chip ${activityLimit === 80 ? 'on' : ''}" onclick="activityLimit=80;loadPanel()">آخر 80</button></div></div>
+      ${(d.events || []).map((e) => `<div class="card activity-row"><b>${esc(e.action)}</b><small>${new Date(e.at).toLocaleString('fr-DZ')}</small><p>${esc(e.summary)}</p><small>المدير: ${Number(e.adminId) || 0} · ${esc(e.entity)}</small></div>`).join('') || '<div class="card">لا توجد أحداث مسجلة.</div>'}`;
+  }
+
   // ==================== 1. تبويب الطلبات وتسليم الشاشات ====================
-  if (tab === 'orders' || tab === 'delivered') {
+  else if (tab === 'orders' || tab === 'delivered') {
     const statuses = ['', 'قيد المراجعة', 'مؤكد', 'ملغي'];
     const list = (d.orders || []).map((o) => {
       const pd = o.paymentDetails || {};
@@ -304,8 +367,8 @@ function renderMain(d) {
           ${pd.transactionId ? `<div>• مرجع العملية: <code dir="ltr">${esc(pd.transactionId)}</code></div>` : ''}
         </div>` : ''}
 
-        <div class="deliver-box">
-          <h4>🔑 تسليم الطلب (حساب / شاشة / رابط تفعيل)</h4>
+        <details class="deliver-box delivery-wizard"><summary>🔑 تسليم الطلب · افتح النموذج</summary>
+          <p class="ov-caption">1. اختر نوع التسليم ← 2. أدخل البيانات ← 3. راجع وأرسل. تُرسل المعلومات إلى صاحب الطلب فقط.</p>
           <label class="lbl">نوع التسليم</label>
           <select class="inp" id="dlv_type_${o._id}" onchange="toggleDeliveryFields('${o._id}')">
             <option value="screen" ${(!da.type || da.type === 'screen') ? 'selected' : ''}>📺 شاشة / بروفايل</option>
@@ -332,15 +395,17 @@ function renderMain(d) {
           </div>
           <label class="lbl">📌 ملاحظة أو تعليمات إضافية للزبون (اختياري)</label>
           <input class="inp" id="dlv_note_${o._id}" value="${esc(da.extraNote || '')}" placeholder="مثال: ممنوع تغيير كلمة السر أو الدخول لشاشة أخرى">
-          <button class="btn-ok" onclick="deliverAccount('${o._id}')">🚀 حفظ وتسليم بيانات الطلب</button>
+          <button class="btn-sm" onclick="previewDelivery('${o._id}')">👁️ مراجعة بيانات التسليم</button>
+          <button class="btn-ok" onclick="deliverAccount('${o._id}')">🚀 تأكيد إرسال التسليم</button>
           <details style="margin-top:12px"><summary>🔐 إرسال رمز مصادقة مؤقت عند الحاجة</summary>
             <p class="meta">يرسل مباشرة إلى Telegram المرتبط بالزبون، ولا يتم حفظ الرمز في قاعدة البيانات.</p>
             <input class="inp" type="text" id="tempcode_${o._id}" autocomplete="off" placeholder="رمز لمرة واحدة" dir="ltr" maxlength="12">
             <button class="btn-sm" onclick="sendTemporaryCode('${o._id}')">📲 إرسال الرمز للزبون</button>
           </details>
-        </div>
+        </details>
 
         <div class="note-row">
+          <button class="btn-sm" onclick="copyOrderSummary('${o._id}','${esc(o.orderCode)}')">📋 نسخ رمز الطلب</button>
           <button class="btn-sm" onclick="saveNote('${o._id}')">حفظ الملاحظة</button>
           <input class="inp" id="nt_${o._id}" value="${esc(o.adminNote || '')}" placeholder="ملاحظة إدارية داخلية..." style="padding:8px 12px">
         </div>
@@ -359,10 +424,11 @@ function renderMain(d) {
       <div class="chips">
         ${tab === 'orders' ? statuses.map((s) => `<button class="chip ${stFilter === s ? 'on' : ''}" onclick="stFilter='${s}';ordersPage=1;loadPanel()">${s || 'كل الطلبات'}</button>`).join('') : '<span class="chip on">✅ سجل الطلبات المسلّمة</span>'}
       </div>
-      <div class="search-row">
-        <input class="inp" placeholder="ابحث بالاسم أو الهاتف أو الإيميل أو رمز الطلب..." value="${esc(qFilter)}" onchange="qFilter=this.value;ordersPage=1;loadPanel()">
-        <button class="btn-sm" onclick="loadPanel()">بحث</button>
-      </div>
+      <form class="search-row" onsubmit="event.preventDefault();qFilter=this.querySelector('input[name=q]').value;ordersPage=1;loadPanel()">
+        <input class="inp" name="q" aria-label="البحث عن طلب" placeholder="الاسم، الهاتف، البريد أو رمز الطلب" value="${esc(qFilter)}">
+        <button class="btn-sm" type="submit">🔍 بحث</button>
+      </form>
+      <details class="card ov-filter"><summary>⚙️ تصفية حسب تاريخ الطلب</summary><div class="grid-2"><div><label class="lbl">من تاريخ</label><input class="inp" id="orderFrom" type="date" value="${esc(orderFrom)}"></div><div><label class="lbl">إلى تاريخ</label><input class="inp" id="orderTo" type="date" value="${esc(orderTo)}"></div></div><div class="grid-2"><button class="btn-pri" onclick="applyOrderDates()">تطبيق التصفية</button><button class="btn-sm" onclick="orderFrom='';orderTo='';ordersPage=1;loadPanel()">مسح التواريخ</button></div></details>
       <div class="card pager">
         <span>عدد الطلبات: <b>${Number(d.total) || 0}</b> — الصفحة ${d.page || 1} من ${d.pages || 1}</span>
         <div class="pager-actions">
@@ -380,7 +446,7 @@ function renderMain(d) {
       const featsStr = (p.features || []).join('\n');
       const stepsStr = (p.steps || []).map((s) => `${s.title} | ${s.desc}`).join('\n');
       return `
-      <details class="card compact-product" ${openProductId === String(p._id) ? 'open' : ''} ontoggle="onProductToggle(this,'${p._id}')">
+      <details class="card compact-product product-card" data-search="${esc((p.title + ' ' + p.brandName + ' ' + p.category).toLowerCase())}" ${openProductId === String(p._id) ? 'open' : ''} ontoggle="onProductToggle(this,'${p._id}')">
         <summary class="product-summary"><b>${esc(p.title)}</b><small>${esc(p.brandName)} · ${(p.plans || []).length} باقات</small><span class="badge" style="background:${p.active ? '#16A34A' : '#EF4444'}">${p.active ? 'منشورة' : 'مخفية'}</span><span>تعديل ▾</span></summary>
         <div class="product-detail"><div class="ord-head">
           <span class="badge" style="background:${p.active ? '#16A34A' : '#EF4444'}">${p.active ? '🟢 معروضة في الموقع' : '🔴 مخفية'}</span>
@@ -425,7 +491,9 @@ function renderMain(d) {
           </div>
         </div>
         <label class="lbl">الباقات والأسعار (الأشهر:السعر*|وصف الباقة، مثال 1:1500|حساب خاص)</label>
-        <input class="inp" id="pr_pl_${p._id}" dir="ltr" value="${esc(plansStr)}">
+        <input type="hidden" id="pr_pl_${p._id}" value="${esc(plansStr)}">
+        <div class="plan-editor" data-plan-target="pr_pl_${p._id}"></div>
+        <details class="advanced-plan"><summary>⚙️ عرض أو تعديل الصيغة اليدوية (اختياري)</summary><textarea class="inp" dir="ltr" oninput="planRawChanged('pr_pl_${p._id}',this.value)">${esc(plansStr)}</textarea></details>
         <label class="lbl">مميزات صفحة الهبوط (كل ميزة في سطر)</label>
         <textarea class="inp" id="pr_ft_${p._id}">${esc(featsStr)}</textarea>
         <label class="lbl">خطوات الطلب في صفحة الهبوط (العنوان | الشرح)</label>
@@ -434,12 +502,16 @@ function renderMain(d) {
           <button class="btn-ok" style="margin:0" onclick="updateProduct('${p._id}')">💾 حفظ التعديلات</button>
           <button class="btn-sm" onclick="toggleProduct('${p._id}', ${!p.active})">${p.active ? '🙈 إخفاء من الموقع' : '👁️ إظهار في الموقع'}</button>
         </div>
+        <div class="grid-2"><button class="btn-sm" onclick="previewProduct('${p._id}')">👁️ معاينة المنتج</button><button class="btn-sm" onclick="loadProductRevisions('${p._id}')">🕘 سجل التعديلات / استعادة</button></div>
+        <div id="pr_preview_${p._id}" class="product-preview" hidden></div>
+        <div id="pr_hist_${p._id}" class="product-history" hidden></div>
         <button class="btn-bad" onclick="deleteProduct('${p._id}')">🗑️ حذف البطاقة نهائياً</button>
       </div></details>`;
     }).join('');
 
     content = `
-      <details class="card compact-product" style="border:2px solid var(--pri2)">
+      <div class="card"><h3>🛍️ إدارة المنتجات بسهولة</h3><p class="ov-caption">اضغط على بطاقة لتعديلها. يمكن إدخال الباقات من حقول منفصلة دون رموز خاصة.</p><input class="inp" id="productSearch" placeholder="ابحث عن منتج أو علامة تجارية" value="${esc(productQuery)}" oninput="filterProducts(this.value)"></div>
+      <details class="card compact-product" id="createProductBlock" style="border:2px solid var(--pri2)">
         <summary class="product-summary"><b>➕ إنشاء منتج جديد</b><span>فتح النموذج ▾</span></summary>
         <div class="product-detail"><h3>إنشاء بطاقة عرض وصفحة هبوط كاملة جديدة</h3>
         <p style="font-size:12px;color:var(--mut);margin:6px 0">اختر قالباً جاهزاً لتعبئة الألوان والتصميم تلقائياً (أو خصصه كما تشاء):</p>
@@ -452,6 +524,7 @@ function renderMain(d) {
           <button class="chip" onclick="applyPreset('spotify')">🟢 Spotify</button>
           <button class="chip" onclick="applyPreset('chatgpt')">🤖 ChatGPT</button>
           <button class="chip" onclick="applyPreset('canva')">🟣 Canva Pro</button>
+          <button class="chip" onclick="applyPreset('gemini')">✨ Gemini Pro</button>
         </div>
         <div class="grid-2">
           <div>
@@ -488,9 +561,12 @@ function renderMain(d) {
           </div>
         </div>
         <label class="lbl">الوصف التفصيلي تحت العنوان في صفحة الهبوط</label>
-        <input class="inp" id="np_sub" placeholder="أكبر مكتبة أنمي عالمية بدون إعلانات وبأعلى جودة 4K">
+        <input class="inp" id="np_sub" placeholder="وصف دقيق للمنتج دون وعود غير مؤكدة">
+        <button class="btn-sm" onclick="suggestProductDescription()">✨ اقتراح وصف أولي قابل للتعديل</button>
         <label class="lbl">الباقات والأسعار * (مثال: 1:1500|مشترك, 1:5000*|حساب خاص)</label>
-        <input class="inp" id="np_plans" dir="ltr" placeholder="1:600, 3:1650, 6:3000, 12:5500*">
+        <input type="hidden" id="np_plans" value="1:600">
+        <div class="plan-editor" data-plan-target="np_plans"></div>
+        <details class="advanced-plan"><summary>⚙️ الصيغة اليدوية (اختياري)</summary><textarea class="inp" dir="ltr" oninput="planRawChanged('np_plans',this.value)">1:600</textarea></details>
         <label class="lbl">مميزات صفحة الهبوط (كل ميزة في سطر)</label>
         <textarea class="inp" id="np_feats" placeholder="بدون إعلانات نهائياً&#10;شاشة خاصة مقفلة برمز PIN&#10;تسليم فوري للبيانات"></textarea>
         <button class="btn-pri" onclick="createProduct()">🚀 نشر البطاقة وصفحة الهبوط في الموقع</button>
@@ -635,6 +711,7 @@ function renderMain(d) {
           <div style="font-weight:600">${esc(c.message)}</div>
         </div>
         <label class="lbl">💬 رد الإدارة (يصل للزبون في تيليغرام وفي حسابه بالموقع)</label>
+        <div class="chips"><button class="chip" onclick="setComplaintTemplate('${c._id}','progress')">⏳ جارٍ العمل</button><button class="chip" onclick="setComplaintTemplate('${c._id}','details')">📋 طلب تفاصيل</button><button class="chip" onclick="setComplaintTemplate('${c._id}','solved')">✅ تم الحل</button></div>
         <textarea class="inp" id="crep_${c._id}" placeholder="اكتب ردك لحل مشكلة العميل...">${esc(c.adminReply || '')}</textarea>
         <div class="grid-2" style="margin-top:8px">
           <button class="btn-pri" style="margin:0" onclick="replyComplaint('${c._id}','تم الرد')">إرسال الرد للعميل</button>
@@ -652,8 +729,8 @@ function renderMain(d) {
   // ==================== 5. تبويب الزبائن وإدارة أرصدتهم ====================
   else if (tab === 'customers') {
     const custList = (d.customers || []).map((c) => `
-      <div class="card">
-        <div class="ord-head">
+      <details class="card compact-product customer-card"><summary class="product-summary"><b>${esc(c.name)}</b><span>💰 ${fmt(c.balance || 0)}</span><span>${c.blocked ? '🚫 محظور' : c.twoFactorEnabled ? '🔐 محمي' : 'فتح التفاصيل ▾'}</span></summary>
+        <div class="product-detail"><div class="ord-head">
           <div>
             <b style="font-size:16px">${esc(c.name)}</b>
             ${c.blocked ? '<span class="badge" style="background:var(--bad);margin-right:6px">محظور</span>' : ''}
@@ -692,7 +769,7 @@ function renderMain(d) {
             ${c.blocked ? '✅ فك الحظر' : '🚫 حظر الحساب'}
           </button>
         </div>
-      </div>`).join('');
+      </div></details>`).join('');
 
     content = `
       <div class="card">
@@ -795,7 +872,10 @@ function renderMain(d) {
       <button class="btn-sm" onclick="loadPanel()">تحديث 🔄</button>
       <h2>لوحة إدارة OVIRA PLAY</h2>
     </div>
-    <div class="tabs">
+    <form class="ov-global-search" onsubmit="event.preventDefault();runGlobalSearch(this.elements.globalQuery.value)"><input class="inp" name="globalQuery" aria-label="بحث شامل" value="${esc(globalSearch)}" placeholder="🔍 بحث شامل في الطلبات والعملاء والمنتجات"><button class="btn-sm">بحث</button></form>
+    <div class="tabs" aria-label="أقسام لوحة التحكم">
+      <button class="tab ${tab === 'overview' ? 'on' : ''}" onclick="goAdmin('overview')">🏠 الرئيسية</button>
+      <button class="tab ${tab === 'activity' ? 'on' : ''}" onclick="goAdmin('activity')">🛡️ النشاط</button>
       <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';ordersPage=1;qFilter='';stFilter='';loadPanel()">📋 الطلبات</button>
       <button class="tab ${tab === 'delivered' ? 'on' : ''}" onclick="tab='delivered';ordersPage=1;qFilter='';loadPanel()">✅ تم التسليم</button>
       <button class="tab ${tab === 'reviews' ? 'on' : ''}" onclick="tab='reviews';loadPanel()">⭐ التقييمات</button>
@@ -807,6 +887,193 @@ function renderMain(d) {
       <button class="tab ${tab === 'settings' ? 'on' : ''}" onclick="tab='settings';loadPanel()">⚙️ الإعدادات</button>
     </div>
     ${content}`;
+  if (tab === 'products') {
+    initPlanEditors();
+    if (productQuery) filterProducts(productQuery);
+    if (createAfterLoad) { createAfterLoad = false; openCreateProduct(); }
+  }
+}
+
+// أدوات الواجهة: جميع العمليات الحساسة تُؤكَّد وتُنفَّذ من الخادم، لا من المتصفح.
+function runGlobalSearch(q) {
+  globalSearch = String(q || '').trim().slice(0,64);
+  if (globalSearch.length < 2) return toast('أدخل حرفين على الأقل للبحث');
+  goAdmin('search');
+}
+function searchProduct(title) {
+  productQuery = title.toLowerCase();
+  goAdmin('products');
+}
+function goAdmin(section, search = '', status = '') {
+  tab = section;
+  qFilter = search;
+  stFilter = status;
+  ordersPage = 1;
+  loadPanel();
+}
+function startCreateProduct() { createAfterLoad = true; goAdmin('products'); }
+function openCreateProduct() {
+  const block = document.getElementById('createProductBlock');
+  if (block) { block.open = true; block.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+function applyOrderDates() {
+  orderFrom = document.getElementById('orderFrom')?.value || '';
+  orderTo = document.getElementById('orderTo')?.value || '';
+  if (orderFrom && orderTo && orderFrom > orderTo) return toast('تاريخ البداية بعد النهاية');
+  ordersPage = 1;
+  loadPanel();
+}
+function filterProducts(term) {
+  productQuery = String(term || '').toLowerCase().trim();
+  document.querySelectorAll('.product-card[data-search]').forEach((el) => {
+    el.hidden = Boolean(productQuery && !el.dataset.search.includes(productQuery));
+  });
+}
+function previewDelivery(id) {
+  const type = document.getElementById('dlv_type_' + id)?.value;
+  const creds = document.getElementById('dlv_cred_' + id)?.value.trim() || '';
+  const url = document.getElementById('dlv_invite_' + id)?.value.trim() || '';
+  const profile = document.getElementById('dlv_prof_' + id)?.value.trim() || '';
+  if (type === 'invite' && !/^https:\/\/\S+$/i.test(url)) return toast('أدخل رابط تفعيل HTTPS صالحًا');
+  if (type !== 'invite' && !creds) return toast('بيانات الحساب مطلوبة');
+  const typeName = { screen: 'شاشة / بروفايل', account: 'حساب كامل', invite: 'رابط دعوة' }[type] || type;
+  // لا نكشف كلمة المرور أو رمز المصادقة في نافذة المعاينة.
+  alert('معاينة آمنة للتسليم\nالنوع: ' + typeName + '\nبيانات الحساب: ' + (creds ? 'تم إدخالها' : 'غير مطلوبة') + '\nالرابط: ' + (url ? 'تم إدخاله' : 'غير مطلوب') + '\nالشاشة: ' + (profile || 'لا توجد') + '\n\nراجع الطلب ثم اضغط تأكيد إرسال التسليم.');
+}
+
+// لوحة أسعار مرئية؛ الصيغة اليدوية محفوظة للخادم كما كانت حفاظًا على التوافق.
+function readPlanRows(source) {
+  const entries = String(source || '').split(/[,\n]+/).map(x => x.trim()).filter(Boolean);
+  return entries.map((entry) => {
+    const m = entry.match(/^(\d{1,2}):(\d+)(\*)?(?:\|([^\n,]*))?$/);
+    if (!m) return null;
+    return { months: m[1], price: m[2], featured: Boolean(m[3]), label: m[4] || '' };
+  }).filter(Boolean);
+}
+function initPlanEditors() {
+  document.querySelectorAll('[data-plan-target]').forEach((editor) => {
+    renderPlanEditor(editor.dataset.planTarget);
+  });
+}
+function renderPlanEditor(id, rows) {
+  const field = document.getElementById(id);
+  const editor = document.querySelector(`[data-plan-target="${id}"]`);
+  if (!field || !editor) return;
+  const plans = Array.isArray(rows) ? rows : readPlanRows(field.value);
+  editor.innerHTML = `<div class="plan-editor-heading"><b>📦 الباقات (${plans.length})</b><span>كل سطر = باقة مستقلة</span></div>` +
+    (plans.length ? plans.map((item, index) => `<div class="plan-row" data-row="${index}">
+      <div class="plan-row-label">باقة ${index + 1}</div>
+      <label>الشهور<input type="number" min="1" max="36" step="1" value="${esc(item.months)}" data-f="months" oninput="syncPlanEditor('${id}')"></label>
+      <label>السعر (DA)<input type="number" min="0" step="1" value="${esc(item.price)}" data-f="price" oninput="syncPlanEditor('${id}')"></label>
+      <label>نوع / وصف الباقة<input maxlength="80" value="${esc(item.label)}" data-f="label" placeholder="عائلي / خاص" oninput="syncPlanEditor('${id}')"></label>
+      <label class="plan-best"><input type="checkbox" data-f="featured" ${item.featured ? 'checked' : ''} onchange="onlyFeatured('${id}',${index})">الأوفر</label>
+      <button type="button" class="plan-remove" aria-label="حذف الباقة" onclick="removePlanRow('${id}',${index})">✕</button>
+      </div>`).join('') : '<p class="ov-caption">أضف باقة لبدء إدخال الأسعار.</p>') +
+    `<button class="btn-sm plan-add" type="button" onclick="addPlanRow('${id}')">＋ إضافة باقة جديدة</button><p class="ov-caption">يمكن إضافة باقتين بنفس المدة بأسعار مختلفة، مثل Family وPersonal.</p>`;
+  syncPlanEditor(id);
+}
+function planEditorRows(id) {
+  const editor = document.querySelector(`[data-plan-target="${id}"]`);
+  if (!editor) return [];
+  return [...editor.querySelectorAll('.plan-row')].map((row) => ({
+    months: row.querySelector('[data-f="months"]').value,
+    price: row.querySelector('[data-f="price"]').value,
+    label: row.querySelector('[data-f="label"]').value.trim(),
+    featured: row.querySelector('[data-f="featured"]').checked
+  }));
+}
+function syncPlanEditor(id) {
+  const field = document.getElementById(id);
+  if (!field) return;
+  field.value = planEditorRows(id).map(p => `${p.months}:${p.price}${p.featured ? '*' : ''}${p.label ? '|' + p.label.replace(/[|,\n]/g, ' ') : ''}`).join(', ');
+}
+function addPlanRow(id) {
+  const rows = planEditorRows(id);
+  if (rows.length >= 20) return toast('الحد الأقصى 20 باقة للمنتج');
+  rows.push({ months: '1', price: '', label: '', featured: false });
+  renderPlanEditor(id, rows);
+}
+function removePlanRow(id, n) {
+  const rows = planEditorRows(id);
+  rows.splice(n, 1);
+  renderPlanEditor(id, rows);
+}
+function onlyFeatured(id, i) {
+  const rows = planEditorRows(id);
+  if (rows[i]?.featured) rows.forEach((row, n) => { if (n !== i) row.featured = false; });
+  renderPlanEditor(id, rows);
+}
+function planRawChanged(id, raw) {
+  const parsed = readPlanRows(raw);
+  if (parsed.length !== raw.split(/[,\n]+/).filter(x => x.trim()).length) {
+    toast('صيغة غير صالحة؛ استخدم المحرر المرئي بدلاً منها');
+    return;
+  }
+  document.getElementById(id).value = raw;
+  renderPlanEditor(id, parsed);
+}
+function plansValid(id) {
+  const rows = planEditorRows(id);
+  return rows.length > 0 && rows.every(r => Number.isInteger(Number(r.months)) && Number(r.months) >= 1 && Number(r.months) <= 36 &&
+    /^\d+$/.test(r.price) && Number(r.price) >= 0 && r.label.length <= 80);
+}
+function previewProduct(id) {
+  const dest = document.getElementById('pr_preview_' + id);
+  if (!dest) return;
+  dest.hidden = !dest.hidden;
+  if (dest.hidden) return;
+  const title = document.getElementById('pr_tl_' + id)?.value || 'منتج';
+  const subtitle = document.getElementById('pr_sub_' + id)?.value || '';
+  dest.innerHTML = `<b>${esc(title)}</b><p>${esc(subtitle)}</p>` + planEditorRows('pr_pl_' + id)
+    .map(p=>`<div class="preview-row"><span>${esc(p.months)} شهر · ${esc(p.label)}</span><strong>${fmt(p.price)}</strong></div>`).join('');
+}
+async function loadProductRevisions(id) {
+  const box = document.getElementById('pr_hist_' + id);
+  if (!box) return;
+  box.hidden = false;
+  box.textContent = 'جاري جلب سجل التعديلات...';
+  try {
+    const r = await fetch(`${API}/products/${id}/revisions`, { headers: { Authorization: 'Bearer ' + token } });
+    const d = await r.json();
+    if (!d.success) return box.textContent = d.message || 'غير متاح (للمالك فقط)';
+    box.innerHTML = (d.revisions || []).map(rev => `<div class="history-row"><span>${new Date(rev.createdAt).toLocaleString('fr-DZ')} · ${esc(rev.label)}</span><button class="btn-sm" onclick="restoreProductRevision('${id}','${rev._id}')">استعادة</button></div>`).join('') || '<p>لا توجد نسخ سابقة بعد.</p>';
+  } catch (_) { box.textContent = 'تعذّر تحميل السجل'; }
+}
+async function restoreProductRevision(id, revId) {
+  if (!confirm('استعادة النسخة السابقة؟ ستُحفظ الحالة الحالية في سجل التعديلات أيضًا.')) return;
+  try {
+    const r = await fetch(`${API}/products/${id}/restore/${revId}`, { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+    const d = await r.json();
+    toast(d.message || 'تعذّر الاستعادة');
+    if (d.success) { openProductId = id; loadPanel(); }
+  } catch (_) { toast('فشل الاتصال بالخادم'); }
+}
+function copyOrderSummary(id, code) {
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(code)
+    .then(() => toast('تم نسخ رمز الطلب')).catch(() => toast('تعذّر النسخ'));
+  else toast('النسخ غير مدعوم هنا');
+}
+function suggestProductDescription() {
+  const brand = document.getElementById('np_brand')?.value.trim();
+  if (!brand) return toast('أدخل اسم العلامة أولًا');
+  const title = document.getElementById('np_title');
+  const sub = document.getElementById('np_sub');
+  const feat = document.getElementById('np_feats');
+  if (title && !title.value.trim()) title.value = brand + ' — باقات اشتراك';
+  if (sub && !sub.value.trim()) sub.value = 'اختر باقة ' + brand + ' المناسبة من حيث المدة والنوع. تظهر التفاصيل والسعر النهائي قبل إتمام الطلب، مع إرشادات التسليم بعد التحقق من الدفع.';
+  if (feat && !feat.value.trim()) feat.value = '📅 مدد اشتراك متعددة حسب الباقة\n📩 متابعة حالة الطلب من الموقع أو Telegram\n💬 دعم عند الحاجة';
+  toast('تم إنشاء وصف أولي؛ راجع دقته وعدّله قبل النشر');
+}
+function setComplaintTemplate(id, kind) {
+  const box = document.getElementById('crep_' + id);
+  if (!box) return;
+  const messages = {
+    progress: 'مرحبًا، استلمنا طلب الدعم الخاص بك ونراجع التفاصيل الآن. سنرسل لك التحديث فور توفره. شكرًا لصبرك.',
+    details: 'مرحبًا، لمساعدتك بسرعة يرجى إرسال رقم طلبك وتوضيح المشكلة بدقة، دون إرسال كلمة مرورك أو رمز المصادقة.',
+    solved: 'مرحبًا، تم معالجة البلاغ من طرف فريق OVIRA PLAY. يُرجى التجربة وإخبارنا إذا استمرت المشكلة. شكرًا لتواصلك.'
+  };
+  box.value = messages[kind] || '';
+  box.focus();
 }
 
 // ==================== إجراءات التحقق بخطوتين (2FA) للمدير ====================
@@ -915,6 +1182,7 @@ async function moderateReview(id, approved) {
 }
 
 async function createProduct() {
+  if (!plansValid('np_plans')) return toast('أكمل كل باقة: مدة صحيحة وسعر صحيح');
   const payload = {
     brandName: document.getElementById('np_brand').value.trim(),
     title: document.getElementById('np_title').value.trim(),
@@ -939,6 +1207,7 @@ async function createProduct() {
 }
 
 async function updateProduct(id) {
+  if (!plansValid('pr_pl_' + id)) return toast('أكمل كل باقة: مدة صحيحة وسعر صحيح');
   const payload = {
     brandName: document.getElementById('pr_br_' + id).value.trim(),
     title: document.getElementById('pr_tl_' + id).value.trim(),
@@ -960,7 +1229,7 @@ async function updateProduct(id) {
   });
   const d = await r.json();
   toast(d.message || 'تم حفظ التعديلات ✓');
-  loadPanel();
+  if (d.success) { openProductId = id; loadPanel(); }
 }
 
 async function toggleProduct(id, active) {
@@ -1012,6 +1281,7 @@ async function deliverAccount(orderId) {
 
   if (type !== 'invite' && !credentials) return toast('أدخل بيانات الحساب أولاً');
   if (type === 'invite' && !/^https:\/\/\S+$/i.test(invitationUrl)) return toast('أدخل رابط تفعيل يبدأ بـ https://');
+  if (!confirm('سيتم حفظ بيانات التسليم وإرسالها للزبون المرتبط بهذا الطلب. هل تأكدت من هوية الزبون ومعلومات الحساب؟')) return;
 
   const r = await fetch(`${API}/orders/${orderId}/deliver`, {
     method: 'POST',
@@ -1019,8 +1289,8 @@ async function deliverAccount(orderId) {
     body: JSON.stringify({ type, credentials, invitationUrl, profileName, pinCode, extraNote })
   });
   const d = await r.json();
-  toast(d.message || 'تم تسليم الحساب بنجاح ✓');
-  loadPanel();
+  toast(d.message || (d.success ? 'تم التسليم ✓' : 'تعذّر التسليم'));
+  if (d.success) loadPanel();
 }
 
 async function upStatus(id, status) {
@@ -1086,6 +1356,8 @@ async function createCustomer() {
 
 async function setCustBalance(id) {
   const exactBalance = Number(document.getElementById('bal_' + id).value || 0);
+  if (!Number.isFinite(exactBalance) || exactBalance < 0) return toast('أدخل رصيدًا صحيحًا');
+  if (!confirm('تأكيد ضبط رصيد الزبون على ' + fmt(exactBalance) + '؟')) return;
   const r = await fetch(`${API}/customers/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -1097,6 +1369,7 @@ async function setCustBalance(id) {
 }
 
 async function addQuickBalance(id, balanceDelta) {
+  if (!confirm('تأكيد تعديل رصيد الزبون بمقدار ' + fmt(balanceDelta) + '؟')) return;
   const r = await fetch(`${API}/customers/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },

@@ -81,7 +81,7 @@ const FAQ = [
 const COL = { 'قيد المراجعة': '#F59E0B', 'مؤكد': '#2447C9', 'تم التسليم': '#16A34A', 'ملغي': '#EF4444' };
 const pr = (id) => P.find((p) => p.id == id);
 const pl = (i) => { const p = pr(i.id); return p && (p.pl.find((x) => i.k && x[4] === i.k) || p.pl.find((x) => x[0] == i.m)); };
-const sv = (p, x) => Math.round((1 - x[1] / (p.pl[0][1] * x[0])) * 100);
+// نسب التوفير لا تُعرض دون سعر أصلي موثق لكل باقة.
 
 let cart = [], sel = 0, cat = 'الكل', payId = 'chargily', msg = '', chargilyMode = 'test';
 let editK = -1;
@@ -117,7 +117,6 @@ const clean = () => {
 };
 const save = () => { try { localStorage.setItem('oc', JSON.stringify(cart)); } catch (e) {} };
 const tot = () => cart.reduce((s, i) => s + pl(i)[1] * i.q, 0);
-const saved = () => cart.reduce((s, i) => s + (pr(i.id).pl[0][1] * pl(i)[0] - pl(i)[1]) * i.q, 0);
 const me = () => {
   if (custProfile) return { n: custProfile.name, p: custProfile.phone, e: custProfile.email };
   try { return JSON.parse(localStorage.getItem('oi') || '{}'); } catch (e) { return {}; }
@@ -254,10 +253,9 @@ const gc = (p) => `
   </div>`;
 
 const card = (p) => {
-  const m = Math.max(...p.pl.map((x) => sv(p, x)));
   return `<a class="pc" href="#/p/${encodeURIComponent(p.id)}" style="--c:${esc(p.c)};--c2:${esc(p.c2)}">
     <div class="pv">
-      <div class="bds"><span class="bd fl">${esc(p.badge || '⚡ فوري')}</span>${m > 0 ? `<span class="bd sv">وفّر ${m}%</span>` : ''}</div>
+      <div class="bds"><span class="bd fl">${esc(p.badge || '⚡ فوري')}</span></div>
       ${gc(p)}
     </div>
     <div class="pi">
@@ -306,7 +304,7 @@ const prod = (p) => {
   const featBlock = `<h2 class="sh">ما ستحصل عليه</h2>
     <ul class="ft">${(p.f || []).map((f) => `<li><i>✓</i>${esc(f)}</li>`).join('')}</ul>`;
   const plansBlock = `<h2 class="sh">اختر مدة الاشتراك</h2>
-    ${p.pl.map((y, i) => `<button class="pl ${i == sel ? 'on' : ''}" onclick="pickPlan(${i})">${y[2] ? '<span class="tag">الأوفر</span>' : ''}<span class="rd"></span><span class="d">${dur(y[0])}${y[3] ? `<small class="plan-label">${esc(y[3])}</small>` : ''}${sv(p, y) > 0 ? `<em>وفّر ${sv(p, y)}%</em>` : ''}</span><b>${fmt(y[1])}</b></button>`).join('')}`;
+    ${p.pl.map((y, i) => `<button class="pl ${i == sel ? 'on' : ''}" onclick="pickPlan(${i})">${y[2] ? '<span class="tag">الأوفر</span>' : ''}<span class="rd"></span><span class="d">${dur(y[0])}${y[3] ? `<small class="plan-label">${esc(y[3])}</small>` : ''}</span><b>${fmt(y[1])}</b></button>`).join('')}`;
   const qtyBlock = it ? `<h2 class="sh">الكمية</h2>
     <div class="qrow">
       <div class="q lg"><button onclick="editQty(-1)" aria-label="إنقاص">−</button><span>${it.q}</span><button onclick="editQty(1)" aria-label="زيادة">+</button></div>
@@ -341,7 +339,6 @@ const cartV = () => {
   if (!cart.length) {
     return `<div class="w em"><div>🛒</div><h2>سلتك فارغة</h2><p class="note" style="margin-bottom:18px">اختر اشتراكك المفضل وابدأ المشاهدة اليوم</p><a class="btn" href="#/shop">تصفّح الاشتراكات</a></div>`;
   }
-  const sv2 = saved();
   return `<div class="w">
     <h1 class="ttl">سلة التسوق</h1>
     ${cartNote ? `<div class="cart-note">${esc(cartNote)}</div>` : ''}
@@ -360,7 +357,6 @@ const cartV = () => {
     <div class="sm">
       <h3>ملخص الطلب</h3>
       <div class="row"><span>عدد الاشتراكات</span><b>${cart.reduce((s, i) => s + i.q, 0)}</b></div>
-      ${sv2 > 0 ? `<div class="row" style="color:var(--ok)"><span>توفيرك</span><b>${fmt(sv2)}</b></div>` : ''}
       <hr>
       <div class="tt"><span>الإجمالي</span>${fmt(tot())}</div>
     </div>
@@ -400,13 +396,15 @@ const chk = () => {
   const u = me();
   return `<div class="w">
     <h1 class="ttl">إتمام الطلب</h1>
+    <nav class="checkout-steps" aria-label="مراحل إتمام الطلب"><span class="done">✓ اختيار الباقة</span><span class="current">2 بياناتك والدفع</span><span>3 تأكيد الطلب</span></nav>
+    <div class="checkout-trust">🔒 تُراجع طريقة الدفع على الخادم، ولا نطلب منك كتابة بيانات بطاقتك البنكية داخل المتجر.</div>
     <div class="sm rv">
       <div class="rv-h"><h3>راجع سلتك قبل الدفع</h3><a class="rv-a" href="#/cart">تعديل السلة</a></div>
       ${cart.map((i, k) => {
         const p = pr(i.id), x = pl(i);
         return `<div class="rv-i ${i.q > 1 ? 'multi' : ''}">
           <i class="ic" style="background:${esc(p.c)}">${esc(p.l)}</i>
-          <div class="rv-d"><b>${esc(p.t)}</b><span>${dur(x[0])} <span class="qx">× ${i.q}</span></span></div>
+          <div class="rv-d"><b>${esc(p.t)}</b><span>${dur(x[0])} ${x[3] ? `· ${esc(x[3])}` : ''} <span class="qx">× ${i.q}</span></span></div>
           <div class="rv-p">${fmt(x[1] * i.q)}<button onclick="editItem(${k})">تعديل</button></div>
         </div>`;
       }).join('')}
@@ -424,9 +422,12 @@ const chk = () => {
     <label class="lb" for="fe">البريد الإلكتروني الشخصي للتواصل والضمان *</label>
     <input class="in2" id="fe" type="email" value="${esc(chkDraft.e ?? u.e ?? '')}" oninput="chkDraft.e=this.value" dir="ltr" placeholder="example@gmail.com" required>
 
+    <div class="checkout-help"><strong>📩 كيف نستلم معلوماتك؟</strong><p>سنستخدم رقم واتساب والبريد لإشعارات الطلب فقط. يمكنك متابعة حالة الطلب في الموقع أو بوت Telegram بعد إتمام الطلب.</p></div>
     <label class="lb">اختر طريقة الدفع</label>
     <div class="pms" id="pms">${payButtons()}</div>
     <div class="box" id="pbox">${pbox()}</div>
+    <div class="checkout-total"><span>المبلغ النهائي</span><strong>${fmt(tot())}</strong></div>
+    <p class="checkout-confirmation">بالضغط على التأكيد، تُنشئ طلبًا بالمبلغ المعروض. الدفع اليدوي لا يُؤكَّد تلقائيًا بمجرد إرسال صورة وصل.</p>
     <button class="btn" id="submitBtn" onclick="send()">${submitLabel()}</button>
   </div>`;
 };
@@ -436,8 +437,9 @@ const doneV = () => {
   const showClaim = ord.claimToken && !custProfile;
   return `<div class="w em">
     <div class="okc">✓</div>
+    <nav class="checkout-steps" aria-label="مراحل الطلب"><span class="done">✓ اختيار الباقة</span><span class="done">✓ بياناتك</span><span class="current">3 متابعة الطلب</span></nav>
     <h2>شكرًا ${esc(ord.n || 'لك')}، استلمنا طلبك 🎉</h2>
-    <p class="note" style="font-size:15px;margin:4px 0">رقم طلبك: <b dir="ltr">${esc(ord.code)}</b></p>
+    <p class="note" style="font-size:15px;margin:4px 0">رقم طلبك: <b dir="ltr">${esc(ord.code)}</b> <button class="order-copy" onclick="cp('${esc(ord.code)}')">📋 نسخ</button></p>
     <p class="note" id="paidStatusNote">${ord.paid ? '✅ تم تأكيد دفعك الإلكتروني بنجاح! سيصلك الحساب والشاشة قريباً.' : 'أرسل صورة وصل الدفع عبر بوت تيليغرام لتأكيد طلبك واستلام الحساب والشاشة.'}</p>
 
     <div id="receiptContainer">${renderPaymentReceiptBox(ord.paymentDetails, ord.totalPrice)}</div>
