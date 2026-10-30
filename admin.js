@@ -6,6 +6,8 @@ let isLoggingIn = false;
 let adm2FaPending = null; // { tempToken, method, message }
 let adm2FaSetup = null;   // { method, secret, otpauthUrl, message }
 let payMethodsState = [];
+let ordersPage = 1;
+let renewalFilter = 'urgent';
 
 const COL = {
   'قيد المراجعة': '#F59E0B',
@@ -195,9 +197,12 @@ async function loadPanel() {
   if (tab === 'orders') {
     if (stFilter) params.set('status', stFilter);
     if (qFilter) params.set('q', qFilter);
+    params.set('page', String(ordersPage));
     endpoint = 'orders?' + params.toString();
   } else if (tab === 'products') {
     endpoint = 'products';
+  } else if (tab === 'renewals') {
+    endpoint = 'renewals?filter=' + encodeURIComponent(renewalFilter);
   } else if (tab === 'payments') {
     endpoint = 'payment-methods';
   } else if (tab === 'complaints') {
@@ -222,6 +227,14 @@ async function loadPanel() {
     if (typeof d.openComplaints === 'number') openComplaintsCount = d.openComplaints;
     if (tab === 'payments' && Array.isArray(d.methods)) {
       payMethodsState = d.methods;
+      // إعدادات شارجيلي لا تظهر إلا للمالك؛ أبقِ بقية طرق الدفع قابلة للعرض عند تعذرها
+      try {
+        const sr = await fetch(`${API}/settings`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (sr.ok) {
+          const sd = await sr.json();
+          if (sd.success) d.chargily = sd.chargily;
+        }
+      } catch (err) { console.warn('تعذّر تحميل إعدادات Chargily'); }
     }
     renderMain(d);
   } catch (e) {
@@ -273,7 +286,7 @@ function renderMain(d) {
 
         ${o.isPaidOnline && pd.paidAtFormatted ? `
         <div class="chargily-receipt">
-          <b class="title">⚡ تفاصيل وصل الدفع الإلكتروني المؤكّد:</b>
+          <b class="title">${o.paymentMethod === 'رصيد المحفظة' ? '💰 تفاصيل الخصم من المحفظة:' : '⚡ تفاصيل وصل الدفع الإلكتروني المؤكّد:'}</b>
           <div>• المبلغ المدفوع: <b>${fmt(pd.amountPaid || o.totalPrice)}</b> (${esc(pd.paymentMethodUsed || 'Chargily Pay')})</div>
           <div>• وقت الدفع: <b dir="ltr">${esc(pd.paidAtFormatted)}</b></div>
           <div>• اسم الدافع: ${esc(pd.payerName || o.customerName)} | الإيميل: ${esc(pd.payerEmail || o.customerEmail || '—')}</div>
@@ -316,11 +329,18 @@ function renderMain(d) {
 
     content = `
       <div class="chips">
-        ${statuses.map((s) => `<button class="chip ${stFilter === s ? 'on' : ''}" onclick="stFilter='${s}';loadPanel()">${s || 'كل الطلبات'}</button>`).join('')}
+        ${statuses.map((s) => `<button class="chip ${stFilter === s ? 'on' : ''}" onclick="stFilter='${s}';ordersPage=1;loadPanel()">${s || 'كل الطلبات'}</button>`).join('')}
       </div>
       <div class="search-row">
-        <input class="inp" placeholder="ابحث بالاسم أو الهاتف أو الإيميل أو رمز الطلب..." value="${esc(qFilter)}" onchange="qFilter=this.value;loadPanel()">
+        <input class="inp" placeholder="ابحث بالاسم أو الهاتف أو الإيميل أو رمز الطلب..." value="${esc(qFilter)}" onchange="qFilter=this.value;ordersPage=1;loadPanel()">
         <button class="btn-sm" onclick="loadPanel()">بحث</button>
+      </div>
+      <div class="card pager">
+        <span>عدد الطلبات: <b>${Number(d.total) || 0}</b> — الصفحة ${d.page || 1} من ${d.pages || 1}</span>
+        <div class="pager-actions">
+          <button class="btn-sm" ${ordersPage <= 1 ? 'disabled' : ''} onclick="ordersPage=Math.max(1,ordersPage-1);loadPanel()">السابق</button>
+          <button class="btn-sm" ${ordersPage >= (d.pages || 1) ? 'disabled' : ''} onclick="ordersPage++;loadPanel()">التالي</button>
+        </div>
       </div>
       ${list || '<div class="card" style="text-align:center">لا توجد طلبات مطابقة حالياً</div>'}`;
   }
@@ -448,8 +468,42 @@ function renderMain(d) {
       ${pList}`;
   }
 
+  // ==================== 2.5 الاشتراكات والتجديدات ====================
+  else if (tab === 'renewals') {
+    const c = d.counts || {};
+    const renewals = (d.renewals || []).map((r) => `
+      <div class="card renewal-card">
+        <div class="ord-head">
+          <span class="badge" style="background:${r.renewalStatus === 'expired' ? 'var(--bad)' : r.renewalStatus === 'expiring_soon' ? 'var(--warn)' : 'var(--ok)'}">
+            ${r.renewalStatus === 'expired' ? 'انتهى الاشتراك' : r.renewalStatus === 'expiring_soon' ? 'قريب الانتهاء' : 'نشط'}
+          </span>
+          <b dir="ltr">${esc(r.orderCode)}</b>
+        </div>
+        <div>👤 <b>${esc(r.customerName)}</b> — 📱 <span dir="ltr">${esc(r.whatsappNumber)}</span></div>
+        <div>🎬 ${esc(r.itemsSummary)}</div>
+        ${r.profileName ? `<div>🖥️ الشاشة: ${esc(r.profileName)}</div>` : ''}
+        <div>📅 تاريخ الانتهاء: <b>${new Date(r.expiresAt).toLocaleDateString('fr-DZ')}</b></div>
+        <div>⏳ الأيام المتبقية: <b>${Number(r.daysLeft)}</b></div>
+        <div class="grid-2">
+          <a class="btn-pri link-btn" href="${esc(r.waRemindUrl)}" target="_blank" rel="noopener noreferrer">💬 تذكير عبر واتساب</a>
+          <button class="btn-pri" ${r.telegramLinked ? '' : 'disabled'} onclick="remindRenewal('${r._id}')">📲 إرسال عبر تيليغرام</button>
+        </div>
+      </div>`).join('');
+    content = `
+      <div class="card renewal-stats">
+        <h3>🔔 إدارة الاشتراكات والتجديدات</h3>
+        <div class="renewal-counts"><span>انتهت: ${c.expired || 0}</span><span>قريبة: ${c.expiringSoon || 0}</span><span>نشطة: ${c.active || 0}</span></div>
+        <p>التذكير التلقائي مخصص للاشتراكات المرتبطة بتليغرام. باقي العملاء يمكن مراسلتهم عبر واتساب.</p>
+      </div>
+      <div class="chips">
+        ${[['urgent','العاجلة'],['expired','المنتهية'],['expiring_soon','القريبة'],['active','النشطة'],['all','الكل']].map(([k, v]) => `<button class="chip ${renewalFilter === k ? 'on' : ''}" onclick="renewalFilter='${k}';loadPanel()">${v}</button>`).join('')}
+      </div>
+      ${renewals || '<div class="card">لا توجد اشتراكات مطابقة للفلتر حاليًا.</div>'}`;
+  }
+
   // ==================== 3. تبويب طرق الدفع (الخطوة 2) ====================
   else if (tab === 'payments') {
+    const ch = d.chargily || {};
     const methodsHtml = (payMethodsState || []).map((m, idx) => {
       const stateBadge = m.visible
         ? '<span class="vis-state ok">🟢 ظاهرة للعملاء</span>'
@@ -495,7 +549,34 @@ function renderMain(d) {
         <p style="font-size:13px;color:var(--mut);margin-top:4px">أي طريقة توقف تفعيلها هنا تختفي فوراً من صفحة إتمام الطلب عند الزبائن، ويرفض الخادم أي طلب بها.</p>
       </div>
       ${methodsHtml}
-      <button class="btn-pri" onclick="savePaymentMethodsAll()">💾 حفظ جميع إعدادات طرق الدفع</button>`;
+      <button class="btn-pri" onclick="savePaymentMethodsAll()">💾 حفظ جميع إعدادات طرق الدفع</button>
+      ${d.chargily ? `      <div class="card">
+        <h3>⚡ إعدادات الدفع التلقائي (Chargily Pay V2)</h3>
+        <label class="lbl">وضع التشغيل الحالي</label>
+        <select class="inp" id="ch_mode">
+          <option value="test" ${ch.mode === 'test' ? 'selected' : ''}>🧪 وضع التجربة (Test Mode)</option>
+          <option value="live" ${ch.mode === 'live' ? 'selected' : ''}>🟢 الوضع الحقيقي (Live Mode)</option>
+        </select>
+
+        <label class="lbl">رابط الـ Webhook (انسخه وضعه في لوحة شارجيلي)</label>
+        <input class="inp" dir="ltr" readonly value="${esc(ch.webhookUrl || '')}" onclick="this.select()">
+
+        <hr style="margin:16px 0;border:0;border-top:1px solid var(--line)">
+        <h4>🧪 مفاتيح وضع التجربة (Test Keys)</h4>
+        <label class="lbl">المفتاح العام التجريبي (Test Public Key)</label>
+        <input class="inp" id="ch_tpk" dir="ltr" value="${esc(ch.testPublicKey || '')}">
+        <label class="lbl">المفتاح السري التجريبي (Test Secret Key)</label>
+        <input class="inp" id="ch_tsk" dir="ltr" type="password" autocomplete="new-password" placeholder="اتركه فارغاً للاحتفاظ بالمفتاح الحالي">
+
+        <hr style="margin:16px 0;border:0;border-top:1px solid var(--line)">
+        <h4>🟢 مفاتيح الوضع الحقيقي (Live Keys)</h4>
+        <label class="lbl">المفتاح العام الحقيقي (Live Public Key)</label>
+        <input class="inp" id="ch_lpk" dir="ltr" value="${esc(ch.livePublicKey || '')}" placeholder="live_pk_...">
+        <label class="lbl">المفتاح السري الحقيقي (Live Secret Key)</label>
+        <input class="inp" id="ch_lsk" dir="ltr" type="password" autocomplete="new-password" placeholder="اتركه فارغاً للاحتفاظ بالمفتاح الحالي">
+
+        <button class="btn-pri" onclick="saveChargily()">💾 حفظ إعدادات ومفاتيح شارجيلي</button>
+      </div>` : `<div class="card"><b>🔐 إعدادات Chargily</b><p>غير متاحة لهذا الحساب أو تحتاج صلاحية المالك.</p></div>`}`;
   }
 
   // ==================== 4. تبويب شكاوى الزبائن ====================
@@ -639,9 +720,7 @@ function renderMain(d) {
             <h4>${adm2FaSetup.method === 'totp' ? '🔑 مسح باركود Google Authenticator' : '📲 إدخال كود تيليغرام'}</h4>
             ${adm2FaSetup.method === 'totp' ? `
               <p style="font-size:13px;color:var(--mut)">امسح الباركود بتطبيق <b>Google Authenticator</b> أو أدخل المفتاح يدوياً:</p>
-              <div class="qr-wrap">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(adm2FaSetup.otpauthUrl)}" width="190" height="190" alt="QR Code">
-              </div>
+              <p style="font-size:12px;color:var(--mut)">لأمان مفتاح 2FA، أدخله يدوياً في تطبيق المصادقة. لا يتم رفع هذا المفتاح إلى أي خدمة QR خارجية.</p>
               <div style="font-size:13px;font-weight:800;margin-bottom:8px" dir="ltr">Secret: <code>${esc(adm2FaSetup.secret)}</code></div>
             ` : `
               <p style="font-size:13px;color:var(--mut);margin-bottom:8px">${esc(adm2FaSetup.message)}</p>
@@ -656,39 +735,13 @@ function renderMain(d) {
       </div>
 
       <div class="card">
-        <h3>⚡ إعدادات الدفع التلقائي (Chargily Pay V2)</h3>
-        <label class="lbl">وضع التشغيل الحالي</label>
-        <select class="inp" id="ch_mode">
-          <option value="test" ${ch.mode === 'test' ? 'selected' : ''}>🧪 وضع التجربة (Test Mode)</option>
-          <option value="live" ${ch.mode === 'live' ? 'selected' : ''}>🟢 الوضع الحقيقي (Live Mode)</option>
-        </select>
-
-        <label class="lbl">رابط الـ Webhook (انسخه وضعه في لوحة شارجيلي)</label>
-        <input class="inp" dir="ltr" readonly value="${esc(ch.webhookUrl || '')}" onclick="this.select()">
-
-        <hr style="margin:16px 0;border:0;border-top:1px solid var(--line)">
-        <h4>🧪 مفاتيح وضع التجربة (Test Keys)</h4>
-        <label class="lbl">المفتاح العام التجريبي (Test Public Key)</label>
-        <input class="inp" id="ch_tpk" dir="ltr" value="${esc(ch.testPublicKey || '')}">
-        <label class="lbl">المفتاح السري التجريبي (Test Secret Key)</label>
-        <input class="inp" id="ch_tsk" dir="ltr" value="${esc(ch.testSecretKey || '')}" placeholder="test_sk_...">
-
-        <hr style="margin:16px 0;border:0;border-top:1px solid var(--line)">
-        <h4>🟢 مفاتيح الوضع الحقيقي (Live Keys)</h4>
-        <label class="lbl">المفتاح العام الحقيقي (Live Public Key)</label>
-        <input class="inp" id="ch_lpk" dir="ltr" value="${esc(ch.livePublicKey || '')}" placeholder="live_pk_...">
-        <label class="lbl">المفتاح السري الحقيقي (Live Secret Key)</label>
-        <input class="inp" id="ch_lsk" dir="ltr" value="${esc(ch.liveSecretKey || '')}" placeholder="live_sk_...">
-
-        <button class="btn-pri" onclick="saveChargily()">💾 حفظ إعدادات ومفاتيح شارجيلي</button>
-      </div>
-
-      <div class="card">
         <h3>🔑 تغيير البريد الإلكتروني وكلمة السر للمدير</h3>
         <label class="lbl">البريد الإلكتروني الجديد</label>
         <input class="inp" id="new_em" dir="ltr" value="${esc(sec.email || '')}" placeholder="admin@oviraplaydz.com">
-        <label class="lbl">كلمة السر الجديدة (6 أحرف فأكثر)</label>
+        <label class="lbl">كلمة السر الجديدة (8 أحرف فأكثر)</label>
         <input class="inp" id="new_pw" type="password" dir="ltr" placeholder="••••••••">
+        <label class="lbl">كلمة السر الحالية (إلزامية)</label>
+        <input class="inp" id="current_pw" type="password" autocomplete="current-password" placeholder="أدخل كلمة السر الحالية">
         <button class="btn-pri" onclick="saveCreds()">تحديث بيانات الدخول</button>
       </div>
 
@@ -710,6 +763,7 @@ function renderMain(d) {
       <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';qFilter='';loadPanel()">📋 الطلبات</button>
       <button class="tab ${tab === 'products' ? 'on' : ''}" onclick="tab='products';loadPanel()">🛍️ البطاقات</button>
       <button class="tab ${tab === 'payments' ? 'on' : ''}" onclick="tab='payments';loadPanel()">💳 الدفع</button>
+      <button class="tab ${tab === 'renewals' ? 'on' : ''}" onclick="tab='renewals';loadPanel()">🔔 التجديدات</button>
       <button class="tab ${tab === 'complaints' ? 'on' : ''}" onclick="tab='complaints';loadPanel()">🎫 الشكاوى ${openComplaintsCount ? `<span class="badge-cnt">${openComplaintsCount}</span>` : ''}</button>
       <button class="tab ${tab === 'customers' ? 'on' : ''}" onclick="tab='customers';qFilter='';loadPanel()">👥 الزبائن</button>
       <button class="tab ${tab === 'settings' ? 'on' : ''}" onclick="tab='settings';loadPanel()">⚙️ الإعدادات</button>
@@ -768,6 +822,17 @@ async function disableAdmin2FA() {
   } catch (e) {
     toast('تعذّر الاتصال بالخادم');
   }
+}
+
+async function remindRenewal(id) {
+  if (!confirm('إرسال تذكير تجديد للزبون عبر بوت تيليغرام؟')) return;
+  try {
+    const r = await fetch(`${API}/renewals/${encodeURIComponent(id)}/remind`, {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const d = await r.json();
+    toast(d.message || 'تعذّر إرسال التذكير');
+  } catch { toast('تعذّر الاتصال بالخادم'); }
 }
 
 // ==================== حفظ طرق الدفع (الخطوة 2) ====================
@@ -1003,9 +1068,9 @@ async function saveChargily() {
   const payload = {
     mode: document.getElementById('ch_mode').value,
     testPublicKey: document.getElementById('ch_tpk').value,
-    testSecretKey: document.getElementById('ch_tsk').value,
+    ...(document.getElementById('ch_tsk').value.trim() ? { testSecretKey: document.getElementById('ch_tsk').value.trim() } : {}),
     livePublicKey: document.getElementById('ch_lpk').value,
-    liveSecretKey: document.getElementById('ch_lsk').value
+    ...(document.getElementById('ch_lsk').value.trim() ? { liveSecretKey: document.getElementById('ch_lsk').value.trim() } : {})
   };
   const r = await fetch(`${API}/settings/chargily`, {
     method: 'POST',
@@ -1018,15 +1083,18 @@ async function saveChargily() {
 }
 
 async function saveCreds() {
+  const currentPassword = document.getElementById('current_pw').value;
+  if (!currentPassword) return toast('أدخل كلمة السر الحالية أولاً');
   const newEmail = document.getElementById('new_em').value.trim();
   const newPassword = document.getElementById('new_pw').value;
   const r = await fetch(`${API}/settings/credentials`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify({ newEmail, newPassword })
+    body: JSON.stringify({ currentPassword, newEmail, newPassword })
   });
   const d = await r.json();
   toast(d.message || 'تم تحديث بيانات الدخول ✓');
+  if (d.success && d.token) { token = d.token; localStorage.setItem('adm_tk', token); sessionStorage.setItem('adm_tk', token); }
 }
 
 async function cleanDb(deleteOrders) {

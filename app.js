@@ -625,12 +625,7 @@ const securityBlock = () => {
         <div class="ok-box" style="margin-top:14px;border-color:var(--pri2);background:rgba(36,71,201,.06)">
           <h4 style="color:var(--pri2)">${twoFaSetup.method === 'totp' ? '🔑 إعداد تطبيق Google Authenticator' : '📲 تأكيد كود بوت تيليغرام'}</h4>
           ${twoFaSetup.method === 'totp' ? `
-            <p style="font-size:13px;color:var(--mut)">1. امسح رمز الباركود التالي بتطبيق <b>Google Authenticator</b> أو انسخ المفتاح السري:</p>
-            <div style="text-align:center">
-              <div class="qr-wrap">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(twoFaSetup.otpauthUrl)}" width="190" height="190" alt="QR Code">
-              </div>
-            </div>
+            <p style="font-size:13px;color:var(--mut)">1. في تطبيق المصادقة اختر إضافة مفتاح يدوياً، ثم انسخ المفتاح أدناه. حفاظاً على سر التحقق لا نرسله إلى أي خادم لتوليد QR.</p>
             <div class="cred-row">
               <span>المفتاح: <code>${esc(twoFaSetup.secret)}</code></span>
               <button class="cp" onclick="cp('${esc(twoFaSetup.secret)}')">${ico(I.copy)} نسخ</button>
