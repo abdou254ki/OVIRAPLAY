@@ -14,6 +14,7 @@ let payMethodsState = [];
 let ordersPage = 1;
 let renewalFilter = 'urgent';
 let openProductId = null;
+let marketingDays = 30;
 
 const COL = {
   'قيد المراجعة': '#F59E0B',
@@ -36,6 +37,44 @@ const PRESETS = {
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
 const fmt = (n) => Number(n || 0).toLocaleString('en-US') + ' DA';
+
+
+// حقول الهبوط تقابل بالضبط عقد /api/admin/products؛ النص الفارغ يزيل المحتوى.
+const LANDING_FIELDS = [
+  ['audienceText','aud','يناسبك الاشتراك إذا (سطر لكل حالة)','قائمة مخصصة اختياريًا؛ سطر لكل حالة', 'textarea'],
+  ['limitsText','lim','معلومات مهمة قبل الشراء / حدود الخدمة','اذكر القيود الفعلية، سطر لكل حد', 'textarea'],
+  ['faqsText','faq','الأسئلة الشائعة (السؤال | الجواب)','هل يعمل على التلفاز؟ | اكتب الإجابة الصحيحة هنا', 'textarea'],
+  ['guaranteeText','guar','الضمان وسياسة الاستبدال','نص الضمان الفعلي فقط', 'textarea'],
+  ['deliveryText','dlv','كيفية ووقت التسليم الفعلي','اشرح طريقة التسليم ووقته بدقة', 'textarea'],
+  ['seoTitle','seoT','عنوان SEO للمنتج (70 حرفًا)','عنوان دقيق للمنتج', 'input'],
+  ['seoDescription','seoD','وصف SEO للمنتج (200 حرف)','وصف موجز ودقيق للمنتج', 'textarea']
+];
+function landingForm(prefix, landing = {}) {
+  return `<details class="landing-editor"><summary>✍️ محتوى صفحة الهبوط، الشروط، FAQ وSEO</summary>
+    <p class="ov-caption">كل قسم اختياري: تركه فارغاً يخفيه تماماً من صفحة المنتج. لا تكتب مزايا أو وعوداً غير مؤكدة.</p>
+    <div class="landing-editor-grid">${LANDING_FIELDS.map(([field, suffix, title, placeholder, kind]) => {
+      const value = esc(landing[field] || '');
+      const id = `lp_${prefix}_${suffix}`;
+      const control = kind === 'input'
+        ? `<input class="inp" id="${id}" value="${value}" maxlength="70" placeholder="${esc(placeholder)}">`
+        : `<textarea class="inp" id="${id}" rows="3" ${suffix === 'seoD' ? 'maxlength="200"' : ''} placeholder="${esc(placeholder)}">${value}</textarea>`;
+      return `<label class="landing-field" for="${id}"><span>${esc(title)}</span>${control}</label>`;
+    }).join('')}</div>
+  </details>`;
+}
+function landingPayload(prefix) {
+  const payload = {};
+  LANDING_FIELDS.forEach(([field, suffix]) => {
+    const el = document.getElementById(`lp_${prefix}_${suffix}`);
+    payload[field] = el ? el.value.trim() : '';
+  });
+  return payload;
+}
+function setMarketingDays(days) {
+  if (![7,30,90].includes(Number(days))) return;
+  marketingDays = Number(days);
+  loadPanel();
+}
 
 let tt;
 function toast(msg) {
@@ -218,6 +257,8 @@ async function loadPanel() {
     endpoint = 'search?q=' + encodeURIComponent(globalSearch);
   } else if (tab === 'products') {
     endpoint = 'products';
+  } else if (tab === 'marketing') {
+    endpoint = 'marketing?days=' + marketingDays;
   } else if (tab === 'renewals') {
     endpoint = 'renewals?filter=' + encodeURIComponent(renewalFilter);
   } else if (tab === 'reviews') {
@@ -442,6 +483,7 @@ function renderMain(d) {
   // ==================== 2. تبويب بطاقات العرض وصفحات الهبوط ====================
   else if (tab === 'products') {
     const pList = (d.products || []).map((p) => {
+      const landing = p.landing || {};
       const plansStr = (p.plans || []).map((pl) => `${pl.months}:${pl.price}${pl.best ? '*' : ''}${pl.label ? '|' + pl.label : ''}`).join(', ');
       const featsStr = (p.features || []).join('\n');
       const stepsStr = (p.steps || []).map((s) => `${s.title} | ${s.desc}`).join('\n');
@@ -467,7 +509,7 @@ function renderMain(d) {
           </div>
           <div>
             <label class="lbl">نص الشارة العلوية</label>
-            <input class="inp" id="pr_bdg_${p._id}" value="${esc(p.badgeText || '⚡ فوري')}">
+            <input class="inp" id="pr_bdg_${p._id}" value="${esc(p.badgeText || '')}">
           </div>
         </div>
         <label class="lbl">الوصف التفصيلي تحت العنوان في صفحة الهبوط</label>
@@ -498,6 +540,7 @@ function renderMain(d) {
         <textarea class="inp" id="pr_ft_${p._id}">${esc(featsStr)}</textarea>
         <label class="lbl">خطوات الطلب في صفحة الهبوط (العنوان | الشرح)</label>
         <textarea class="inp" id="pr_st_${p._id}">${esc(stepsStr)}</textarea>
+        ${landingForm('pr_' + p._id, landing)}
         <div class="grid-2" style="margin-top:10px">
           <button class="btn-ok" style="margin:0" onclick="updateProduct('${p._id}')">💾 حفظ التعديلات</button>
           <button class="btn-sm" onclick="toggleProduct('${p._id}', ${!p.active})">${p.active ? '🙈 إخفاء من الموقع' : '👁️ إظهار في الموقع'}</button>
@@ -541,7 +584,7 @@ function renderMain(d) {
           </div>
           <div>
             <label class="lbl">الشارة العلوية</label>
-            <input class="inp" id="np_bdg" value="⚡ فوري">
+            <input class="inp" id="np_bdg" placeholder="اختياري — اتركه فارغاً لإخفاء الشارة">
           </div>
           <div>
             <label class="lbl">اللون الأساسي</label>
@@ -568,10 +611,41 @@ function renderMain(d) {
         <div class="plan-editor" data-plan-target="np_plans"></div>
         <details class="advanced-plan"><summary>⚙️ الصيغة اليدوية (اختياري)</summary><textarea class="inp" dir="ltr" oninput="planRawChanged('np_plans',this.value)">1:600</textarea></details>
         <label class="lbl">مميزات صفحة الهبوط (كل ميزة في سطر)</label>
-        <textarea class="inp" id="np_feats" placeholder="بدون إعلانات نهائياً&#10;شاشة خاصة مقفلة برمز PIN&#10;تسليم فوري للبيانات"></textarea>
+        <textarea class="inp" id="np_feats" placeholder="اكتب المميزات الفعلية المؤكدة؛ ميزة في كل سطر"></textarea>
+        <label class="lbl">خطوات الطلب المخصصة (العنوان | الشرح) — اختياري</label>
+        <textarea class="inp" id="np_steps" placeholder="اختر باقتك | اختر المدة المناسبة"></textarea>
+        ${landingForm('np')}
         <button class="btn-pri" onclick="createProduct()">🚀 نشر البطاقة وصفحة الهبوط في الموقع</button>
       </div></details>
       ${pList}`;
+  }
+
+  // ==================== التسويق: بيانات المصدر الحقيقية فقط ====================
+  else if (tab === 'marketing') {
+    const rows = Array.isArray(d.rows) ? d.rows : [];
+    const orders = rows.reduce((s, r) => s + Math.max(0, Number(r.orders) || 0), 0);
+    const paid = rows.reduce((s, r) => s + Math.max(0, Number(r.paid) || 0), 0);
+    const revenue = rows.reduce((s, r) => s + Math.max(0, Number(r.revenue) || 0), 0);
+    const maxOrders = Math.max(1, ...rows.map(r => Number(r.orders) || 0));
+    content = `<div class="card">
+      <h3>📈 مصادر الزيارات والطلبات</h3>
+      <p class="ov-caption">إحصائيات الطلبات المسجلة من الخادم فقط، وليست عدد زيارات الموقع. المدفوع = الطلبات المؤكدة أو المسلّمة، والإيراد مستمد من حالتها.</p>
+      <div class="marketing-period" role="group" aria-label="الفترة">
+        ${[7,30,90].map(n => `<button class="chip ${marketingDays === n ? 'on' : ''}" onclick="setMarketingDays(${n})">آخر ${n} يوم</button>`).join('')}
+      </div>
+      <div class="marketing-summary">
+        <div><small>إجمالي الطلبات</small><b>${orders.toLocaleString('en-US')}</b></div>
+        <div><small>طلبات مؤكدة أو مسلّمة</small><b>${paid.toLocaleString('en-US')}</b></div>
+        <div><small>إيراد الطلبات المؤكدة أو المسلّمة</small><b>${fmt(revenue)}</b></div>
+      </div>
+      ${rows.length ? `<div class="marketing-table-wrap"><table class="marketing-table"><thead><tr><th>مصدر الطلب</th><th>الطلبات</th><th>المؤكدة/المسلّمة</th><th>الإيراد</th></tr></thead>
+        <tbody>${rows.map(r => {
+          const count = Math.max(0, Number(r.orders) || 0);
+          const pct = Math.min(100, count / maxOrders * 100);
+          return `<tr><td><b dir="auto">${esc(r.source || 'مباشر / غير محدد')}</b><div class="marketing-bar"><span style="width:${pct}%"></span></div></td>
+            <td>${count}</td><td>${Math.max(0,Number(r.paid)||0)}</td><td>${fmt(r.revenue)}</td></tr>`;
+        }).join('')}</tbody></table></div>` : '<p class="marketing-empty">لا توجد طلبات مسجلة لهذه الفترة.</p>'}
+    </div>`;
   }
 
   // ==================== تقييمات الزبائن ====================
@@ -879,6 +953,7 @@ function renderMain(d) {
       <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';ordersPage=1;qFilter='';stFilter='';loadPanel()">📋 الطلبات</button>
       <button class="tab ${tab === 'delivered' ? 'on' : ''}" onclick="tab='delivered';ordersPage=1;qFilter='';loadPanel()">✅ تم التسليم</button>
       <button class="tab ${tab === 'reviews' ? 'on' : ''}" onclick="tab='reviews';loadPanel()">⭐ التقييمات</button>
+      <button class="tab ${tab === 'marketing' ? 'on' : ''}" onclick="goAdmin('marketing')">📈 التسويق</button>
       <button class="tab ${tab === 'products' ? 'on' : ''}" onclick="tab='products';loadPanel()">🛍️ البطاقات</button>
       <button class="tab ${tab === 'payments' ? 'on' : ''}" onclick="tab='payments';loadPanel()">💳 الدفع</button>
       <button class="tab ${tab === 'renewals' ? 'on' : ''}" onclick="tab='renewals';loadPanel()">🔔 التجديدات</button>
@@ -1061,8 +1136,8 @@ function suggestProductDescription() {
   const feat = document.getElementById('np_feats');
   if (title && !title.value.trim()) title.value = brand + ' — باقات اشتراك';
   if (sub && !sub.value.trim()) sub.value = 'اختر باقة ' + brand + ' المناسبة من حيث المدة والنوع. تظهر التفاصيل والسعر النهائي قبل إتمام الطلب، مع إرشادات التسليم بعد التحقق من الدفع.';
-  if (feat && !feat.value.trim()) feat.value = '📅 مدد اشتراك متعددة حسب الباقة\n📩 متابعة حالة الطلب من الموقع أو Telegram\n💬 دعم عند الحاجة';
-  toast('تم إنشاء وصف أولي؛ راجع دقته وعدّله قبل النشر');
+  // لا نقترح مميزات قد لا تكون متوفرة فعلاً في هذا الاشتراك.
+  toast('تم إنشاء وصف أولي؛ أضف المميزات والضمان الفعليين بنفسك قبل النشر');
 }
 function setComplaintTemplate(id, kind) {
   const box = document.getElementById('crep_' + id);
@@ -1174,11 +1249,13 @@ async function savePaymentMethodsAll() {
 // ==================== باقي العمليات الإدارية ====================
 
 async function moderateReview(id, approved) {
-  const r = await fetch(`${API}/reviews/${id}`, { method:'PATCH',
-    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }, body:JSON.stringify({approved}) });
-  const d = await r.json();
-  toast(d.success ? 'تم تحديث التقييم' : (d.message || 'تعذّر تحديث التقييم'));
-  if(d.success)loadPanel();
+  try {
+    const r = await fetch(`${API}/reviews/${id}`, { method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }, body:JSON.stringify({approved}) });
+    const d = await r.json();
+    toast(d.success ? 'تم تحديث التقييم' : (d.message || 'تعذّر تحديث التقييم'));
+    if (r.ok && d.success) loadPanel();
+  } catch (_) { toast('تعذّر الاتصال أثناء تحديث التقييم'); }
 }
 
 async function createProduct() {
@@ -1194,7 +1271,9 @@ async function createProduct() {
     imageUrl: document.getElementById('np_img').value.trim(),
     subtitle: document.getElementById('np_sub').value.trim(),
     plansText: document.getElementById('np_plans').value.trim(),
-    featuresText: document.getElementById('np_feats').value.trim()
+    featuresText: document.getElementById('np_feats').value.trim(),
+    stepsText: document.getElementById('np_steps').value.trim(),
+    ...landingPayload('np')
   };
   const r = await fetch(`${API}/products`, {
     method: 'POST',
@@ -1220,7 +1299,8 @@ async function updateProduct(id) {
     imageUrl: document.getElementById('pr_img_' + id).value.trim(),
     plansText: document.getElementById('pr_pl_' + id).value.trim(),
     featuresText: document.getElementById('pr_ft_' + id).value.trim(),
-    stepsText: document.getElementById('pr_st_' + id).value.trim()
+    stepsText: document.getElementById('pr_st_' + id).value.trim(),
+    ...landingPayload('pr_' + id)
   };
   const r = await fetch(`${API}/products/${id}`, {
     method: 'PATCH',

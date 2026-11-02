@@ -30,30 +30,155 @@ const I = {
 };
 I.account = I.user;
 
-const DEFAULT_STEPS = [
-  { title: 'اختر باقتك وأضفها', desc: 'حدد المدة التي تناسبك ثم أكمل الطلب باسمك ورقم واتساب.' },
-  { title: 'ادفع إلكترونياً أو يدوياً', desc: 'ادفع فوراً بالبطاقة الذهبية/CIB عبر شارجيلي أو عبر بريدي موب وبينانس.' },
-  { title: 'استلم حسابك وشاشتك', desc: 'نسلّمك الإيميل وكلمة المرور مع شاشتك الخاصة المقفلة برمز PIN.' }
-];
+// المصدر الوحيد للمنتجات هو الكتالوج الحي من الخادم؛ لا منتجات وهمية ولا كاش قديم.
+let P = [];
+let catalogStatus = 'loading'; // loading | ready | error
+let catalogErrorCode = '';
+let catalogRequest = null;
+let cartAlert = '';
+const BASE_TITLE = document.title || 'OVIRA PLAY | متجر الاشتراكات الرقمية';
+const BASE_META = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+let productReviewSummary = {};
+const productReviewsCache = new Map();
+let deliveryStats = null;
 
-let P = [
-  { id: 'netflix', n: 'Netflix', t: 'نتفلكس بروفايل خاص', sub: 'مشاهدة بجودة 4K Ultra HD مع شاشة خاصة مقفلة برمز PIN سري', cat: 'أفلام ومسلسلات', c: '#E50914', c2: '#5C060C', l: 'N', badge: '⚡ فوري', f: ['شاشة خاصة باسمك', 'رمز PIN سري خاص بك', 'جودة 4K Ultra HD', 'تسليم فوري للبيانات'], steps: DEFAULT_STEPS, pl: [[1, 900], [3, 2700], [6, 4900], [12, 9500, 1]] },
-  { id: 'cr-mega', n: 'Crunchyroll', t: 'كرانشي رول Mega Fan', sub: 'أكبر مكتبة أنمي في العالم بدون إعلانات مع التحميل للمشاهدة بدون إنترنت', cat: 'أنمي', c: '#F47521', c2: '#8A3A0A', l: 'C', badge: '⚡ فوري', f: ['بدون إعلانات', 'حلقات بعد ساعة من اليابان', 'تحميل للمشاهدة بدون إنترنت', 'تسليم فوري للحساب'], steps: DEFAULT_STEPS, pl: [[1, 600], [3, 1650], [6, 3000], [12, 5500, 1]] },
-  { id: 'cr-fan', n: 'Crunchyroll', t: 'كرانشي رول Fan', sub: 'مشاهدة كافة حلقات الأنمي بجودة عالية 1080p وبدون إعلانات', cat: 'أنمي', c: '#F47521', c2: '#8A3A0A', l: 'C', badge: '⚡ فوري', f: ['مشاهدة بدون إعلانات', 'مكتبة الأنمي كاملة', 'جودة 1080p', 'تسليم فوري للبيانات'], steps: DEFAULT_STEPS, pl: [[1, 500], [3, 1350], [6, 2500], [12, 4500, 1]] },
-  { id: 'shahid', n: 'Shahid VIP', t: 'شاهد VIP (باقة شاملة)', sub: 'أحدث الأعمال العربية الحصرية والباقة الرياضية الشاملة بشاشة خاصة', cat: 'أفلام ومسلسلات', c: '#005FF9', c2: '#002E8A', l: 'S', badge: '⚡ فوري', f: ['الباقة الرياضية الشاملة', 'شاشة خاصة برقم سري', 'بدون إعلانات', 'تسليم فوري'], steps: DEFAULT_STEPS, pl: [[1, 800], [12, 7500, 1]] },
-  { id: 'prime', n: 'Prime Video', t: 'أمازون برايم فيديو', sub: 'أفلام ومسلسلات أمازون الحصرية بجودة 4K HDR وشاشة مخصصة لك', cat: 'أفلام ومسلسلات', c: '#00A8E1', c2: '#005B7F', l: 'P', badge: '⚡ فوري', f: ['شاشة خاصة بك', 'مكتبة أفلام أمازون الحصرية', 'جودة 4K HDR', 'تسليم فوري'], steps: DEFAULT_STEPS, pl: [[1, 600], [6, 3200], [12, 6000, 1]] }
-];
+function updatePageSEO(product) {
+  const t = product && String(product.seoT || '').trim();
+  document.title = product ? (t || `${product.t} | OVIRA PLAY`) : BASE_TITLE;
+  let meta = document.querySelector('meta[name="description"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'description';
+    document.head.appendChild(meta);
+  }
+  meta.setAttribute('content', product ? String(product.seoD || product.sub || '').trim() : BASE_META);
+  // تحديث معاينة الصفحة داخل المتصفح؛ معاينات شبكات التواصل الخارجية تحتاج صفحات SSR حقيقية.
+  for (const [property, content] of [
+    ['og:title', document.title],
+    ['og:description', product ? String(product.seoD || product.sub || '').trim() : BASE_META]
+  ]) {
+    let el = document.querySelector(`meta[property="${property}"]`);
+    if (!el) { el = document.createElement('meta'); el.setAttribute('property', property); document.head.appendChild(el); }
+    el.setAttribute('content', content);
+  }
+}
 
-try {
-  const cachedCatalog = JSON.parse(localStorage.getItem('ov_catalog') || 'null');
-  if (Array.isArray(cachedCatalog) && cachedCatalog.length) P = cachedCatalog;
-} catch (e) {}
+// حملة الإحالة: تقرأ من رابط الصفحة أو مسار #/، وتبقى في الجلسة وفي التخزين المحلي 7 أيام.
+const SOURCE_KEY = 'ov_ref_source_v1';
+const SOURCE_TTL = 7 * 24 * 60 * 60 * 1000;
+const sourceSafe = (v) => String(v || '').replace(/[^A-Za-z0-9 _.:|/+\-]/g, '').trim();
+function sourceParams() {
+  const normal = new URLSearchParams(location.search || '');
+  const hash = (location.hash || '').slice(1);
+  const query = hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : (/^(?:\/?)(?:utm_source|utm_medium|utm_campaign|src)=/i.test(hash) ? hash.replace(/^\//, '') : '');
+  const hashed = new URLSearchParams(query);
+  const parts = ['utm_source', 'utm_medium', 'utm_campaign', 'src'];
+  return parts.map((key) => {
+    const v = hashed.get(key) || normal.get(key);
+    return v ? `${key}:${sourceSafe(v).slice(0, 48)}` : '';
+  }).filter((x) => x && !x.endsWith(':')).join('|').slice(0, 80);
+}
+function captureSource() {
+  const value = sourceParams();
+  if (!value) return;
+  const record = JSON.stringify({ value, at: Date.now() });
+  try { sessionStorage.setItem(SOURCE_KEY, record); } catch (_) {}
+  try { localStorage.setItem(SOURCE_KEY, record); } catch (_) {}
+}
+function currentSource() {
+  captureSource();
+  for (const store of [typeof sessionStorage !== 'undefined' ? sessionStorage : null, typeof localStorage !== 'undefined' ? localStorage : null]) {
+    if (!store) continue;
+    try {
+      const d = JSON.parse(store.getItem(SOURCE_KEY) || 'null');
+      if (d && typeof d.value === 'string' && Number(d.at) > Date.now() - SOURCE_TTL && Number(d.at) <= Date.now()) return sourceSafe(d.value).slice(0, 80);
+      if (d) store.removeItem(SOURCE_KEY);
+    } catch (_) {}
+  }
+  return '';
+}
+captureSource();
+
+function catalogLoading() {
+  return `<div class="w ov-loading" role="status" aria-live="polite" aria-label="جاري تحميل المنتجات">
+    <div class="ov-skeleton ov-sk-hero"></div><div class="ov-skeleton" style="height:25px;width:180px"></div>
+    <div class="ov-sk-grid">${[0, 1, 2, 3].map(() => '<div class="ov-skeleton ov-sk-card"></div>').join('')}</div>
+    <p class="note" style="text-align:center;margin-top:20px">جاري جلب الاشتراكات والأسعار الحالية من المتجر… قد يتأخر اتصال الخادم قليلاً.</p>
+  </div>`;
+}
+function catalogUnavailable() {
+  const rateLimited = catalogErrorCode === 'RATE_LIMITED';
+  return `<div class="w"><div class="ov-state" role="alert">
+    <div style="font-size:35px">${rateLimited ? '⏳' : '📡'}</div>
+    <h2>${rateLimited ? 'ازدحام مؤقت في الطلبات' : 'تعذّر تحميل الاشتراكات'}</h2>
+    <p>${rateLimited ? 'وصل المتجر إلى حد الاتصالات المسموح مؤقتاً. يرجى إعادة المحاولة بعد قليل.' : 'لا يمكن التأكد من المنتجات والأسعار الحالية دون الاتصال بالخادم. تحقق من الإنترنت وأعد المحاولة، وقد يحتاج الخادم بعض الوقت للبدء.'}</p>
+    <button class="btn" type="button" onclick="retryCatalog()">إعادة المحاولة</button>
+  </div></div>`;
+}
+function catalogEmpty() {
+  return `<div class="w"><div class="ov-state"><h2>لا توجد اشتراكات متاحة حالياً</h2><p>لم ينشر المتجر منتجات نشطة في الوقت الحالي.</p><button class="btn" type="button" onclick="retryCatalog()">تحديث القائمة</button></div></div>`;
+}
+
+async function loadCatalog() {
+  if (catalogRequest) return catalogRequest;
+  catalogStatus = 'loading';
+  catalogErrorCode = '';
+  draw();
+  catalogRequest = (async () => {
+    try {
+      const response = await fetch(API_URL + '/catalog', { cache: 'no-cache' });
+      let data;
+      try { data = await response.json(); } catch (_) { throw new Error('INVALID_RESPONSE'); }
+      if (!response.ok || !data || !data.success || !Array.isArray(data.products)) {
+        const err = new Error('CATALOG_FAILED');
+        err.code = data?.code === 'RATE_LIMITED' || response.status === 429 ? 'RATE_LIMITED' : 'CATALOG_FAILED';
+        throw err;
+      }
+      P = data.products.filter((p) => p && typeof p.id === 'string' && Array.isArray(p.pl));
+      catalogStatus = 'ready';
+      try { localStorage.removeItem('ov_catalog'); } catch (_) {}
+      route(false);
+    } catch (e) {
+      P = [];
+      catalogStatus = 'error';
+      catalogErrorCode = e.code || 'CONNECTION_FAILED';
+      draw();
+    } finally {
+      catalogRequest = null;
+    }
+  })();
+  return catalogRequest;
+}
+function retryCatalog() { if (!catalogRequest) loadCatalog(); }
+
+async function loadReviewSummary() {
+  try {
+    const response = await fetch(`${API_URL}/reviews-summary`);
+    const data = await response.json();
+    if (response.ok && data.success && data.summary && !Array.isArray(data.summary)) {
+      productReviewSummary = data.summary;
+      updateProductEvidence();
+    }
+  } catch (_) { /* لا نعرض رقماً غير موثق عند انقطاع الاتصال */ }
+}
+async function loadDeliveryStats() {
+  try {
+    const response = await fetch(`${API_URL}/delivery-stats`);
+    const data = await response.json();
+    const s = data?.stats;
+    if (response.ok && data.success && s && Number.isFinite(Number(s.medianMinutes)) && Number(s.sample) >= 10) {
+      deliveryStats = s;
+      updateProductEvidence();
+    }
+  } catch (_) { /* لا نعرض وقت تسليم تخمينياً */ }
+}
+
 
 let PAY = [];
 let payLoaded = false, payFailed = false;
 const PAY_DESC = {
-  chargily: 'دفع إلكتروني فوري ومؤمّن 100% عبر البطاقة الذهبية أو CIB (يتم تأكيد طلبك تلقائياً)',
-  wallet: 'ادفع فوراً من رصيد حسابك في المتجر دون انتظار'
+  chargily: 'دفع إلكتروني عبر Chargily Pay عند تفعيله. يتحقق الخادم من نجاح العملية قبل تأكيد الدفع.',
+  wallet: 'يُخصم مبلغ الطلب من رصيد محفظتك المتاح عند تأكيد العملية.'
 };
 const mapPay = (m) => ({
   id: m.id,
@@ -72,16 +197,17 @@ function applyPay(methods) {
   }
 }
 
-const FAQ = [
-  ['هل الحسابات رسمية وتعمل بدون انقطاع؟', 'نعم، جميع اشتراكاتنا يتم تفعيلها بطرق رسمية 100% لضمان مشاهدة مستقرة طوال فترة اشتراكك.'],
-  ['كيف أستلم بيانات الحساب والشاشة؟', 'تصلك بيانات الحساب واسم الشاشة ورمز PIN تلقائياً على بوت تيليغرام، كما تظهر داخل صفحة (حسابي) وصفحة (تتبع طلبي) في الموقع.'],
-  ['كيف يعمل الدفع عبر شارجيلي؟', 'اختر Chargily Pay عند إتمام الطلب، وستنتقل لبوابة الدفع الرسمية لإدخال بيانات البطاقة الذهبية أو CIB، ويتأكد طلبك في ثوانٍ.']
-];
-
 const COL = { 'قيد المراجعة': '#F59E0B', 'مؤكد': '#2447C9', 'تم التسليم': '#16A34A', 'ملغي': '#EF4444' };
-const pr = (id) => P.find((p) => p.id == id);
-const pl = (i) => { const p = pr(i.id); return p && (p.pl.find((x) => i.k && x[4] === i.k) || p.pl.find((x) => x[0] == i.m)); };
+const pr = (id) => P.find((p) => p.id === String(id));
+const pl = (item) => {
+  const product = pr(item?.id);
+  if (!product) return null;
+  if (item.k) return product.pl.find((x) => x[4] === item.k && Number(x[0]) === Number(item.m)) || null;
+  const matches = product.pl.filter((x) => Number(x[0]) === Number(item.m));
+  return matches.length === 1 ? matches[0] : null; // لا نخمن عندما تتطابق مدة باقتين
+};
 // نسب التوفير لا تُعرض دون سعر أصلي موثق لكل باقة.
+
 
 let cart = [], sel = 0, cat = 'الكل', payId = 'chargily', msg = '', chargilyMode = 'test';
 let editK = -1;
@@ -102,21 +228,32 @@ try { const cp0 = JSON.parse(localStorage.getItem('ov_pay') || 'null'); if (Arra
 if (!Array.isArray(cart)) cart = [];
 
 const clean = () => {
-  const n0 = cart.length;
-  cart = cart.filter((i) => i && pl(i) && i.q > 0);
+  if (catalogStatus !== 'ready') return; // لا تمس سلة العميل إن فشل جلب الكتالوج
+  const initial = JSON.stringify(cart);
+  let removed = 0;
+  cart = cart.filter((item) => {
+    if (!item || !Number.isInteger(Number(item.q)) || Number(item.q) < 1 || !pl(item)) { removed++; return false; }
+    item.q = Math.min(9, Number(item.q));
+    const plan = pl(item);
+    if (!item.k && plan[4]) item.k = plan[4]; // ترقية السلة القديمة حين تكون المدة فريدة
+    return true;
+  });
   if (editK < 0) {
-    const seen = {};
-    cart = cart.filter((i) => {
-      const k = i.id + '|' + (i.k || i.m);
-      if (seen[k]) { seen[k].q = Math.min(9, seen[k].q + i.q); return false; }
-      seen[k] = i;
+    const seen = new Map();
+    cart = cart.filter((item) => {
+      const key = item.id + '|' + (item.k || item.m);
+      if (seen.has(key)) { seen.get(key).q = Math.min(9, seen.get(key).q + item.q); return false; }
+      seen.set(key, item);
       return true;
     });
   }
-  if (cart.length !== n0) save();
+  if (removed) cartAlert = `تم استبعاد ${removed} من عناصر السلة لأن الباقة لم تعد متاحة أو تغيرت. اختر الباقة الجديدة من المتجر قبل الشراء.`;
+  if (JSON.stringify(cart) !== initial) save();
 };
-const save = () => { try { localStorage.setItem('oc', JSON.stringify(cart)); } catch (e) {} };
-const tot = () => cart.reduce((s, i) => s + pl(i)[1] * i.q, 0);
+const save = () => { try { localStorage.setItem('oc', JSON.stringify(cart)); } catch (_) {} };
+const tot = () => cart.reduce((s, i) => s + (pl(i)?.[1] || 0) * i.q, 0);
+
+
 const me = () => {
   if (custProfile) return { n: custProfile.name, p: custProfile.phone, e: custProfile.email };
   try { return JSON.parse(localStorage.getItem('oi') || '{}'); } catch (e) { return {}; }
@@ -157,16 +294,8 @@ fetch(ACC_URL + '/auth-config')
   })
   .catch(() => {});
 
-fetch(API_URL + '/catalog')
-  .then((r) => r.json())
-  .then((d) => {
-    if (d && d.success && Array.isArray(d.products) && d.products.length) {
-      P = d.products;
-      try { localStorage.setItem('ov_catalog', JSON.stringify(P)); } catch (e) {}
-      draw();
-    }
-  })
-  .catch(() => {});
+// لا نُظهر بيانات cachedCatalog ولا المنتجات القديمة في متصفح فيسبوك.
+// نؤخّر الاتصال إلى نهاية تهيئة الواجهة حتى لا نغيّر شاشات الحساب وتسجيل الدخول.
 
 function loadPayConfig() {
   return fetch(API_URL + '/payment-config').then((r) => r.json()).then((d) => {
@@ -253,94 +382,174 @@ const gc = (p) => `
   </div>`;
 
 const card = (p) => {
+  const plans = p.pl.filter((x) => Number.isFinite(Number(x[1])));
+  const cheapest = plans.length ? Math.min(...plans.map((x) => Number(x[1]))) : null;
   return `<a class="pc" href="#/p/${encodeURIComponent(p.id)}" style="--c:${esc(p.c)};--c2:${esc(p.c2)}">
     <div class="pv">
-      <div class="bds"><span class="bd fl">${esc(p.badge || '⚡ فوري')}</span></div>
+      ${String(p.badge || '').trim() ? `<div class="bds"><span class="bd fl">${esc(p.badge)}</span></div>` : ''}
       ${gc(p)}
     </div>
     <div class="pi">
       <small>${esc(p.cat)}</small>
       <h3>${esc(p.t)}</h3>
-      <div class="pr">ابتداءً من <b>${fmt(Math.min(...p.pl.map((x) => x[1])))}</b></div>
-      <div class="btn" style="margin:0">عرض الباقات</div>
+      <div class="pr">${cheapest !== null ? `ابتداءً من <b>${fmt(cheapest)}</b>` : '<span class="note">لا توجد باقات متاحة</span>'}</div>
+      <div class="btn" style="margin:0">عرض التفاصيل</div>
     </div>
   </a>`;
 };
 
 const home = () => `
   <div class="w">
-    <div class="hero">
-      <div class="sl" style="background:linear-gradient(135deg,#12286E,#2F5BEA)">
-        <h2>اشتراكات الترفيه<br>بأسعار تناسبك</h2>
-        <p>دفع فوري بالبطاقة الذهبية أو CIB عبر Chargily Pay واستلام للشاشة والـ PIN</p>
-        <a class="cta" href="#/shop">تصفّح الاشتراكات</a>
-      </div>
-    </div>
-    <h2 class="sh">اختر اشتراكك</h2>
-    <div class="g">${P.map(card).join('')}</div>
-    <h2 class="sh">مميزات متجرنا</h2>
+    <div class="hero"><div class="sl" style="background:linear-gradient(135deg,#12286E,#2F5BEA)">
+      <h2>اشتراكات رقمية<br>بأسعار واضحة</h2>
+      <p>تعرّف على الباقات المتاحة، اختر طريقة الدفع، وتابع طلبك من حسابك.</p>
+      <a class="cta" href="#/shop">تصفّح الاشتراكات</a>
+    </div></div>
+    ${P.length ? `<h2 class="sh">اختر اشتراكك</h2><div class="g">${P.map(card).join('')}</div>` : catalogEmpty()}
+    <h2 class="sh">خدمات المتجر</h2>
     <div class="tr">
-      <div><b>⚡ دفع إلكتروني تلقائي</b>ادفع بالذهبية أو CIB أو بمحفظتك ويتأكد طلبك في ثوانٍ</div>
-      <div><b>👤 شاشة خاصة ورمز PIN</b>بيانات الشاشة وكود القفل تظهر في حسابك وفي بوت تيليغرام</div>
-      <div><b>🎫 دعم فني وشكاوى</b>فريق دعم مخصص لمتابعة طلباتك وحل أي مشكلة فوراً</div>
+      <div><b>💳 خيارات دفع متعددة</b>تظهر طرق الدفع المفعلة وتفاصيلها عند إتمام الطلب.</div>
+      <div><b>📦 متابعة الطلب</b>يمكنك الاطلاع على حالة الطلب وبياناته المتاحة في حسابك.</div>
+      <div><b>🎫 دعم وشكاوى</b>يمكنك التواصل مع الدعم وفتح شكوى عند الحاجة.</div>
     </div>
-    <h2 class="sh">الأسئلة الشائعة</h2>
-    ${FAQ.map((q) => `<details><summary>${q[0]}</summary><p>${q[1]}</p></details>`).join('')}
   </div>`;
 
 const shop = () => {
-  const cs = ['الكل', ...new Set(P.map((p) => p.cat))];
+  if (!P.length) return catalogEmpty();
+  const cats = ['الكل', ...new Set(P.map((p) => p.cat))];
   return `<div class="w">
     <h1 class="ttl">المتجر</h1>
-    <div class="chips">${cs.map((c) => `<button class="chip ${c == cat ? 'on' : ''}" onclick="setCat('${esc(c)}')">${esc(c)}</button>`).join('')}</div>
-    <div class="g" style="margin-top:8px">${P.filter((p) => cat == 'الكل' || p.cat == cat).map(card).join('')}</div>
+    <div class="chips">${cats.map((c) => `<button class="chip ${c === cat ? 'on' : ''}" data-category="${esc(c)}" onclick="setCat(this.dataset.category)">${esc(c)}</button>`).join('')}</div>
+    <div class="g" style="margin-top:8px">${P.filter((p) => cat === 'الكل' || p.cat === cat).map(card).join('') || '<p class="note">لا توجد اشتراكات ضمن هذا التصنيف.</p>'}</div>
   </div>`;
 };
 
+
+function landingList(title, values, caution = false) {
+  const lines = Array.isArray(values) ? values.filter((v) => typeof v === 'string' && v.trim()) : [];
+  if (!lines.length) return '';
+  return `<section class="ov-landing-section"><h2>${esc(title)}</h2><ul class="ov-landing-list ${caution ? 'ov-cautions' : ''}">
+    ${lines.map((value) => `<li><span class="ov-mark">${caution ? '•' : '✓'}</span><span>${esc(value)}</span></li>`).join('')}
+  </ul></section>`;
+}
+function landingText(title, value, icon) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  return `<section class="ov-landing-section"><h2>${icon} ${esc(title)}</h2><p class="ov-landing-note">${esc(value.trim())}</p></section>`;
+}
+function formatDeliveryTime(minutes) {
+  const n = Math.round(Number(minutes));
+  if (!Number.isFinite(n) || n < 0) return '';
+  if (n < 60) return `${n} دقيقة`;
+  const h = Math.floor(n / 60), m = n % 60;
+  return `${h} ساعة${m ? ` و${m} دقيقة` : ''}`;
+}
+function deliveryEvidence(p) {
+  const hasText = typeof p.dlv === 'string' && !!p.dlv.trim();
+  const s = deliveryStats;
+  const median = s && formatDeliveryTime(s.medianMinutes);
+  const p80 = s && formatDeliveryTime(s.p80Minutes);
+  if (!hasText && !median) return '';
+  return `<section class="ov-evidence" aria-label="معلومات التسليم">
+    <h2>📦 التسليم</h2>
+    ${hasText ? `<p class="ov-landing-note" style="color:var(--ink)">${esc(p.dlv.trim())}</p>` : ''}
+    ${median ? `<div class="ov-delivery-metrics">
+      <div class="ov-metric"><small>الوسيط الفعلي لمدة التسليم</small><b>${median}</b></div>
+      ${p80 ? `<div class="ov-metric"><small>80% من الطلبات خلال</small><b>${p80}</b></div>` : ''}
+    </div><p>إحصاء عام للمتجر، من تأكيد الدفع إلى التسليم، لعينة من ${Number(s.sample).toLocaleString('ar-DZ')} طلبًا خلال آخر ${Number(s.days)} يومًا؛ لا يمثل وعدًا بمدة تسليم هذا المنتج.</p>` : ''}
+  </section>`;
+}
+function reviewEvidence(id) {
+  const d = productReviewsCache.get(id);
+  const summary = d?.status === 'done' ? d.data : productReviewSummary[id];
+  const count = Number(summary?.count) || 0;
+  const average = Number(summary?.average);
+  if (count < 1 || !Number.isFinite(average) || average < 1 || average > 5) return '';
+  const reviews = d?.status === 'done' && Array.isArray(d.data.reviews) ? d.data.reviews : [];
+  return `<section class="ov-evidence" aria-label="التقييمات المعتمدة">
+    <h2>⭐ آراء العملاء بعد اعتمادها</h2>
+    <div><strong>${esc(average.toFixed(1))} / 5</strong> <span class="note">من ${count} تقييم معتمد</span></div>
+    ${reviews.map((v) => {
+      const stars = Math.max(1, Math.min(5, Math.round(Number(v.stars) || 1)));
+      const date = v.createdAt && !Number.isNaN(new Date(v.createdAt).getTime()) ? new Date(v.createdAt).toLocaleDateString('ar-DZ') : '';
+      return `<article class="ov-review-card"><div class="ov-review-meta"><b>${esc(v.displayName)}</b><span aria-label="${stars} من 5">${'⭐'.repeat(stars)}</span>${date ? `<time>${esc(date)}</time>` : ''}</div>${v.comment ? `<p>${esc(v.comment)}</p>` : ''}</article>`;
+    }).join('')}
+    ${d?.status === 'loading' ? '<p>جاري تحميل نصوص التقييمات المعتمدة…</p>' : ''}
+  </section>`;
+}
+function updateProductEvidence() {
+  const holder = document.getElementById('productReviews');
+  if (holder) holder.innerHTML = reviewEvidence(holder.dataset.product);
+  const deliveryHolder = document.getElementById('productDeliveryEvidence');
+  const id = deliveryHolder?.dataset.product;
+  if (id) {
+    const p = pr(id);
+    if (p) deliveryHolder.innerHTML = deliveryEvidence(p);
+  }
+}
 const prod = (p) => {
-  const x = p.pl[sel] || p.pl[0];
-  const it = editK >= 0 ? cart[editK] : null;
-  const stepsList = Array.isArray(p.steps) && p.steps.length ? p.steps : DEFAULT_STEPS;
-  const featBlock = `<h2 class="sh">ما ستحصل عليه</h2>
-    <ul class="ft">${(p.f || []).map((f) => `<li><i>✓</i>${esc(f)}</li>`).join('')}</ul>`;
-  const plansBlock = `<h2 class="sh">اختر مدة الاشتراك</h2>
-    ${p.pl.map((y, i) => `<button class="pl ${i == sel ? 'on' : ''}" onclick="pickPlan(${i})">${y[2] ? '<span class="tag">الأوفر</span>' : ''}<span class="rd"></span><span class="d">${dur(y[0])}${y[3] ? `<small class="plan-label">${esc(y[3])}</small>` : ''}</span><b>${fmt(y[1])}</b></button>`).join('')}`;
-  const qtyBlock = it ? `<h2 class="sh">الكمية</h2>
-    <div class="qrow">
-      <div class="q lg"><button onclick="editQty(-1)" aria-label="إنقاص">−</button><span>${it.q}</span><button onclick="editQty(1)" aria-label="زيادة">+</button></div>
-      <b class="qtot">${fmt(x[1] * it.q)}</b>
-    </div>` : '';
+  const selected = p.pl[sel] || p.pl[0];
+  const item = editK >= 0 ? cart[editK] : null;
+  const plansBlock = p.pl.length ? `<h2 class="sh">اختر باقتك</h2>
+    ${p.pl.map((plan, i) => `<button class="pl ${i === sel ? 'on' : ''}" onclick="pickPlan(${i})">
+      ${plan[2] ? '<span class="tag">الأوفر</span>' : ''}
+      <span class="rd"></span><span class="d">${dur(plan[0])}${plan[3] ? `<small class="plan-label">${esc(plan[3])}</small>` : ''}</span>
+      <b>${fmt(plan[1])}</b>
+    </button>`).join('')}` : '<p class="ov-price-empty">هذا المنتج لا تتوفر له باقات للطلب حالياً.</p>';
+  const quantityBlock = item && selected ? `<h2 class="sh">الكمية</h2><div class="qrow">
+    <div class="q lg"><button onclick="editQty(-1)" aria-label="إنقاص">−</button><span>${item.q}</span><button onclick="editQty(1)" aria-label="زيادة">+</button></div>
+    <b class="qtot">${fmt(selected[1] * item.q)}</b>
+  </div>` : '';
+  const steps = Array.isArray(p.steps) ? p.steps.filter((s) => s && (String(s.title || '').trim() || String(s.desc || '').trim())) : [];
+  const stepsBlock = steps.length ? `<section class="ov-landing-section"><h2>كيف يتم طلبك؟</h2><div class="tr">
+    ${steps.map((s, i) => `<div><b>${i + 1}. ${esc(s.title)}</b>${esc(s.desc)}</div>`).join('')}
+  </div></section>` : '';
+  const faqs = Array.isArray(p.faq) ? p.faq.filter((f) => f && String(f.q || '').trim() && String(f.a || '').trim()) : [];
+  const faqBlock = faqs.length ? `<section class="ov-landing-section ov-faq"><h2>الأسئلة الشائعة حول هذا الاشتراك</h2>
+    ${faqs.map((v) => `<details><summary>${esc(v.q)}</summary><p>${esc(v.a)}</p></details>`).join('')}
+  </section>` : '';
   return `<div class="ph" style="--c:${esc(p.c)};--c2:${esc(p.c2)}">
     ${gc(p)}
+    ${String(p.badge || '').trim() ? `<span class="bd fl" style="display:inline-block;margin:8px auto">${esc(p.badge)}</span>` : ''}
     <h1>${esc(p.t)}</h1>
-    <p style="max-width:520px;opacity:.92;font-size:14px">${esc(p.sub || p.cat)}</p>
+    ${p.sub ? `<p style="max-width:520px;opacity:.92;font-size:14px">${esc(p.sub)}</p>` : ''}
   </div>
   <div class="w">
-    ${it ? `<div class="edit-note">${ico(I.edit, 16)}<span>أنت تعدّل اشتراكاً من سلتك — كل تغيير يُحفظ مباشرة، ويمكنك الرجوع في أي وقت.</span></div>` : ''}
-    ${it ? plansBlock + qtyBlock + featBlock : featBlock + plansBlock}
-    <h2 class="sh">كيف يتم طلبك؟</h2>
-    <div class="tr">
-      ${stepsList.map((st, idx) => `<div><b>${idx + 1}. ${esc(st.title)}</b>${esc(st.desc)}</div>`).join('')}
+    ${item ? `<div class="edit-note">${ico(I.edit, 16)}<span>أنت تعدّل اشتراكاً من السلة، ويتم حفظ التغيير عند اختيار الباقة أو تعديل الكمية.</span></div>` : ''}
+    <div id="productReviews" data-product="${esc(p.id)}">${reviewEvidence(p.id)}</div>
+    <div id="productDeliveryEvidence" data-product="${esc(p.id)}">${deliveryEvidence(p)}</div>
+    ${item ? plansBlock + quantityBlock : landingList('ما ستحصل عليه', p.f) + plansBlock}
+    ${item ? landingList('ما ستحصل عليه', p.f) : ''}
+    ${landingList('يناسبك هذا الاشتراك إذا', p.aud)}
+    ${landingList('معلومات مهمة قبل الشراء', p.lim, true)}
+    ${landingText('الضمان وسياسة الاستبدال', p.guar, '🛡️')}
+    ${stepsBlock}
+    ${faqBlock}
+    <div class="ov-landing-section" style="margin-bottom:25px">
+      <h2>قيّم تجربتك بعد استلام الطلب</h2>
+      ${custToken ? `<div class="sm"><label class="lb">تقييمك (بعد استلام الطلب)</label>
+        <select id="reviewStars" class="in2">${[5,4,3,2,1].map((n) => `<option value="${n}">${n} ⭐</option>`).join('')}</select>
+        <textarea class="in2" id="reviewText" rows="3" maxlength="800" placeholder="شارك تجربتك الفعلية مع المنتج"></textarea>
+        <button class="btn" data-product="${esc(p.id)}" onclick="submitReview(this.dataset.product)">إرسال التقييم للمراجعة</button>
+      </div>` : '<p class="note">سجّل الدخول لتقييم مشترياتك بعد التسليم. لن يظهر التقييم حتى تعتمده الإدارة.</p>'}
     </div>
   </div>
-  <div class="w"><h2 class="sh">⭐ آراء المشترين</h2><div id="productReviews" data-product="${esc(p.id)}"><p class="note">جاري تحميل التقييمات…</p></div>
-    ${custToken ? `<div class="sm"><label class="lb">تقييمك (بعد استلام الطلب)</label><select id="reviewStars" class="in2">${[5,4,3,2,1].map(n=>`<option value="${n}">${n} ⭐</option>`).join('')}</select><textarea class="in2" id="reviewText" rows="3" maxlength="800" placeholder="شارك تجربتك الحقيقية مع المنتج"></textarea><button class="btn" onclick="submitReview('${esc(p.id)}')">إرسال التقييم للمراجعة</button></div>` : `<p class="note">سجّل الدخول لتقييم مشترياتك بعد التسليم.</p>`}
-  </div>
-  ${it ? `<div class="bar">
+  ${selected ? (item ? `<div class="bar">
     <button class="btn o" onclick="editRemove()">حذف</button>
-    <button class="btn" onclick="editDone()">حفظ · ${fmt(x[1] * it.q)}</button>
+    <button class="btn" onclick="editDone()">حفظ · ${fmt(selected[1] * item.q)}</button>
   </div>` : `<div class="bar">
-    <button class="btn o" onclick="add('${esc(p.id)}',${x[0]})">أضف للسلة</button>
-    <button class="btn" onclick="add('${esc(p.id)}',${x[0]},1)">اشترِ الآن · ${fmt(x[1])}</button>
-  </div>`}`;
+    <button class="btn o" data-product="${esc(p.id)}" onclick="add(this.dataset.product,${Number(selected[0])})">أضف للسلة</button>
+    <button class="btn" data-product="${esc(p.id)}" onclick="add(this.dataset.product,${Number(selected[0])},1)">اشترِ الآن · ${fmt(selected[1])}</button>
+  </div>`) : ''}`;
 };
+
 
 const cartV = () => {
   if (!cart.length) {
-    return `<div class="w em"><div>🛒</div><h2>سلتك فارغة</h2><p class="note" style="margin-bottom:18px">اختر اشتراكك المفضل وابدأ المشاهدة اليوم</p><a class="btn" href="#/shop">تصفّح الاشتراكات</a></div>`;
+    return `<div class="w em"><div>🛒</div><h2>سلتك فارغة</h2><p class="note" style="margin-bottom:18px">تصفّح الاشتراكات المتاحة واقرأ شروطها قبل الشراء</p><a class="btn" href="#/shop">تصفّح الاشتراكات</a></div>`;
   }
   return `<div class="w">
     <h1 class="ttl">سلة التسوق</h1>
+    ${cartAlert ? `<div class="cart-note" role="alert">${esc(cartAlert)}</div>` : ''}
     ${cartNote ? `<div class="cart-note">${esc(cartNote)}</div>` : ''}
     ${cart.map((i, k) => {
       const p = pr(i.id), x = pl(i);
@@ -502,7 +711,6 @@ window.trackOrder = async () => {
         <hr>
         <div class="tt"><span>الإجمالي</span>${fmt(t.totalPrice)}</div>
         ${renderDeliveredBox(t.deliveredAccount)}
-        ${t.deliveryNotice ? `<p class="note">${esc(t.deliveryNotice)}</p>` : ''}
         ${t.deliveryNotice ? `<p class="note">${esc(t.deliveryNotice)}</p>` : ''}
       </div>
       ${renderPaymentReceiptBox(t.paymentDetails, t.totalPrice)}`;
@@ -1122,8 +1330,16 @@ function view() {
     }
   }
 
-  document.body.className = v == 'p' && pr(prodSlug) ? 'pp' : '';
-  if (v == 'p' && pr(prodSlug)) return prod(pr(prodSlug));
+  const needsCatalog = ['home', 'shop', 'p', 'cart', 'checkout'].includes(v);
+  if (needsCatalog && catalogStatus !== 'ready') {
+    document.body.className = '';
+    updatePageSEO(null);
+    return catalogStatus === 'error' ? catalogUnavailable() : catalogLoading();
+  }
+  const product = v === 'p' ? pr(prodSlug) : null;
+  document.body.className = product ? 'pp' : '';
+  updatePageSEO(product);
+  if (v === 'p') return product ? prod(product) : `<div class="w ov-state"><h2>هذا الاشتراك غير متاح حالياً</h2><p>لم يعد هذا المنتج منشوراً في قائمة المتجر.</p><a href="#/shop" class="btn">العودة إلى المتجر</a></div>`;
   return v == 'shop' ? shop()
     : v == 'cart' ? cartV()
     : v == 'checkout' ? chk()
@@ -1166,17 +1382,28 @@ function draw() {
 }
 
 async function loadProductReviews() {
-  const target = document.getElementById('productReviews');
-  if (!target) return;
-  const id = target.dataset.product;
+  const holder = document.getElementById('productReviews');
+  if (!holder || catalogStatus !== 'ready') return;
+  const id = holder.dataset.product;
+  if (!pr(id)) return;
+  const cached = productReviewsCache.get(id);
+  if (cached?.status === 'loading' || cached?.status === 'done') return;
+  productReviewsCache.set(id, { status: 'loading' });
+  updateProductEvidence();
   try {
-    const r = await fetch(`${API_URL}/reviews/${encodeURIComponent(id)}`);
-    const d = await r.json();
-    if (!d.success || !target.isConnected || target.dataset.product !== id) return;
-    target.innerHTML = `<p class="note">${d.count ? `متوسط التقييم: ${d.average}/5 من ${d.count} تقييم` : 'لا توجد تقييمات منشورة بعد.'}</p>` +
-      (d.reviews || []).map((v) => `<div class="sm"><b>${esc(v.displayName)}</b> <span>${'⭐'.repeat(v.stars)}</span><p>${esc(v.comment)}</p></div>`).join('');
-  } catch(e) { if(target.isConnected)target.textContent='تعذّر تحميل التقييمات حالياً.'; }
+    const response = await fetch(`${API_URL}/reviews/${encodeURIComponent(id)}`);
+    const data = await response.json();
+    if (!response.ok || !data.success || !Array.isArray(data.reviews)) throw new Error('REVIEWS_UNAVAILABLE');
+    productReviewsCache.set(id, { status: 'done', data });
+    if (Number(data.count) > 0) productReviewSummary[id] = { count: data.count, average: data.average };
+    else delete productReviewSummary[id];
+  } catch (_) {
+    productReviewsCache.set(id, { status: 'failed' });
+  }
+  updateProductEvidence();
 }
+
+
 window.submitReview = async (productId) => {
   const stars = Number(document.getElementById('reviewStars')?.value);
   const comment = document.getElementById('reviewText')?.value || '';
@@ -1187,7 +1414,8 @@ window.submitReview = async (productId) => {
   } catch(e){toast('تعذر إرسال التقييم');}
 };
 
-function route() {
+function route(shouldScroll = true) {
+  captureSource();
   const h = location.hash.slice(2).split('?')[0].split('/');
   const slug = decodeURIComponent(h[1] || '');
   editK = -1;
@@ -1206,7 +1434,7 @@ function route() {
   }
   if (h[0] == 'account' && custToken) fetchCustomerProfile().then(() => { app.innerHTML = view(); chrome(); });
   draw();
-  scrollTo(0, 0);
+  if (shouldScroll) scrollTo(0, 0);
 }
 
 function back() { history.length > 1 ? history.back() : (location.hash = '#/'); }
@@ -1217,26 +1445,31 @@ function pickPlan(i) {
   draw();
 }
 function add(id, m, go) {
-  const chosen = pr(id)?.pl[sel] || pr(id)?.pl.find((x) => x[0] == m);
-  const key = chosen?.[4] || '';
-  const e = cart.find((i) => i.id == id && (key ? i.k === key : i.m == m));
-  const had = !!e;
-  if (e) e.q = Math.min(9, e.q + 1);
-  else cart.push({ id, m, k: key, q: 1 });
+  if (catalogStatus !== 'ready') return toast('انتظر تحميل الأسعار الحالية أولاً');
+  const product = pr(id);
+  const chosen = product?.pl[sel] || product?.pl.find((p) => Number(p[0]) === Number(m));
+  if (!chosen) return toast('هذه الباقة غير متاحة حالياً');
+  const months = Number(chosen[0]);
+  const key = chosen[4] || '';
+  const existing = cart.find((i) => i.id === id && (key ? i.k === key : !i.k && Number(i.m) === months));
+  const had = !!existing;
+  if (existing) existing.q = Math.min(9, existing.q + 1);
+  else cart.push({ id, m: months, k: key, q: 1 });
   save();
-  const cur = cart.find((i) => i.id == id && (key ? i.k === key : i.m == m));
+  const current = existing || cart[cart.length - 1];
   if (go) {
-    if (cart.length === 1 && cur.q === 1) { location.hash = '#/checkout'; return; }
-    const t = pr(id).t + ' — ' + dur(m);
+    if (cart.length === 1 && current.q === 1) { location.hash = '#/checkout'; return; }
+    const t = product.t + ' — ' + dur(months) + (chosen[3] ? ' · ' + chosen[3] : '');
     cartNote = had
-      ? `«${t}» كان في سلتك أصلاً فأصبحت كميته ${cur.q}. إن لم تقصد ذلك فعدّل الكمية قبل المتابعة.`
+      ? `«${t}» كان في سلتك أصلاً فأصبحت كميته ${current.q}. راجع الكمية قبل المتابعة.`
       : `تمت إضافة «${t}». راجع كل ما في سلتك ثم تابع للدفع.`;
     location.hash = '#/cart';
   } else {
     draw();
-    toast(had ? `في سلتك الآن ${cur.q} من هذا الاشتراك — عدّل الكمية من السلة إن لزم` : 'تمت الإضافة إلى السلة ✓');
+    toast(had ? `في سلتك الآن ${current.q} من هذه الباقة` : 'تمت الإضافة إلى السلة ✓');
   }
 }
+
 
 window.editItem = (k) => {
   const it = cart[k];
@@ -1273,6 +1506,7 @@ function pick(id) {
 }
 
 async function send() {
+  if (catalogStatus !== 'ready' || !cart.length) return toast('تأكد من تحميل الكتالوج والسلة قبل تأكيد الطلب');
   const n = $('#fn').value.trim();
   const ph = normPh($('#fp').value);
   const em = $('#fe').value.trim().toLowerCase();
@@ -1288,6 +1522,7 @@ async function send() {
   submitBtn.textContent = 'جاري معالجة الطلب...';
 
   const returnOrigin = location.origin + location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+  const attribution = currentSource();
   const payload = {
     customerName: n,
     whatsappNumber: ph,
@@ -1295,7 +1530,8 @@ async function send() {
     paymentMethod: pm.n,
     totalPrice: tot(),
     cartItems: cart.map((i) => ({ id: i.id, m: i.m, k: i.k || '', q: i.q })),
-    returnOrigin
+    returnOrigin,
+    ...(attribution ? { source: attribution } : {})
   };
 
   const headers = { 'Content-Type': 'application/json' };
@@ -1314,7 +1550,7 @@ async function send() {
         '📧 الإيميل: ' + em,
         '',
         '🛒 المشتريات:',
-        ...cart.map((i, k) => (k + 1) + ') ' + pr(i.id).t + ' (' + dur(pl(i)[0]) + ' × ' + i.q + ')'),
+        ...cart.map((i, k) => (k + 1) + ') ' + pr(i.id).t + ' (' + dur(pl(i)[0]) + (pl(i)[3] ? ' · ' + pl(i)[3] : '') + ' × ' + i.q + ')'),
         '💰 الإجمالي: ' + tot() + ' DA',
         '💳 طريقة الدفع: ' + pm.n
       ].join('\n');
@@ -1359,3 +1595,6 @@ if (CFG.wa) {
 
 addEventListener('hashchange', route);
 route();
+loadCatalog();
+loadReviewSummary();
+loadDeliveryStats();

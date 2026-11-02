@@ -578,3 +578,26 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .ov-global-search { display: flex; gap: 8px; margin-bottom: 12px; }
 .ov-global-search input { flex: 1; min-width: 0; }
 .ov-global-search button { min-width: 65px; }
+
+/* Batch 5 — product landing editor and factual attribution reporting */
+.landing-editor { margin:18px 0; padding:15px; border:1px solid var(--line); border-radius:16px; background:var(--bg); }
+.landing-editor > summary { cursor:pointer; font-size:15px; font-weight:900; color:var(--pri2); }
+.landing-editor[open] > summary { margin-bottom:12px; }
+.landing-editor-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px; }
+.landing-field { display:flex; flex-direction:column; gap:7px; font-size:12px; font-weight:800; color:var(--ink); min-width:0; }
+.landing-field .inp { margin:0; width:100%; }
+.landing-field textarea { min-height:98px; line-height:1.8; resize:vertical; }
+.marketing-period { display:flex; gap:8px; flex-wrap:wrap; margin:15px 0; }
+.marketing-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:12px 0 20px; }
+.marketing-summary > div { border:1px solid var(--line); border-radius:14px; padding:14px; background:var(--bg); min-width:0; }
+.marketing-summary small { display:block; color:var(--mut); font-size:11px; line-height:1.6; }
+.marketing-summary b { display:block; font-size:19px; overflow-wrap:anywhere; }
+.marketing-table-wrap { overflow-x:auto; }
+.marketing-table { width:100%; border-collapse:collapse; font-size:12px; min-width:460px; }
+.marketing-table th { text-align:right; color:var(--mut); background:var(--bg); }
+.marketing-table th, .marketing-table td { padding:11px; border-bottom:1px solid var(--line); vertical-align:middle; }
+.marketing-table td:first-child { min-width:150px; overflow-wrap:anywhere; }
+.marketing-bar { margin-top:7px; height:5px; border-radius:10px; background:var(--line); overflow:hidden; }
+.marketing-bar span { display:block; background:var(--pri2); height:100%; border-radius:inherit; }
+.marketing-empty { padding:20px; text-align:center; color:var(--mut); }
+@media (max-width:580px) { .landing-editor-grid,.marketing-summary { grid-template-columns:1fr; } .marketing-summary { gap:7px; } }

@@ -1331,3 +1331,58 @@ pre {
 :root[data-theme="dark"] .checkout-trust,
 :root[data-theme="dark"] .checkout-help { background: #17213a; border-color: #354767; color: #e1e8f8; }
 :root[data-theme="dark"] .checkout-total { border-color: #354767; }
+
+
+/* Batch 4 | Loading, truthful product evidence and dynamic landing sections */
+.ov-loading {padding:26px 0 34px}
+.ov-skeleton {background:linear-gradient(95deg,var(--line),var(--card),var(--line));background-size:220% 100%;animation:ov-shimmer 1.5s ease-in-out infinite;border-radius:16px}
+@keyframes ov-shimmer {0%{background-position:100% 50%}100%{background-position:-100% 50%}}
+.ov-sk-hero {height:148px;margin:8px 0 25px;border-radius:23px}
+.ov-sk-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
+.ov-sk-card {height:215px}
+.ov-state {padding:28px 18px;margin:25px auto;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:20px;max-width:650px}
+.ov-state h2 {font-size:21px;margin:9px 0}
+.ov-state p {color:var(--mut);font-size:14px;line-height:1.9;margin-bottom:16px}
+.ov-state .btn {display:inline-block;width:auto;min-width:170px}
+.ov-landing-section {margin:22px 0;padding:18px;background:var(--card);border:1px solid var(--line);border-radius:19px;box-shadow:var(--sh)}
+.ov-landing-section h2 {font-size:19px;font-weight:900;margin:0 0 12px}
+.ov-landing-list {list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.ov-landing-list li {display:flex;gap:10px;align-items:flex-start;line-height:1.8;font-weight:600;font-size:14px}
+.ov-landing-list li .ov-mark {color:var(--ok);font-weight:900;flex:none}
+.ov-landing-list.ov-cautions li .ov-mark {color:var(--warn)}
+.ov-landing-note {line-height:1.95;font-size:14px;white-space:pre-line;overflow-wrap:anywhere}
+.ov-evidence {padding:15px 18px;border-radius:17px;border:1px solid var(--line);background:var(--card);margin:16px 0}
+.ov-evidence h2 {font-size:17px;margin:0 0 7px}
+.ov-evidence p {font-size:13px;color:var(--mut);line-height:1.8;margin:6px 0}
+.ov-evidence strong {font-size:17px;color:var(--ink)}
+.ov-review-card {border-top:1px solid var(--line);padding:12px 0}
+.ov-review-card:first-of-type {margin-top:10px}
+.ov-review-card p {color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
+.ov-review-meta {display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--mut)}
+.ov-review-meta b {font-size:13px;color:var(--ink)}
+.ov-faq details {margin:10px 0;border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.ov-faq summary {cursor:pointer;font-weight:800}
+.ov-faq p {font-size:14px;white-space:pre-line;overflow-wrap:anywhere;margin-top:10px;line-height:1.9}
+.ov-delivery-metrics {display:flex;flex-wrap:wrap;gap:12px;margin:10px 0}
+.ov-metric {flex:1 1 160px;border:1px solid var(--line);border-radius:13px;padding:11px}
+.ov-metric small {display:block;color:var(--mut);font-size:12px}
+.ov-metric b {display:block;font-size:19px}
+.ov-price-empty {padding:12px;color:var(--mut);font-size:13px}
+@media (max-width:480px) {.ov-sk-grid{grid-template-columns:1fr 1fr}.ov-sk-card{height:165px}.ov-landing-section{padding:14px}}
+@media (prefers-reduced-motion:reduce) {.ov-skeleton{animation:none}}
+/* Improved landing hierarchy & mobile accessibility */
+.ov-landing-section { transition: border-color .15s ease, box-shadow .15s ease; }
+.ov-landing-section:focus-within { border-color:var(--pri2); }
+.ov-landing-list li { overflow-wrap:anywhere; }
+.ov-faq details[open] { border-color:var(--pri2); }
+.ov-faq summary:focus-visible, .ov-state button:focus-visible { outline:3px solid var(--pri2);outline-offset:3px; }
+.ov-evidence { overflow-wrap:anywhere; }
+.ov-skeleton { pointer-events:none; }
+.skip-link { position:absolute;top:-90px;right:10px;z-index:9999;background:var(--card);color:var(--ink);padding:10px 18px;border-radius:12px; }
+.skip-link:focus { top:10px; }
+@media (max-width: 480px) {
+  .ov-evidence { padding:13px; }
+  .ov-delivery-metrics { gap:8px; }
+  .ov-metric { flex-basis:115px; }
+  .ov-review-meta { gap:6px; }
+}
