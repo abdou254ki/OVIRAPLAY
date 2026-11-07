@@ -1386,3 +1386,17 @@ pre {
   .ov-metric { flex-basis:115px; }
   .ov-review-meta { gap:6px; }
 }
+
+/* الدخول عبر بوت تيليغرام */
+.tgbot-status {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(34, 158, 217, .10);
+  border: 1px solid rgba(34, 158, 217, .35);
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: center;
+}
+.tgbot-status .chip { display: inline-block; margin-top: 8px; }
+.tg-hint { text-align: center; margin: 16px 0 6px; font-size: 12px; }

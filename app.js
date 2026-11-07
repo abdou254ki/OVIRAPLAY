@@ -220,6 +220,8 @@ let custOrders = [];
 let custComplaints = [];
 let authTab = 'login';
 let twoFaPending = null; // { tempToken, method, message }
+let tgBot = null;      // { url, msg } حالة الدخول عبر بوت تيليغرام
+let tgBotTimer = null;
 let twoFaSetup = null;   // { method, secret, otpauthUrl, message }
 let ord = { n: '', code: '', ids: [], claimToken: '', paid: false, paymentDetails: null };
 
@@ -933,6 +935,9 @@ const accountV = () => {
         <div class="social-divider">أو الدخول السريع بضغطة زر عبر</div>
         <div class="social-box">
           <div id="g_id_btn" class="social-slot"></div>
+          <button class="btn tg" style="margin:12px 0 0" onclick="startBotLogin()">📲 الدخول عبر بوت تيليغرام (الأسهل)</button>
+          <div id="tg_bot_status"></div>
+          <div class="note tg-hint">أو عبر نافذة تيليغرام: اكتب رقمك <b>بدون الصفر</b> بعد +213 (مثال: <span dir="ltr">+213 77 64 14 485</span>)</div>
           <div id="tg_login_btn" class="social-slot"></div>
         </div>
       </div>
@@ -977,6 +982,8 @@ const accountV = () => {
 
 // تهيئة أزرار Google وTelegram بعد رسم صفحة الدخول
 function mountSocialButtons() {
+  renderTgBotStatus();
+  resumeBotLogin();
   const gBox = document.getElementById('g_id_btn');
   if (gBox && CFG.googleClientId) {
     if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -1012,6 +1019,90 @@ function mountSocialButtons() {
     tgBox.appendChild(s);
   }
 }
+
+// ===== الدخول عبر بوت تيليغرام (رابط عميق + استطلاع) =====
+// لا يحتاج رقم الهاتف ولا نافذة منبثقة، ويعمل في Brave وفي متصفح فيسبوك.
+function renderTgBotStatus() {
+  const box = document.getElementById('tg_bot_status');
+  if (!box) return;
+  if (!tgBot) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="tgbot-status">
+    <div>${esc(tgBot.msg || '')}</div>
+    ${tgBot.url ? `<a class="chip on" target="_blank" rel="noopener" href="${esc(tgBot.url)}">فتح تيليغرام ←</a>` : ''}
+  </div>`;
+}
+
+function stopBotLogin(clear) {
+  if (tgBotTimer) { clearTimeout(tgBotTimer); tgBotTimer = null; }
+  if (clear) { try { sessionStorage.removeItem('ov_tgl'); } catch (e) {} }
+}
+
+async function pollBotLogin() {
+  tgBotTimer = null;
+  if (!document.getElementById('tg_bot_status')) return; // خرج المستخدم من صفحة الدخول؛ يُستأنف عند عودته
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem('ov_tgl') || 'null'); } catch (e) {}
+  if (!saved || Date.now() - saved.t > 290000) {
+    stopBotLogin(true);
+    tgBot = { msg: 'انتهت صلاحية المحاولة، اضغط الزر من جديد.' };
+    return renderTgBotStatus();
+  }
+  try {
+    const r = await fetch(ACC_URL + '/oauth/telegram/poll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: saved.k })
+    });
+    const d = await r.json();
+    if (d.success && d.pending) {
+      tgBot = {
+        url: saved.u,
+        msg: d.state === 'awaiting'
+          ? '✅ وصلك الطلب في تيليغرام: اضغط «نعم، أنا من طلب الدخول» ثم ارجع هنا.'
+          : '⏳ اضغط Start في بوت تيليغرام ثم أكّد الدخول…'
+      };
+      renderTgBotStatus();
+    } else if (d.success) {
+      stopBotLogin(true);
+      tgBot = null;
+      return processAuthResult(d, 'تم تسجيل الدخول عبر تيليغرام بنجاح ✓');
+    } else {
+      stopBotLogin(true);
+      tgBot = { msg: d.message || 'تعذّر الدخول عبر تيليغرام.' };
+      return renderTgBotStatus();
+    }
+  } catch (e) { /* انقطاع شبكة أو الخادم يستيقظ: نكمل المحاولة */ }
+  tgBotTimer = setTimeout(pollBotLogin, 2500);
+}
+
+function resumeBotLogin() {
+  if (tgBotTimer || custToken) return;
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem('ov_tgl') || 'null'); } catch (e) {}
+  if (!saved || Date.now() - saved.t > 290000) return;
+  if (!tgBot) tgBot = { url: saved.u, msg: '⏳ بانتظار تأكيدك داخل تيليغرام…' };
+  renderTgBotStatus();
+  tgBotTimer = setTimeout(pollBotLogin, 1500);
+}
+
+window.startBotLogin = async () => {
+  stopBotLogin(true);
+  tgBot = { msg: 'جارٍ تجهيز رابط الدخول…' };
+  renderTgBotStatus();
+  try {
+    const r = await fetch(ACC_URL + '/oauth/telegram/start', { method: 'POST' });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message);
+    try { sessionStorage.setItem('ov_tgl', JSON.stringify({ k: d.token, u: d.botUrl, t: Date.now() })); } catch (e) {}
+    tgBot = { url: d.botUrl, msg: 'افتح تيليغرام واضغط Start، ثم ارجع إلى هنا.' };
+    renderTgBotStatus();
+    window.open(d.botUrl, '_blank', 'noopener'); // إن حُجبت النافذة يبقى زر «فتح تيليغرام» ظاهرًا
+    tgBotTimer = setTimeout(pollBotLogin, 2500);
+  } catch (e) {
+    tgBot = { msg: e.message || 'تعذّر بدء الدخول عبر تيليغرام، حاول مجددًا.' };
+    renderTgBotStatus();
+  }
+};
 
 async function processAuthResult(d, welcomeMsg = 'مرحباً بك ✓') {
   if (d.requires2FA) {
