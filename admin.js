@@ -37,6 +37,33 @@ const PRESETS = {
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
 const fmt = (n) => Number(n || 0).toLocaleString('en-US') + ' DA';
+// Navigation responsive with explicit text labels and stable legacy routes.
+function toggleAdminNav(force) {
+  const open = typeof force === 'boolean' ? force : !document.body.classList.contains('nav-open');
+  document.body.classList.toggle('nav-open', open);
+  document.getElementById('ovMenuButton')?.setAttribute('aria-expanded', String(open));
+}
+const storedAdminTheme = localStorage.getItem('ovira_admin_theme');
+if (['dark','light'].includes(storedAdminTheme)) document.documentElement.setAttribute('data-theme', storedAdminTheme);
+function toggleAdminTheme() {
+  const active = document.documentElement.getAttribute('data-theme');
+  const next = active === 'dark' ? 'light' : active === 'light' ? 'dark' :
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('ovira_admin_theme', next);
+}
+function navButton(id, label, count = '') {
+  return `<button class="tab ${tab === id ? 'on' : ''}" ${tab === id ? 'aria-current="page"' : ''} onclick="goAdmin('${id}')">${label}${count ? ` <span class="badge-cnt">${count}</span>` : ''}</button>`;
+}
+function renderAdminFailure(message, status) {
+  const html = `<div class="card ov-failure" role="alert"><h3>${status === 403 ? 'صلاحيات غير كافية' : 'تعذّر تحميل البيانات'}</h3>
+    <p>${esc(message || 'الخدمة غير متاحة مؤقتًا؛ لم تُحمّل أي أرقام جديدة.')}</p>
+    <button class="btn-pri" onclick="loadPanel()">↻ إعادة المحاولة</button></div>`;
+  const panel = document.getElementById('ov-panel');
+  if (panel) panel.innerHTML = html;
+  else document.getElementById('root').innerHTML = `<div class="card" style="margin:30px auto;max-width:520px"><button class="btn-sm" onclick="logout()">خروج</button>${html}</div>`;
+}
+
 
 
 // حقول الهبوط تقابل بالضبط عقد /api/admin/products؛ النص الفارغ يزيل المحتوى.
@@ -228,6 +255,7 @@ function logout() {
   token = '';
   adm2FaPending = null;
   adm2FaSetup = null;
+  agentOneTimeToken = '';
   localStorage.removeItem('adm_tk');
   sessionStorage.removeItem('adm_tk');
   document.getElementById('root').innerHTML = '';
@@ -271,19 +299,24 @@ async function loadPanel() {
   } else if (tab === 'customers') {
     if (qFilter) params.set('q', qFilter);
     endpoint = 'customers?' + params.toString();
+  } else if (tab === 'ai' || tab === 'historical' || tab === 'finance') {
+    endpoint = null; // v2 API only; no placeholder numbers
   } else {
     endpoint = 'settings';
   }
 
+  const panel = document.getElementById('ov-panel');
+  if (panel) panel.innerHTML = '<div class="card ov-loading" role="status">يُحمّل من الخادم…</div>';
   try {
-    const r = await fetch(`${API}/${endpoint}`, {
-      headers: { 'Authorization': 'Bearer ' + token }
+    const target = tab === 'ai' ? aiUrl('settings') : tab === 'historical' ? historicUrl()+'?page='+historicalPage : tab === 'finance' ? financeUrl() : `${API}/${endpoint}`;
+    const r = await fetch(target, {
+      headers: { 'Authorization': 'Bearer ' + token }, cache:'no-store'
     });
     if (r.status === 401) return logout();
     const d = await r.json();
     if (requestSerial !== panelRequestSerial) return;
-    if (!d.success) {
-      return toast(d.message || 'تعذّر جلب البيانات، أعد المحاولة.');
+    if (!r.ok || !d.success) {
+      return renderAdminFailure(d.message || 'تعذّر جلب البيانات من الخادم.', r.status);
     }
     if (typeof d.openComplaints === 'number') openComplaintsCount = d.openComplaints;
     if (tab === 'payments' && Array.isArray(d.methods)) {
@@ -300,7 +333,7 @@ async function loadPanel() {
     if (requestSerial !== panelRequestSerial) return;
     renderMain(d);
   } catch (e) {
-    if (requestSerial === panelRequestSerial) toast('جاري إعادة الاتصال بالخادم...');
+    if (requestSerial === panelRequestSerial) renderAdminFailure('فشل الاتصال بالخادم. تحقق من الإنترنت أو Render ثم أعد المحاولة.');
   }
 }
 
@@ -331,7 +364,8 @@ function renderMain(d) {
       return `<div class="ov-chart-col" title="${esc(day.day)}: ${fmt(day.value)}"><b>${Number(day.value) ? Math.round(Number(day.value) / 1000) + 'k' : '0'}</b><span style="height:${Math.max(5, (Number(day.value) || 0) / max * 98)}px"></span><small>${esc(day.day.slice(5))}</small></div>`;
     }).join('');
     const tasks = (v.recentOrders || []).map((o) => `<button class="ov-task" onclick="goAdmin('orders','${esc(o.orderCode)}')"><span class="status-dot ${o.status === 'مؤكد' ? 'confirmed' : 'review'}"></span><span><b dir="ltr">${esc(o.orderCode)}</b><small>${esc(o.customerName)} · ${esc(o.status)}</small></span><b>${fmt(o.totalPrice)}</b></button>`).join('');
-    content = `<section class="ov-hero"><div><span class="ov-eyebrow">مركز الإدارة · OVIRA PLAY</span><h2>مرحبًا بك 👋</h2><p>نظرة مباشرة على العمليات التي تحتاج اهتمامك، دون أرقام تجريبية.</p></div><button class="btn-sm" onclick="loadPanel()">⟳ تحديث</button></section>
+    content = `<section class="ov-hero"><div><span class="ov-eyebrow">مركز الإدارة · OVIRA PLAY</span><h2>مهام اليوم</h2><p>الطلبات والشكاوى والمدفوعات الموثقة مباشرة من الخادم.</p></div><button class="btn-sm" onclick="loadPanel()">⟳ تحديث</button></section>
+      <p class="ov-main-caption">بيانات الخادم فقط · آخر تحديث: ${esc(d.generatedAt ? new Date(d.generatedAt).toLocaleString('fr-DZ') : 'غير متاح')} · التوقيت: الجزائر</p>
       <div class="ov-kpis">
         <button class="ov-kpi" onclick="goAdmin('orders','', 'قيد المراجعة')"><small>🧾 تنتظر المراجعة</small><strong>${Number(v.review) || 0}</strong><span>عرض الطلبات</span></button>
         <button class="ov-kpi" onclick="goAdmin('orders','', 'مؤكد')"><small>📦 جاهزة للتسليم</small><strong>${Number(v.confirmed) || 0}</strong><span>عرض المؤكدة</span></button>
@@ -346,6 +380,9 @@ function renderMain(d) {
         <button onclick="goAdmin('renewals')">🔔 التجديدات</button>
         <button onclick="goAdmin('payments')">💳 مراجعة الدفع</button>
         <button onclick="goAdmin('customers')">👥 إدارة الزبائن</button>
+        <button onclick="goAdmin('ai')">📱 ربط الوكيل المحلي (غير مفعّل)</button>
+        <button onclick="goAdmin('historical')">➕ إضافة بيع خارجي</button>
+        <button onclick="goAdmin('finance')">📊 تقارير مالية جزئية</button>
         <button onclick="goAdmin('activity')">🛡️ سجل النشاط</button>
       </div></div>
       ${Number(v.riskCount) ? `<div class="card ov-alert"><b>⚠️ ${Number(v.riskCount)} طلبات تحتاج مراجعة مخاطر</b><p>لا تُلغِ طلبًا تلقائيًا بناءً على درجة المخاطر؛ راجع الطلب وطريقة الدفع أولًا.</p><button class="btn-sm" onclick="goAdmin('orders','', 'قيد المراجعة')">عرض الطلبات</button></div>` : ''}
@@ -878,6 +915,17 @@ function renderMain(d) {
       ${custList || '<div class="card" style="text-align:center">لا يوجد زبائن مسجلون حالياً</div>'}`;
   }
 
+  // قسم التكاملات الحقيقي: backend محمي بدور المالك، لا بيانات نموذجية.
+  else if (tab === 'ai') {
+    content = renderAIControl(d);
+  }
+  else if (tab === 'historical') {
+    content = renderHistoricalSales(d);
+  }
+  else if (tab === 'finance') {
+    content = renderFinanceSummary(d);
+  }
+
   // ==================== 6. تبويب الإعدادات والتحقق بخطوتين (2FA) وشارجيلي ====================
   else if (tab === 'settings') {
     const ch = d.chargily || {};
@@ -886,6 +934,7 @@ function renderMain(d) {
     const methodText = sec.twoFactorMethod === 'telegram' ? 'عبر بوت تيليغرام 📲' : 'عبر Google Authenticator 🔑';
 
     content = `
+      <div class="card"><h3>🔗 التكاملات</h3><p class="ov-caption">إعداد Chargily مستقل عن مفتاح الوكيل الذكي. كلاهما على خادم Render وMongoDB الحالية.</p><button class="btn-pri" onclick="goAdmin('ai')">📱 إعداد الوكيل المحلي — Local AI Agent</button></div>
       <div class="card" style="border:2px solid var(--pri2)">
         <div class="ord-head">
           <h3>🔐 التحقق بخطوتين (2FA) للوحة الإدارة</h3>
@@ -941,27 +990,50 @@ function renderMain(d) {
   }
 
   document.getElementById('root').innerHTML = `
-    <div class="top-bar">
-      <button class="btn-sm" onclick="logout()">خروج 🔒</button>
-      <button class="btn-sm" onclick="loadPanel()">تحديث 🔄</button>
-      <h2>لوحة إدارة OVIRA PLAY</h2>
-    </div>
-    <form class="ov-global-search" onsubmit="event.preventDefault();runGlobalSearch(this.elements.globalQuery.value)"><input class="inp" name="globalQuery" aria-label="بحث شامل" value="${esc(globalSearch)}" placeholder="🔍 بحث شامل في الطلبات والعملاء والمنتجات"><button class="btn-sm">بحث</button></form>
-    <div class="tabs" aria-label="أقسام لوحة التحكم">
-      <button class="tab ${tab === 'overview' ? 'on' : ''}" onclick="goAdmin('overview')">🏠 الرئيسية</button>
-      <button class="tab ${tab === 'activity' ? 'on' : ''}" onclick="goAdmin('activity')">🛡️ النشاط</button>
-      <button class="tab ${tab === 'orders' ? 'on' : ''}" onclick="tab='orders';ordersPage=1;qFilter='';stFilter='';loadPanel()">📋 الطلبات</button>
-      <button class="tab ${tab === 'delivered' ? 'on' : ''}" onclick="tab='delivered';ordersPage=1;qFilter='';loadPanel()">✅ تم التسليم</button>
-      <button class="tab ${tab === 'reviews' ? 'on' : ''}" onclick="tab='reviews';loadPanel()">⭐ التقييمات</button>
-      <button class="tab ${tab === 'marketing' ? 'on' : ''}" onclick="goAdmin('marketing')">📈 التسويق</button>
-      <button class="tab ${tab === 'products' ? 'on' : ''}" onclick="tab='products';loadPanel()">🛍️ البطاقات</button>
-      <button class="tab ${tab === 'payments' ? 'on' : ''}" onclick="tab='payments';loadPanel()">💳 الدفع</button>
-      <button class="tab ${tab === 'renewals' ? 'on' : ''}" onclick="tab='renewals';loadPanel()">🔔 التجديدات</button>
-      <button class="tab ${tab === 'complaints' ? 'on' : ''}" onclick="tab='complaints';loadPanel()">🎫 الشكاوى ${openComplaintsCount ? `<span class="badge-cnt">${openComplaintsCount}</span>` : ''}</button>
-      <button class="tab ${tab === 'customers' ? 'on' : ''}" onclick="tab='customers';qFilter='';loadPanel()">👥 الزبائن</button>
-      <button class="tab ${tab === 'settings' ? 'on' : ''}" onclick="tab='settings';loadPanel()">⚙️ الإعدادات</button>
-    </div>
-    ${content}`;
+    <div class="ov-shell">
+      <button class="ov-nav-scrim" aria-label="إغلاق القائمة" onclick="toggleAdminNav(false)"></button>
+      <aside class="ov-sidebar" id="ovAdminSidebar" aria-label="التنقل بين أقسام الإدارة">
+        <div class="ov-brand">OVIRA PLAY <small style="font-size:11px;display:block;color:var(--mut)">إدارة المتجر</small></div>
+        <button class="ov-nav-close" onclick="toggleAdminNav(false)">✕ إغلاق القائمة</button>
+        <nav class="tabs" aria-label="أقسام لوحة التحكم">
+          <div class="ov-nav-group"><span class="ov-nav-group-label">مركز العمل</span>
+            ${navButton('overview','🏠 الرئيسية')}
+            ${navButton('search','🔍 البحث')}
+            ${navButton('activity','🛡️ سجل النشاط')}</div>
+          <div class="ov-nav-group"><span class="ov-nav-group-label">المبيعات والتسليم</span>
+            ${navButton('orders','📋 طلبات المتجر')}
+            ${navButton('historical','🧾 مبيعات خارجية/تاريخية')}
+            ${navButton('finance','📊 المركز المالي')}
+            ${navButton('delivered','✅ تم التسليم')}
+            ${navButton('renewals','🔔 التجديدات')}
+            ${navButton('payments','💳 الدفع وChargily')}</div>
+          <div class="ov-nav-group"><span class="ov-nav-group-label">الزبائن والدعم</span>
+            ${navButton('customers','👥 العملاء')}
+            ${navButton('complaints','🎫 الشكاوى',openComplaintsCount)}</div>
+          <div class="ov-nav-group"><span class="ov-nav-group-label">المنتجات والتسويق</span>
+            ${navButton('products','🛍️ المنتجات')}
+            ${navButton('reviews','⭐ التقييمات')}
+            ${navButton('marketing','📈 التسويق')}</div>
+          <div class="ov-nav-group"><span class="ov-nav-group-label">التكاملات والأمان</span>
+            ${navButton('ai','📱 Local AI Agent')}
+            ${navButton('settings','⚙️ الإعدادات و2FA')}</div>
+        </nav>
+      </aside>
+      <div class="ov-workspace">
+        <header class="top-bar">
+          <button class="ov-menu-toggle" id="ovMenuButton" aria-expanded="false" aria-controls="ovAdminSidebar" aria-label="فتح القائمة" onclick="toggleAdminNav()">☰ القائمة</button>
+          <h2>${esc(({overview:'الرئيسية',orders:'طلبات الموقع',historical:'المبيعات التاريخية',finance:'المركز المالي',delivered:'الطلبات المسلّمة',customers:'الزبائن',complaints:'الشكاوى',ai:'تكامل الوكيل المحلي',settings:'الإعدادات',activity:'سجل الإدارة',products:'المنتجات',marketing:'التسويق',reviews:'التقييمات',payments:'الدفع',renewals:'التجديدات',search:'البحث'})[tab] || 'OVIRA PLAY')}</h2>
+          <button class="btn-sm" aria-label="تبديل الوضع الفاتح والداكن" onclick="toggleAdminTheme()">◐</button>
+          <button class="btn-sm" onclick="loadPanel()">⟳</button>
+          <button class="btn-sm" onclick="logout()">خروج</button>
+        </header>
+        <form class="ov-global-search" onsubmit="event.preventDefault();runGlobalSearch(this.elements.globalQuery.value)">
+          <input class="inp" name="globalQuery" aria-label="بحث شامل" value="${esc(globalSearch)}" placeholder="🔍 البحث في الطلبات والعملاء والمنتجات">
+          <button class="btn-sm">بحث</button>
+        </form>
+        <main class="ov-panel" id="ov-panel">${content}</main>
+      </div>
+    </div>`;
   if (tab === 'products') {
     initPlanEditors();
     if (productQuery) filterProducts(productQuery);
@@ -980,6 +1052,8 @@ function searchProduct(title) {
   goAdmin('products');
 }
 function goAdmin(section, search = '', status = '') {
+  if (section !== 'ai') agentOneTimeToken = '';
+  toggleAdminNav(false);
   tab = section;
   qFilter = search;
   stFilter = status;
