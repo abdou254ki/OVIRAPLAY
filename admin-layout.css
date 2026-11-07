@@ -1,0 +1,85 @@
+/* Non-breaking progressive admin shell. Overrides legacy tab grid only after login. */
+:root { color-scheme:light; }
+:root[data-theme="dark"] {color-scheme:dark}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark}}
+body:has(.ov-shell) { max-width:none; margin:0; padding:0; overflow-x:hidden; background:var(--ov-bg); }
+.ov-shell { display:grid; grid-template-columns:244px minmax(0,1fr); min-height:100vh; }
+.ov-sidebar { position:sticky; top:0; height:100vh; overflow-y:auto; padding:20px 12px; background:var(--ov-surface); border-inline-end:1px solid var(--ov-border); z-index:32; }
+.ov-brand { color:var(--ov-primary); font-size:20px; font-weight:900; padding:12px 13px; border-bottom:1px solid var(--ov-border); margin-bottom:12px; }
+.ov-sidebar .tabs { display:flex; flex-direction:column; border:0; padding:0; margin:0; gap:4px; background:transparent; }
+.ov-nav-group {margin-bottom:14px}
+.ov-nav-group-label { padding:10px 13px 4px; display:block; color:var(--mut); font-size:11px; font-weight:800; letter-spacing:.3px; }
+.ov-sidebar .tab {display:block; width:100%; min-height:44px; padding:11px 13px; border-radius:12px; text-align:right; font-size:13px; }
+.ov-sidebar .tab:hover:not(.on) { background:var(--bg); color:var(--ink); }
+.ov-sidebar .tab.on { background:var(--ov-primary-action-admin); color:#fff; }
+.ov-sidebar .badge-cnt {margin-inline-start:5px}
+.ov-workspace { padding:18px clamp(14px,3vw,32px) 48px; min-width:0; max-width:1440px; width:100%; margin:auto; }
+.ov-shell .top-bar { margin:0 0 16px; padding:10px 0; gap:9px; }
+.ov-shell .top-bar h2 {font-size:clamp(16px,2.2vw,22px); margin-inline-start:0; flex:1;}
+.ov-menu-toggle {display:none}
+.ov-nav-close {display:none}
+.ov-nav-scrim {display:none}
+.ov-panel { min-width:0; }
+.ov-panel .ov-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.ov-panel .ov-hero {padding:20px; }
+.ov-panel .ov-hero h2 {font-size:20px;}
+.ov-main-caption { color:var(--mut); font-size:12px; font-weight:700; margin:0 0 14px; }
+.ov-loading {padding:28px; text-align:center; color:var(--mut);}
+.ov-failure {padding:25px; border-inline-start:4px solid var(--bad);}
+.ov-failure p {margin:10px 0; color:var(--mut)}
+.ov-ai-status {display:inline-flex; align-items:center; padding:5px 12px; border-radius:999px; background:var(--bg); border:1px solid var(--line); font-weight:800; font-size:12px;}
+.ov-ai-grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px;}
+.ov-ai-grid > * {min-width:0}
+.ov-ai-meta {display:grid; gap:9px; margin:12px 0; font-size:13px;}
+.ov-ai-meta div {display:flex; justify-content:space-between; gap:14px; padding:9px 0; border-bottom:1px solid var(--line);}
+.ov-ai-token {background:var(--bg); border:1px solid var(--ov-primary-action); padding:15px; border-radius:14px; margin:15px 0; overflow-wrap:anywhere;}
+.ov-ai-token code {display:block; direction:ltr; padding:12px; background:var(--card); border:1px solid var(--line); user-select:all; border-radius:8px; font-family:monospace; font-size:12px;}
+.ov-ai-actions {display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;}
+.ov-ai-actions button {margin:0; min-height:44px;}
+.ov-ai-alert {border:1px solid var(--ov-warning); border-radius:12px; padding:12px; margin:12px 0; font-size:13px;}
+.ov-ai-footer {margin-top:12px; font-size:12px; color:var(--mut);}
+.ov-shell button:focus-visible, .ov-shell a:focus-visible {outline:3px solid var(--ov-primary-action); outline-offset:3px;}
+.ov-shell button, .ov-shell .tab {touch-action:manipulation;}
+:root[data-theme="dark"] .ov-shell .inp, :root[data-theme="dark"] .ov-shell .plan-row input {background:var(--card); color:var(--ink)}
+@media (max-width:1100px) { .ov-panel .ov-kpis {grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:790px){
+ .ov-shell {display:block}
+ .ov-sidebar {position:fixed; top:0; bottom:0; right:0; width:min(286px,86vw); height:100dvh; transform:translateX(110%); transition:transform .2s ease; box-shadow:0 10px 40px rgba(0,0,0,.15);}
+ body.nav-open .ov-sidebar {transform:none}
+ .ov-nav-scrim {display:block; position:fixed; inset:0; z-index:31; opacity:0; visibility:hidden; background:rgba(7,10,22,.48); transition:.2s;}
+ body.nav-open .ov-nav-scrim {visibility:visible; opacity:1}
+ body.nav-open {overflow:hidden}
+ .ov-nav-close {display:block; margin:10px 10px 10px auto; min-height:44px; background:var(--bg); padding:8px 12px; border-radius:12px; font-weight:800;}
+ .ov-workspace {padding:10px 12px 38px;}
+ .ov-menu-toggle {display:block; background:var(--ov-primary-action-admin); color:#fff; border-radius:12px; padding:9px 12px; min-height:44px; font-weight:800;}
+ .ov-shell .top-bar {position:sticky; z-index:20; top:0; background:var(--ov-bg); padding:7px 0;}
+ .ov-shell .top-bar h2 {font-size:15px;}
+ .ov-shell .top-bar .btn-sm {padding:10px; min-height:44px; font-size:12px;}
+ .ov-panel .ov-ai-grid {grid-template-columns:1fr}
+}
+@media(max-width:375px) {
+ .ov-panel .ov-kpis {grid-template-columns:1fr}
+ .ov-panel .ov-hero {padding:15px}
+ .ov-shell .top-bar h2 {font-size:13px}
+ .ov-shell .top-bar .btn-sm {font-size:11px;padding:8px}
+ .ov-shell .ov-ai-actions > button {width:100%}
+}
+@media(min-width:791px) {.ov-panel .card {border-radius:18px}}
+@media(prefers-reduced-motion:reduce){.ov-sidebar,.ov-nav-scrim{transition:none}}
+/* Keep admin legacy variables synchronized with the site's existing dark mode. */
+:root[data-theme="dark"] {--bg:var(--ov-bg);--card:var(--ov-surface);--ink:var(--ov-text);--mut:var(--ov-text-muted);--line:var(--ov-border);--pri:var(--ov-primary);--pri2:var(--ov-primary-action-admin);}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:var(--ov-bg);--card:var(--ov-surface);--ink:var(--ov-text);--mut:var(--ov-text-muted);--line:var(--ov-border);--pri:var(--ov-primary);--pri2:var(--ov-primary-action-admin);}}
+.ov-sale-grid,.ov-finance-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0;}
+.ov-finance-grid>div {background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0;}
+.ov-finance-grid small {display:block;color:var(--mut);font-weight:800;}
+.ov-finance-grid strong {font-size:clamp(16px,2vw,23px);display:block;overflow-wrap:anywhere;}
+.ov-sale-record {display:flex;gap:9px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:13px 0;font-size:12px;}
+.ov-sale-record span {color:var(--mut)}.ov-sale-record strong {margin-inline-start:auto}.ov-sale-record small {color:var(--mut)}
+@media(max-width:600px){.ov-sale-grid,.ov-finance-grid{grid-template-columns:1fr}}
+
+/* AI review and queue: responsive, no horizontal page scroll. */
+.ov-ai-list{margin-top:12px;min-width:0;overflow-wrap:anywhere}.ov-ai-entry{padding:12px 0;border-bottom:1px solid var(--line,#dae2f1);display:grid;gap:6px;min-width:0}.ov-ai-entry small{opacity:.75}.ov-ai-entry p{margin:4px 0;white-space:pre-wrap}.ov-ai-entry blockquote{margin:4px 0;padding:10px;border-inline-start:3px solid var(--pri2,#2447c9);background:rgba(70,100,170,.08);white-space:pre-wrap;overflow-wrap:anywhere}.ov-ai-entry .ov-ai-actions{display:flex;flex-wrap:wrap;gap:8px}.ov-ai-entry a.btn-sm{display:inline-flex;align-items:center;text-decoration:none}.ov-ai-table{max-height:620px;overflow:auto}
+
+/* Unified admin inbox + safety dashboard */
+.ov-msg-layout{display:grid;grid-template-columns:minmax(220px,36%) minmax(0,1fr);gap:14px;margin-top:14px}.ov-msg-list{max-height:70vh;overflow:auto;display:grid;align-content:start;gap:7px}.ov-msg-item{color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;text-align:right;display:grid;gap:6px;padding:12px;cursor:pointer;overflow-wrap:anywhere}.ov-msg-item small{opacity:.8}.ov-msg-detail{min-width:0;border:1px solid var(--line);border-radius:13px;padding:14px;overflow-wrap:anywhere}.ov-conv-messages{max-height:55vh;overflow:auto;display:grid;gap:8px;margin-bottom:16px}.ov-admin-bubble{background:var(--bg);padding:13px;border-radius:12px}.ov-admin-bubble p,.ov-admin-bubble blockquote{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}.ov-admin-bubble small{color:var(--mut)}.ov-msg-detail textarea{width:100%;min-height:95px}.ov-security-row{border-bottom:1px solid var(--line);padding:10px 0}.ov-security-row .badge{margin-inline-start:10px}.ov-security-row p{color:var(--mut);font-size:12px;margin:7px 0}
+@media(max-width:800px){.ov-msg-layout{grid-template-columns:1fr}.ov-msg-list{max-height:260px}}
