@@ -76,3 +76,6 @@ body:has(.ov-shell) { max-width:none; margin:0; padding:0; overflow-x:hidden; ba
 .ov-sale-record {display:flex;gap:9px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:13px 0;font-size:12px;}
 .ov-sale-record span {color:var(--mut)}.ov-sale-record strong {margin-inline-start:auto}.ov-sale-record small {color:var(--mut)}
 @media(max-width:600px){.ov-sale-grid,.ov-finance-grid{grid-template-columns:1fr}}
+
+/* AI review and queue: responsive, no horizontal page scroll. */
+.ov-ai-list{margin-top:12px;min-width:0;overflow-wrap:anywhere}.ov-ai-entry{padding:12px 0;border-bottom:1px solid var(--line,#dae2f1);display:grid;gap:6px;min-width:0}.ov-ai-entry small{opacity:.75}.ov-ai-entry p{margin:4px 0;white-space:pre-wrap}.ov-ai-entry blockquote{margin:4px 0;padding:10px;border-inline-start:3px solid var(--pri2,#2447c9);background:rgba(70,100,170,.08);white-space:pre-wrap;overflow-wrap:anywhere}.ov-ai-entry .ov-ai-actions{display:flex;flex-wrap:wrap;gap:8px}.ov-ai-entry a.btn-sm{display:inline-flex;align-items:center;text-decoration:none}.ov-ai-table{max-height:620px;overflow:auto}

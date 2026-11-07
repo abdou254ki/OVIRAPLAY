@@ -3,12 +3,12 @@ let agentOneTimeToken = '';
 function aiUrl(path) { return new URL(API).origin + '/api/v2/admin/ai/' + path; }
 function renderAIControl(d) {
   const ai = d.ai || {};
-  const labels = {unpaired:'غير مربوط',pending:'رمز صادر — بانتظار الهاتف',connected:'متصل — وضع تجربة',offline:'منقطع',stopped:'متوقف بقرار المالك'};
+  const labels = {unpaired:'غير مربوط',pending:'رمز صادر — بانتظار الهاتف',connected: ai.executionEnabled ? 'متصل — توليد مسودات' : 'متصل — وضع تجربة',offline:'منقطع',stopped:'متوقف بقرار المالك'};
   const credential = ai.credential || {};
   const moment = (v) => v ? new Date(v).toLocaleString('fr-DZ') : 'لم يصل بعد';
   return `<div class="card"><span class="ov-ai-status">📱 ${esc(labels[ai.status] || 'حالة غير معروفة')}</span>
     <h2 style="font-size:21px;margin-top:12px">الوكيل الذكي المحلي — Local AI Agent</h2>
-    <p class="ov-caption">هاتف Android / Termux يتصل لاحقًا بخادم Render عبر HTTPS. لا نغيّر GitHub Pages أو MongoDB Atlas. التنفيذ التلقائي معطّل افتراضيًا.</p></div>
+    <p class="ov-caption">Qwen على هاتف Android/Termux عبر HTTPS صادر إلى Render. العمل الوحيد المسموح هو صياغة مسودات دعم للمراجعة. لا إرسال WhatsApp آلي ولا تعديل الطلبات أو الأرصدة.</p></div>
     <div class="ov-ai-grid">
       <section class="card"><h3>🔌 حالة الاتصال الحقيقية</h3>
         <div class="ov-ai-meta"><div><span>الجهاز</span><b>${esc(credential.deviceName || 'غير مُعد')}</b></div>
@@ -22,7 +22,7 @@ function renderAIControl(d) {
         <div class="ov-ai-meta"><div><span>ردود العملاء</span><b>assist (مراجعة بشرية)</b></div>
         <div><span>حد الرسائل</span><b>${Number(ai.maxMessagesPerHour) || 20} لكل عميل / 60 دقيقة</b></div>
         <div><span>تكلفة WhatsApp</span><b>free — حظر المجهول التكلفة</b></div>
-        <div><span>وضع التشغيل</span><b>Shadow — تنفيذ معطّل</b></div>
+        <div><span>وضع التشغيل</span><b>${ai.executionEnabled ? 'Assist — توليد مسودات' : 'Shadow — لا سحب للمهام'}</b></div>
         <div><span>الإيقاف الطارئ</span><b>${ai.killSwitch ? 'مفعّل' : 'جاهز عند الحاجة'}</b></div></div>
         <p class="ov-caption">هذه سياسة الربط والتحضير، وليست موافقة على إرسال رسائل أو تنفيذ تغييرات في الطلبات.</p>
       </section>
@@ -42,11 +42,25 @@ function renderAIControl(d) {
       </div>
       <div class="ov-ai-alert">لا تدخل رمز العامل في كود الموقع أو GitHub أو بيانات محادثة عامة. تأكد من تفعيل 2FA في الإعدادات أولاً؛ ربط الهاتف وحده لا يفعّل الرد التلقائي.</div>
     </section>
-    <section class="card"><h3>📘 التوصيل لاحقاً في Termux</h3>
+    <section class="card"><h3>🧠 تفعيل Qwen بعد الاختبارات</h3>
+      <p class="ov-caption">يجب وجود هاتف متصل برمز جديد وصلاحية jobs:claim، وضبط AI_EXECUTION_ENABLED=true في Render. يتطلب التفعيل موافقة المالك + 2FA. توليد المسودات لا يرسل أي رسالة.</p>
+      <div class="ov-ai-actions">
+        ${ai.executionEnabled ? '<button class="btn-sm" onclick="changeAgentDraftMode(false)">⏸ إيقاف توليد المسودات</button>' : '<button class="btn-pri" onclick="changeAgentDraftMode(true)">▶ تفعيل توليد مسودات Qwen</button>'}
+      </div>
+      <h4 style="margin-top:18px">🧪 اختبار Qwen على سؤال عام</h4>
+      <input class="inp" id="aiTestQuestion" maxlength="500" value="مرحبا كيف يمكن معرفة أسعار الاشتراكات؟" aria-label="سؤال اختبار بدون بيانات شخصية">
+      <div class="ov-ai-actions"><button class="btn-sm" onclick="queueAgentTest()">إرسال اختبار إلى الهاتف</button><button class="btn-sm" onclick="refreshAIOperations()">تحديث المهام والرسائل</button></div>
+      <div id="ov-ai-jobs" class="ov-ai-list">جارٍ تحميل قائمة المهام…</div>
+    </section>
+    <section class="card"><h3>💬 الرسائل الواردة إلى WhatsApp — مراجعة بشرية</h3>
+      <p class="ov-caption">يشترط Meta WhatsApp Cloud API الرسمي، ومتغيرات Webhook في Render. لا إرسال عبر API في هذه النسخة حفاظًا على سياسة free؛ انسخ المسودة وافتح المحادثة بنفسك عند المراجعة.</p>
+      <div id="ov-ai-inbox" class="ov-ai-list">جارٍ تحميل البريد الوارد…</div>
+    </section>
+    <section class="card"><h3>📘 التشغيل عبر Termux</h3>
       <p>1. جهّز Qwen وTermux محليًا، واحتفظ بـllama-server على 127.0.0.1 فقط.</p>
       <p>2. ضع <code>OVIRA_API_BASE</code> على رابط خادم Render، و<code>OVIRA_AGENT_TOKEN</code> في متغير بيئة سري بالهاتف.</p>
-      <p>3. شغّل عامل Heartbeat الاختباري؛ ستظهر حالة «متصل» عند استقبال النبضات الموثقة، دون السماح بمهام مالية أو ردود WhatsApp.</p>
-      <div class="ov-ai-footer">لا يُنقل أي طلب أو مفتاح دفع إلى الهاتف. تخضع المهام الفعلية لموافقة مستقلة بعد الاختبارات.</div>
+      <p>3. شغّل <code>ovira_worker.py</code> من حزمة Termux مع Qwen. ستُسحب مهام الأسئلة العامة وتعود مسوداتها إلى MongoDB. فعّل وضع المسودات بعد الاختبار فقط.</p>
+      <div class="ov-ai-footer">لا يُنقل أي طلب أو مفتاح دفع إلى الهاتف. الرسائل الشخصية والحساسة تظل مع الدعم البشري.</div>
     </section>`;
 }
 function aiAuthValues() {
@@ -100,4 +114,60 @@ async function restoreAgentConnection() {
   if (!confirm('إعادة السماح باتصال Heartbeat فقط؛ كل المفاتيح القديمة ملغاة. هل تؤكد؟')) return;
   const d = await aiAction('restore-connection',auth);
   if (d) {agentOneTimeToken='';toast(d.message);loadPanel();}
+}
+
+async function changeAgentDraftMode(activate) {
+  const auth = aiAuthValues();
+  if (!auth.currentPassword || !/^\d{6}$/.test(auth.code)) return toast('أدخل كلمة السر ورمز 2FA من الأعلى');
+  if (!confirm(activate ? 'تفعيل توليد مسودات Qwen دون إرسال WhatsApp؟' : 'إيقاف سحب مهام Qwen الجديدة؟')) return;
+  const d = await aiAction(activate ? 'enable-drafts' : 'pause-drafts', auth);
+  if (d) { toast(d.message); loadPanel(); }
+}
+async function queueAgentTest() {
+  const text = document.getElementById('aiTestQuestion')?.value.trim() || '';
+  const d = await aiAction('test-job', {text});
+  if (d) {toast(d.message); refreshAIOperations();}
+}
+async function closeAIMsg(id) {
+  if (!confirm('إغلاق الرسالة بعد مراجعتها دون إرسال تلقائي؟')) return;
+  const d = await aiAction('inbox/'+encodeURIComponent(id)+'/close', {});
+  if (d) {toast(d.message); refreshAIOperations();}
+}
+async function retryAIMsg(id) {
+  const d = await aiAction('inbox/'+encodeURIComponent(id)+'/retry', {});
+  if (d) {toast(d.message); refreshAIOperations();}
+}
+function copyAIDraft(id) {
+  const node = document.getElementById('draft_'+id);
+  if (!node) return;
+  navigator.clipboard.writeText(node.textContent || '').then(()=>toast('تم نسخ مسودة الرد')).catch(()=>toast('حدد النص وانسخه يدويًا'));
+}
+async function refreshAIOperations() {
+  const j = document.getElementById('ov-ai-jobs'), b = document.getElementById('ov-ai-inbox');
+  if (!j || !b || !token) return;
+  try {
+    const head = {Authorization:'Bearer '+token};
+    const [jr, mr] = await Promise.all([fetch(aiUrl('jobs'),{headers:head,cache:'no-store'}),fetch(aiUrl('inbox'),{headers:head,cache:'no-store'})]);
+    if (jr.status === 401 || mr.status === 401) return logout();
+    const [jd, md] = await Promise.all([jr.json(),mr.json()]);
+    if (!jr.ok || !jd.success || !mr.ok || !md.success) throw new Error('فشل تحميل سجلات AI');
+    if (!document.getElementById('ov-ai-jobs')) return;
+    j.innerHTML = `<p class="ov-caption">الحالات: ${Object.entries(jd.counts || {}).map(([k,v])=>esc(k)+': '+Number(v)).join(' | ') || 'لا مهام'}</p>` +
+      ((jd.jobs||[]).length ? `<div class="ov-ai-table">${jd.jobs.map(x=>`<div class="ov-ai-entry"><b>${esc(x.kind)}</b> — ${esc(x.status)} · محاولات ${Number(x.attempts)||0}<small>${esc(new Date(x.createdAt).toLocaleString('fr-DZ'))}</small>${x.resultText ? `<blockquote>${esc(x.resultText)}</blockquote>` : ''}</div>`).join('')}</div>` : '<p>لا توجد مهام بعد.</p>');
+    b.innerHTML = (md.messages||[]).length ? `<div class="ov-ai-table">${md.messages.map(x=>{
+      const id = String(x._id||''); const to = String(x.senderWaId||'').replace(/[^0-9]/g,'');
+      return `<div class="ov-ai-entry"><b>${esc(x.status)}</b> · <span dir="ltr">${esc(to.slice(0,3)+'***'+to.slice(-3))}</span><small>${esc(new Date(x.createdAt).toLocaleString('fr-DZ'))}</small>
+        <p>${esc(x.text || 'رسالة غير نصية؛ للمراجعة البشرية')}</p>
+        ${x.aiDraft ? `<blockquote id="draft_${esc(id)}">${esc(x.aiDraft)}</blockquote>` : ''}
+        <div class="ov-ai-actions">
+          ${x.aiDraft ? `<button class="btn-sm" onclick="copyAIDraft('${esc(id)}')">نسخ المسودة</button>` : ''}
+          ${x.status==='review' ? `<button class="btn-sm" onclick="retryAIMsg('${esc(id)}')">طلب مسودة (سؤال آمن فقط)</button>` : ''}
+          ${to ? `<a class="btn-sm" target="_blank" rel="noopener noreferrer" href="https://wa.me/${to}">فتح المحادثة يدويًا</a>` : ''}
+          ${x.status!=='closed' ? `<button class="btn-sm" onclick="closeAIMsg('${esc(id)}')">تمت المراجعة</button>` : ''}
+        </div></div>`;
+    }).join('')}</div>` : '<p>لا توجد رسائل مستلمة عبر Webhook.</p>';
+  } catch(e) {
+    if (document.getElementById('ov-ai-jobs')) j.textContent = 'تعذّر تحميل المهام. تحقق من API وأعد المحاولة.';
+    if (document.getElementById('ov-ai-inbox')) b.textContent = 'تعذّر تحميل الرسائل. تحقق من الاتصال.';
+  }
 }
