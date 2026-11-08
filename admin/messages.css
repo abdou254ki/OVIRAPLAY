@@ -93,3 +93,22 @@
 }
 @media(max-width:370px){.ov-inbox-contact{gap:7px;padding-inline:4px}.ov-inbox-avatar{min-width:40px;width:40px;height:40px}.ov-inbox-contact-title b{font-size:12px}.ov-inbox-contact-title time{font-size:9px}.ov-inbox-thread-name b{font-size:13px}.ov-inbox .ov-admin-bubble{max-width:92%}}
 @media(prefers-reduced-motion:reduce){.ov-inbox *{scroll-behavior:auto!important;transition:none!important}}
+
+/* Phase 4: prevent tall mobile inbox overlays and Android keyboard collisions. */
+.ov-inbox{isolation:isolate}
+.ov-inbox .ov-msg-layout,.ov-inbox .ov-msg-detail,.ov-inbox .ov-msg-list{min-width:0}
+.ov-inbox .ov-conv-messages{overscroll-behavior:contain;overflow-wrap:anywhere}
+.ov-inbox .ov-inbox-thread-head{min-width:0;gap:7px}
+.ov-inbox .ov-inbox-thread-name{min-width:0;overflow:hidden}
+.ov-inbox .ov-inbox-thread-name b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ov-inbox .ov-inbox-composer{padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}
+@media(max-width:790px){
+ .ov-inbox .ov-msg-detail{height:calc(100dvh - 170px);min-height:320px;max-height:calc(100dvh - 110px)}
+ .ov-inbox .ov-conv-messages{min-height:0;flex:1 1 auto;overflow-y:auto}
+ .ov-inbox .ov-inbox-composer{flex:0 0 auto;max-height:36dvh;overflow-y:auto}
+ .ov-inbox .ov-inbox-thread-head{flex:0 0 auto}
+}
+@media(max-height:620px) and (max-width:790px){
+ .ov-inbox .ov-msg-detail{min-height:230px;height:calc(100dvh - 130px)}
+ .ov-inbox .ov-inbox-composer{max-height:45dvh}
+}

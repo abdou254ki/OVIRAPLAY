@@ -8,7 +8,7 @@ function renderAIControl(d) {
   const moment = (v) => v ? new Date(v).toLocaleString('fr-DZ') : 'لم يصل بعد';
   return `<div class="card"><span class="ov-ai-status">📱 ${esc(labels[ai.status] || 'حالة غير معروفة')}</span>
     <h2 style="font-size:21px;margin-top:12px">الوكيل الذكي المحلي — Local AI Agent</h2>
-    <p class="ov-caption">Qwen على هاتف Android/Termux عبر HTTPS صادر إلى Render. العمل الوحيد المسموح هو صياغة مسودات دعم للمراجعة. لا إرسال WhatsApp آلي ولا تعديل الطلبات أو الأرصدة.</p></div>
+    <p class="ov-caption">Qwen على هاتف Android/Termux عبر HTTPS صادر إلى Render. يمكنه إعداد المسودات والرد على الأسئلة العامة داخل الموقع بعد تفعيل مستقل من المالك. لا يغيّر الطلبات أو الأرصدة أو كلمات السر، ولا يرسل WhatsApp.</p></div>
     <div class="ov-ai-grid">
       <section class="card"><h3>🔌 حالة الاتصال الحقيقية</h3>
         <div class="ov-ai-meta"><div><span>الجهاز</span><b>${esc(credential.deviceName || 'غير مُعد')}</b></div>
@@ -19,7 +19,7 @@ function renderAIControl(d) {
         <div class="ov-ai-actions"><button class="btn-sm" onclick="loadPanel()">⟳ تحديث الحالة</button></div>
       </section>
       <section class="card"><h3>🛡️ السياسة الحالية</h3>
-        <div class="ov-ai-meta"><div><span>ردود العملاء</span><b>assist (مراجعة بشرية)</b></div>
+        <div class="ov-ai-meta"><div><span>ردود العملاء</span><b>${ai.autoSiteRepliesEnabled?'ردود Qwen العامة مفعلة':'مسودات / مراجعة'}</b></div>
         <div><span>حد الرسائل</span><b>${Number(ai.maxMessagesPerHour) || 20} لكل عميل / 60 دقيقة</b></div>
         <div><span>تكلفة WhatsApp</span><b>free — حظر المجهول التكلفة</b></div>
         <div><span>وضع التشغيل</span><b>${ai.executionEnabled ? 'Assist — توليد مسودات' : 'Shadow — لا سحب للمهام'}</b></div>
@@ -44,21 +44,32 @@ function renderAIControl(d) {
     </section>
     <section class="card"><h3>🎛️ مفتاح الوكيل الذكي — تفعيل وإيقاف مستقل</h3>
       <p class="ov-caption">كل تغيير لوضع الوكيل والإجابات الآلية يتطلب كلمة سر المالك وOTP الموجودين أعلى هذه الصفحة. إيقاف الطوارئ يلغي الرمز، أما الإيقاف العادي فيحافظ على الاقتران.</p>
-      <p class="ov-caption">يجب وجود هاتف متصل برمز جديد وصلاحية jobs:claim، وضبط AI_EXECUTION_ENABLED=true في Render. يتطلب التفعيل موافقة المالك + 2FA. توليد المسودات لا يرسل أي رسالة.</p>
+      <p class="ov-caption">يجب وجود هاتف متصل برمز جديد وصلاحية jobs:claim، وضبط AI_EXECUTION_ENABLED=true في Render. يتطلب التفعيل موافقة المالك + 2FA. توليد المسودات وحده لا يرسل أي رسالة. رد Qwen التلقائي إعداد مختلف ومقفل افتراضيًا.</p>
       <div class="ov-ai-actions">
         ${ai.executionEnabled ? '<button class="btn-sm" onclick="changeAgentDraftMode(false)">⏸ إيقاف توليد المسودات</button>' : '<button class="btn-pri" onclick="changeAgentDraftMode(true)">▶ تفعيل توليد مسودات Qwen</button>'}
       </div>
       <h4>إجابات AI الآلية للأسئلة العامة على الموقع فقط</h4>
       <p class="ov-caption">مقفلة افتراضيًا؛ بعد تجربة الوكيل يمكن للمالك السماح بردود ثابتة معتمدة (التحية، طريقة الاشتراك، مكان الأسعار). لا تُرسل صياغة Qwen الحرة تلقائيًا ولا رسائل WhatsApp.</p>
       <div class="ov-ai-actions">${ai.autoSiteFaqEnabled ? '<button class="btn-sm" onclick="setAutoFaq(false)">إيقاف إجابات الموقع الآلية</button>' : '<button class="btn-sm" onclick="setAutoFaq(true)">تفعيل الإجابات المعتمدة بعد الاختبار</button>'}</div>
-      <h4 style="margin-top:18px">🧪 اختبار Qwen على سؤال عام</h4>
-      <input class="inp" id="aiTestQuestion" maxlength="500" value="مرحبا كيف يمكن معرفة أسعار الاشتراكات؟" aria-label="سؤال اختبار بدون بيانات شخصية">
+      <h4 style="margin-top:18px">💬 ردود Qwen العامة التلقائية — موقع المتجر فقط</h4>
+      <p class="ov-caption">ميزة مستقلة مقفلة افتراضيًا. يلزم العلم AI_SITE_AUTO_REPLY_ALLOWED=true في Render، وكلمة السر وOTP، وتشغيل الهاتف. يرد على الاستفسارات العامة فقط؛ الحالات الخاصة بالحساب أو الدفع أو الأسرار تذهب إلى الدعم البشري. لا يرسل على WhatsApp.</p>
+      <div class="ov-ai-actions">${ai.autoSiteRepliesEnabled?'<button class="btn-bad" onclick="setSiteAutoReplies(false)">⏸ إيقاف ردود Qwen التلقائية</button>':'<button class="btn-pri" onclick="setSiteAutoReplies(true)">▶ تفعيل ردود Qwen للموقع بعد الاختبار</button>'}</div>
+      <h4 style="margin-top:18px">🧪 مختبر أسئلة المالك (بدون فلتر الكلمات العامة)</h4>
+      <p class="ov-caption">يمكنك اختبار أي سؤال نصي أو محاولات كشف المعلومات، لكن لا تضع رموزًا حقيقية؛ النموذج لا يحصل على أسرار Render أو بيانات عملاء حقيقية.</p>
+      <textarea class="inp" id="aiTestQuestion" maxlength="1200" rows="3" aria-label="سؤال تجربة المالك">مرحبا كيف يمكن معرفة أسعار الاشتراكات؟</textarea>
       <div class="ov-ai-actions"><button class="btn-sm" onclick="queueAgentTest()">إرسال اختبار إلى الهاتف</button><button class="btn-sm" onclick="refreshAIOperations()">تحديث مهام Qwen</button></div>
       <div id="ov-ai-jobs" class="ov-ai-list">جارٍ تحميل قائمة المهام…</div>
     </section>
     <section class="card"><h3>💬 مركز الرسائل الموحد</h3>
       <p class="ov-caption">رسائل الموقع وWhatsApp الواردة ومسودات Qwen في شاشة واحدة. الرد من الإدارة يصل مباشرة إلى محادثات الموقع. إرسال WhatsApp عبر API يظل معطلاً إلى حين إثبات أهلية الإرسال المجاني.</p>
       <button class="btn-pri" onclick="goAdmin('conversations')">فتح محادثات العملاء والتدريب</button>
+    </section>
+    <section class="card"><h3>🔐 إصدار رمز دعم خاص بحساب زبون</h3>
+      <p class="ov-caption">رمز تحقق منفصل محدود بـ15 دقيقة ومرة واحدة؛ الزبون يدخله من «حسابي»، ولا يعطي Qwen أي كلمة مرور أو تحكمًا في بيانات الحساب. تغيير البيانات يتطلب OTP للحساب أيضًا.</p>
+      <label class="lbl" for="ownerSupportCustomerId">معرّف حساب الزبون (من صفحة الزبائن)</label>
+      <input class="inp" id="ownerSupportCustomerId" maxlength="24" placeholder="24 حرفًا" dir="ltr">
+      <button class="btn-sm" onclick="issueOwnerSupportCode()">إنشاء رمز الدعم بعد كلمة السر وOTP</button>
+      <div id="ownerSupportCodeResult" class="ov-caption" role="status"></div>
     </section>
     <section class="card"><h3>📘 التشغيل عبر Termux</h3>
       <p>1. جهّز Qwen وTermux محليًا، واحتفظ بـllama-server على 127.0.0.1 فقط.</p>
@@ -165,4 +176,21 @@ async function setAutoFaq(on){
  if(!confirm(on?'هل أجريت اختبار Qwen وتؤكد تفعيل الإجابات الثابتة للموقع فقط؟':'تعطيل إجابات الموقع الآلية؟'))return;
  const d=await aiAction('site-auto-faq/'+(on?'enable':'disable'),auth);
  if(d){toast(d.message);loadPanel();}
+}
+
+async function setSiteAutoReplies(on){
+ const auth=aiAuthValues();
+ if(!auth.currentPassword||!/^[0-9]{6}$/.test(auth.code))return toast('أدخل كلمة سر المالك وOTP في الأعلى');
+ if(!confirm(on?'تفعيل الردود العامة من Qwen على محادثات الموقع؟ لن يغيّر أي حساب أو يرسل WhatsApp.':'إيقاف الردود التلقائية وإبقاء المسودات؟'))return;
+ const d=await aiAction('site-auto-replies/'+(on?'enable':'disable'),auth);
+ if(d){toast(d.message);loadPanel();}
+}
+
+async function issueOwnerSupportCode(){
+ const auth=aiAuthValues(),customerId=document.getElementById('ownerSupportCustomerId')?.value.trim()||'';
+ if(!/^[a-f0-9]{24}$/i.test(customerId))return toast('أدخل معرّف زبون صحيحًا');
+ if(!auth.currentPassword||!/^[0-9]{6}$/.test(auth.code))return toast('أدخل كلمة سر المالك وOTP');
+ const d=await aiAction('support-code',{...auth,customerId});
+ const box=document.getElementById('ownerSupportCodeResult');
+ if(d&&box){box.textContent='رمز الدعم (يظهر مرة واحدة؛ انسخه الآن): '+d.code+' — ينتهي بعد 15 دقيقة.';toast(d.message);}
 }
