@@ -52,8 +52,14 @@ async function egRequestOtp(){
 // Trainer and live agent are distinct fixed contacts, not fake customer accounts.
 let ownerTrainingDraft='';
 async function openOwnerTraining(){
+ if (selectedAdminConversation==='__trainer') {
+   const input=document.getElementById('trainerQuestion');
+   if(input)ownerTrainingDraft=input.value;
+ }
+ rememberAdminConversationDraft();
  selectedAdminConversation='__trainer';
  const box=document.getElementById('conversationDetail');if(!box)return;
+ delete box.dataset.conversationId; delete box.dataset.rowState;
  box.innerHTML='<p>تحميل سجل تدريب Qwen…</p>';
  try {
   const data=await egRequest('test-jobs');
@@ -69,8 +75,10 @@ async function ownerSendTraining(){
  try{await egRequest('test','POST',{text});toast('أرسلت المهمة إلى Qwen؛ ستظهر مسودتها بعد المعالجة');await openOwnerTraining();}catch(e){toast(e.message);}
 }
 async function openAgentStatusPane(){
+ rememberAdminConversationDraft();
  selectedAdminConversation='__agent';
  const box=document.getElementById('conversationDetail');if(!box)return;
+ delete box.dataset.conversationId; delete box.dataset.rowState;
  box.innerHTML='<p>تحميل حالة الوكيل…</p>';
  try{
   const r=await fetch(aiUrl('settings'),{headers:{Authorization:'Bearer '+token},cache:'no-store'});
