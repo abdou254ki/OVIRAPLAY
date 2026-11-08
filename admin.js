@@ -15,6 +15,12 @@ let ordersPage = 1;
 let renewalFilter = 'urgent';
 let openProductId = null;
 let marketingDays = 30;
+// Inbox state is kept outside the DOM so a routine refresh cannot erase a reply.
+let selectedAdminConversation = '';
+const adminConversationDrafts = new Map();
+const adminReplyKeys = new Map();
+const adminReplyInFlight = new Set();
+let adminConversationRequestSerial = 0;
 
 const COL = {
   'قيد المراجعة': '#F59E0B',
@@ -306,6 +312,13 @@ async function loadPanel() {
   }
 
   const panel = document.getElementById('ov-panel');
+  if (tab==='conversations') {
+    rememberAdminConversationDraft();
+    if(selectedAdminConversation==='__trainer'){
+      const field=document.getElementById('trainerQuestion');
+      if(field)ownerTrainingDraft=field.value;
+    }
+  }
   if (panel) panel.innerHTML = '<div class="card ov-loading" role="status">يُحمّل من الخادم…</div>';
   try {
     const target = tab === 'conversations' ? API.replace('/api/admin','/api/v2/admin/conversations') : tab === 'security' ? API.replace('/api/admin','/api/v2/admin/security') : tab === 'engagement' ? EG_BASE : tab === 'ai' ? aiUrl('settings') : tab === 'historical' ? historicUrl()+'?page='+historicalPage : tab === 'finance' ? financeUrl() : `${API}/${endpoint}`;
@@ -1061,6 +1074,9 @@ function renderMain(d) {
         <main class="ov-panel" id="ov-panel">${content}</main>
       </div>
     </div>`;
+  if (tab === 'conversations' && selectedAdminConversation && !selectedAdminConversation.startsWith('__')) loadConversationDetail(selectedAdminConversation);
+  else if (tab === 'conversations' && selectedAdminConversation === '__trainer') openOwnerTraining();
+  else if (tab === 'conversations' && selectedAdminConversation === '__agent') openAgentStatusPane();
   if (tab === 'ai') refreshAIOperations();
   if (tab === 'products') {
     initPlanEditors();
@@ -1080,6 +1096,11 @@ function searchProduct(title) {
   goAdmin('products');
 }
 function goAdmin(section, search = '', status = '') {
+  rememberAdminConversationDraft();
+  if(selectedAdminConversation==='__trainer'){
+    const field=document.getElementById('trainerQuestion');
+    if(field)ownerTrainingDraft=field.value;
+  }
   if (section !== 'ai') agentOneTimeToken = '';
   toggleAdminNav(false);
   tab = section;
@@ -1639,7 +1660,12 @@ if (token) {
 
 // Conversations: every action goes through role-checked Render API.
 const convAdminUrl=(path='')=>API.replace('/api/admin','/api/v2/admin/conversations')+(path?'/'+path:'');
-let selectedAdminConversation='';
+function rememberAdminConversationDraft() {
+ const input=document.getElementById('adminChatReply');
+ if (!input || !selectedAdminConversation || selectedAdminConversation.startsWith('__')) return;
+ if (input.value) adminConversationDrafts.set(selectedAdminConversation,input.value);
+ else adminConversationDrafts.delete(selectedAdminConversation);
+}
 async function convAdminRequest(path,method='GET',body) {
  const r=await fetch(convAdminUrl(path),{method,cache:'no-store',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
  const d=await r.json().catch(()=>({}));
@@ -1648,26 +1674,70 @@ async function convAdminRequest(path,method='GET',body) {
  return d;
 }
 async function loadConversationDetail(id) {
+ if (selectedAdminConversation!==id) rememberAdminConversationDraft();
  selectedAdminConversation=id;
  const area=document.getElementById('conversationDetail');if(!area)return;
- area.innerHTML='<p>تحميل الرسائل…</p>';
+ const requestSerial=++adminConversationRequestSerial;
+ const hasThread=area.dataset.conversationId===id && !!area.querySelector('.ov-conv-messages');
+ if (!hasThread) area.innerHTML='<p role="status">تحميل الرسائل…</p>';
  try {
   const d=await convAdminRequest(encodeURIComponent(id));
-  if(selectedAdminConversation!==id||!document.getElementById('conversationDetail'))return;
+  if(requestSerial!==adminConversationRequestSerial || selectedAdminConversation!==id || document.getElementById('conversationDetail')!==area)return;
   const row=d.conversation;
+  const signature=JSON.stringify((d.messages||[]).map(m=>[m._id,m.text,m.aiDraft,m.createdAt,m.author]));
   const chat=(d.messages||[]).map(m=>`<div class="ov-admin-bubble"><b>${esc(m.author==='admin'?'الإدارة':m.author==='ai'?'Qwen':m.author==='customer'||m.author==='guest'?'الزبون':m.author==='whatsapp'?'WhatsApp':'الأرشيف')}</b><p>${esc(m.text)}</p><small>${esc(new Date(m.createdAt).toLocaleString('ar-DZ'))}</small>
     ${m.aiDraft?`<blockquote id="aiDraft_${esc(m._id)}">${esc(m.aiDraft)}</blockquote>${row.channel==='site'&&row.status!=='closed'?`<button class="btn-sm" onclick="approveConversationDraft('${esc(row._id)}','${esc(m._id)}')">إرسال مسودة Qwen بعد المراجعة</button>`:''}`:''}</div>`).join('');
+  const state=[row.channel,row.status,row.aiMode].join(':');
+  // A routine inbox poll updates only the message history. It must not recreate
+  // the reply textarea, owner password or OTP fields.
+  const keepComposer=hasThread && area.dataset.rowState===state;
+  if (keepComposer) {
+    const history=area.querySelector('.ov-conv-messages');
+    if(history && history.dataset.messageSignature!==signature) {
+      const nearBottom=history.scrollHeight-history.scrollTop-history.clientHeight<70;
+      const oldTop=history.scrollTop;
+      history.innerHTML=chat||'<p>لا توجد رسائل</p>';
+      history.dataset.messageSignature=signature;
+      if(nearBottom) history.scrollTop=history.scrollHeight;
+      else history.scrollTop=oldTop;
+    }
+    return;
+  }
+  rememberAdminConversationDraft();
+  area.dataset.conversationId=id;
+  area.dataset.rowState=state;
   area.innerHTML=`<h3>${esc(row.subject)}</h3><p class="ov-caption">القناة: ${esc(row.channel)} · الحالة: ${esc(row.status)} · وضع Qwen: ${esc(row.aiMode)}</p>
     <div class="ov-conv-messages">${chat||'<p>لا توجد رسائل</p>'}</div>
     <div class="ov-ai-actions"><button class="btn-bad" onclick="changeConversationMode('${esc(id)}','human')">⏸ إيقاف الوكيل لهذه المحادثة فورًا</button><button class="btn-sm" onclick="changeConversationStatus('${esc(id)}','closed')">إغلاق</button><button class="btn-sm" onclick="changeConversationStatus('${esc(id)}','open')">إعادة فتح</button></div>
     <details class="ov-otp-details"><summary>🤖 إعادة السماح للوكيل بالمسودات (للمالك فقط)</summary><p class="ov-caption">لن يعاود الوكيل كتابة ردود بعد استلام الموظف إلا بموافقة المالك وكلمة السر وOTP.</p>
       <input class="inp" type="password" autocomplete="current-password" id="convPwd" placeholder="كلمة سر المالك"><input class="inp" id="convOtp" inputmode="numeric" maxlength="6" placeholder="رمز 2FA"><button class="btn-sm" onclick="changeConversationMode('${esc(id)}','assist')">تفعيل المساعد لهذه المحادثة</button></details>
-    ${row.channel==='whatsapp'?`<p class="ov-caption">رد WhatsApp الخارجي غير مفعّل بسبب شروط التكلفة؛ افتح المحادثة يدويًا من تطبيق الأعمال الرسمي.</p>${row.contactUrl?`<a class="btn-sm" target="_blank" rel="noopener noreferrer" href="${esc(row.contactUrl)}">فتح WhatsApp للرد يدويًا</a>`:''}`:row.status==='closed'?'<p>المحادثة مغلقة؛ أعد فتحها للرد.</p>':`<p class="ov-caption">عند إرسال ردك، تنتقل المحادثة إلى وضع الموظف ويتوقف Qwen عنها تلقائيًا.</p><label class="lbl" for="adminChatReply">رد مباشر للزبون في الموقع</label><textarea class="inp" id="adminChatReply" maxlength="1500" placeholder="اكتب ردك هنا"></textarea><button class="btn-pri" onclick="sendAdminConversationReply('${esc(id)}')">إرسال الرد</button>`}`;
- }catch(e){area.innerHTML=`<p role="alert">${esc(e.message)}</p>`;}
+    ${row.channel==='whatsapp'?`<p class="ov-caption">رد WhatsApp الخارجي غير مفعّل بسبب شروط التكلفة؛ افتح المحادثة يدويًا من تطبيق الأعمال الرسمي.</p>${row.contactUrl?`<a class="btn-sm" target="_blank" rel="noopener noreferrer" href="${esc(row.contactUrl)}">فتح WhatsApp للرد يدويًا</a>`:''}`:row.status==='closed'?'<p>المحادثة مغلقة؛ أعد فتحها للرد.</p>':`<p class="ov-caption">عند إرسال ردك، تنتقل المحادثة إلى وضع الموظف ويتوقف Qwen عنها تلقائيًا.</p><label class="lbl" for="adminChatReply">رد مباشر للزبون في الموقع</label><textarea class="inp" id="adminChatReply" maxlength="1500" oninput="rememberAdminConversationDraft()" placeholder="اكتب ردك هنا"></textarea><button class="btn-pri" onclick="sendAdminConversationReply('${esc(id)}')">إرسال الرد</button>`}`;
+  const reply=area.querySelector('#adminChatReply');if(reply)reply.value=adminConversationDrafts.get(id)||'';
+  const history=area.querySelector('.ov-conv-messages');if(history){history.dataset.messageSignature=signature;history.scrollTop=history.scrollHeight;}
+ }catch(e){
+  if(requestSerial!==adminConversationRequestSerial || selectedAdminConversation!==id || document.getElementById('conversationDetail')!==area)return;
+  // A transient connection error should not destroy a reply already being typed.
+  if (hasThread) toast('تعذر تحديث الرسائل؛ الرد غير المرسل محفوظ');
+  else area.innerHTML=`<p role="alert">${esc(e.message)}</p><button class="btn-sm" onclick="loadConversationDetail('${esc(id)}')">إعادة المحاولة</button>`;
+ }
 }
 async function sendAdminConversationReply(id){
+ if (adminReplyInFlight.has(id)) return;
  const text=document.getElementById('adminChatReply')?.value.trim()||'';if(text.length<2)return toast('اكتب ردًا واضحًا');
- try{await convAdminRequest(encodeURIComponent(id)+'/reply','POST',{text,idempotencyKey:crypto.randomUUID()});toast('وصل الرد إلى محادثة الموقع');loadConversationDetail(id);}catch(e){toast(e.message)}
+ const previous=adminReplyKeys.get(id);
+ const key=previous?.text===text?previous.key:crypto.randomUUID();
+ adminReplyKeys.set(id,{text,key});
+ adminReplyInFlight.add(id);
+ try{
+  await convAdminRequest(encodeURIComponent(id)+'/reply','POST',{text,idempotencyKey:key});
+  adminReplyKeys.delete(id);
+  const input=document.getElementById('adminChatReply');
+  if(input&&selectedAdminConversation===id){
+    if(input.value.trim()===text)input.value='';
+    if(input.value)adminConversationDrafts.set(id,input.value);else adminConversationDrafts.delete(id);
+  }else adminConversationDrafts.delete(id);
+  toast('وصل الرد إلى محادثة الموقع');loadConversationDetail(id);
+ }catch(e){toast(e.message)}finally{adminReplyInFlight.delete(id)}
 }
 async function approveConversationDraft(id,messageId){
  if(!confirm('هل راجعت المسودة وتؤكد إرسالها إلى زبون الموقع؟'))return;
