@@ -42,7 +42,8 @@ function renderAIControl(d) {
       </div>
       <div class="ov-ai-alert">لا تدخل رمز العامل في كود الموقع أو GitHub أو بيانات محادثة عامة. تأكد من تفعيل 2FA في الإعدادات أولاً؛ ربط الهاتف وحده لا يفعّل الرد التلقائي.</div>
     </section>
-    <section class="card"><h3>🧠 تفعيل Qwen بعد الاختبارات</h3>
+    <section class="card"><h3>🎛️ مفتاح الوكيل الذكي — تفعيل وإيقاف مستقل</h3>
+      <p class="ov-caption">كل تغيير لوضع الوكيل والإجابات الآلية يتطلب كلمة سر المالك وOTP الموجودين أعلى هذه الصفحة. إيقاف الطوارئ يلغي الرمز، أما الإيقاف العادي فيحافظ على الاقتران.</p>
       <p class="ov-caption">يجب وجود هاتف متصل برمز جديد وصلاحية jobs:claim، وضبط AI_EXECUTION_ENABLED=true في Render. يتطلب التفعيل موافقة المالك + 2FA. توليد المسودات لا يرسل أي رسالة.</p>
       <div class="ov-ai-actions">
         ${ai.executionEnabled ? '<button class="btn-sm" onclick="changeAgentDraftMode(false)">⏸ إيقاف توليد المسودات</button>' : '<button class="btn-pri" onclick="changeAgentDraftMode(true)">▶ تفعيل توليد مسودات Qwen</button>'}
@@ -57,7 +58,7 @@ function renderAIControl(d) {
     </section>
     <section class="card"><h3>💬 مركز الرسائل الموحد</h3>
       <p class="ov-caption">رسائل الموقع وWhatsApp الواردة ومسودات Qwen في شاشة واحدة. الرد من الإدارة يصل مباشرة إلى محادثات الموقع. إرسال WhatsApp عبر API يظل معطلاً إلى حين إثبات أهلية الإرسال المجاني.</p>
-      <button class="btn-pri" onclick="goAdmin('conversations')">فتح مركز الرسائل</button>
+      <button class="btn-pri" onclick="goAdmin('conversations')">فتح محادثات العملاء والتدريب</button>
     </section>
     <section class="card"><h3>📘 التشغيل عبر Termux</h3>
       <p>1. جهّز Qwen وTermux محليًا، واحتفظ بـllama-server على 127.0.0.1 فقط.</p>
