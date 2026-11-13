@@ -1478,3 +1478,12 @@ main{padding-bottom:45px}
  header .ov-site-menu-button{font-size:24px}
  .ov-chat-page{padding-inline:12px}
 }
+
+/* Phase 5 — readable administration-only messenger, announcements, mobile safe layout */
+.ov-announcements[hidden]{display:none!important}.ov-announcements{width:min(1120px,calc(100% - 30px));margin:10px auto;display:grid;gap:8px}
+.ov-announcement{display:grid;gap:5px;padding:12px 15px;border-radius:14px;border:1px solid rgba(37,84,190,.18);background:var(--card,#fff);box-shadow:0 4px 15px rgba(12,28,63,.045);font-size:13px;line-height:1.8;overflow-wrap:anywhere}.ov-announcement strong{color:#2456b8}
+.ov-chat-archives{margin:10px 0;padding:10px;border:1px solid var(--line,#e1e5ee);border-radius:13px}.ov-chat-archives summary{cursor:pointer;font-weight:700}.ov-chat-archives button{width:100%;margin-top:8px}
+.ov-chat-page .ov-chat-thread,.ov-chat-page .ov-chat-directory{overflow:hidden}.ov-chat-page .ov-chat-history{overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto;min-height:0;scrollbar-width:thin}.ov-chat-page .ov-bubble{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.ov-chat-page .ov-chat-thread textarea{box-sizing:border-box;min-height:64px}.ov-chat-page .ov-chat-thread .btn{flex-shrink:0}.ov-chat-page .ov-chat-layout>.sm{box-sizing:border-box}
+@media(max-width:700px){.ov-announcements{width:calc(100% - 22px)}.ov-announcement{padding:10px 12px}.ov-chat-page.has-thread .ov-chat-thread{height:calc(100dvh - 155px);min-height:300px;max-height:calc(100dvh - 110px);overflow:hidden}.ov-chat-page .ov-chat-history{max-height:none}.ov-chat-page .ov-chat-thread-head{flex-shrink:0}.ov-chat-page .ov-chat-hint{font-size:11px}.ov-chat-page .ov-chat-thread textarea{height:66px;resize:none}.ov-chat-page .ov-chat-thread .btn{min-height:44px}}
+@media(max-width:390px){.ov-chat-page .ov-chat-layout>.sm{padding:12px 10px}.ov-chat-page .ov-chat-history{padding-inline:0}.ov-chat-page .ov-bubble{max-width:90%}}

@@ -606,3 +606,15 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 
 .ov-otp-details{margin:12px 0;border:1px solid var(--line);border-radius:12px;padding:12px}.ov-otp-details summary{cursor:pointer;font-weight:800}.ov-otp-details input{margin:8px 0}
 @media(max-width:730px){.ov-msg-layout{grid-template-columns:1fr}.ov-msg-list{max-height:32vh}.ov-msg-detail{padding:13px}.ov-contact{min-height:70px}}
+
+/* Phase 5 — simple admin actions and verified historical linking */
+.ov-link-order{margin:14px 0;padding:14px;border:1px solid var(--line,#dde3ee);border-radius:14px;background:rgba(47,95,195,.045)}
+.ov-link-form,.ov-link-confirm{display:grid;gap:9px;margin-top:12px}
+.ov-link-candidate{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-bottom:1px solid var(--line,#dde3ee);min-width:0}
+.ov-link-candidate>div{min-width:0;overflow-wrap:anywhere}.ov-link-candidate small{display:block;color:var(--mut,#747b8b);font-size:12px;margin-top:4px}
+.ov-link-candidate button{flex-shrink:0}.ov-link-confirm textarea{min-height:70px}
+.ov-notifications-center,.ov-notif-grid{display:grid;gap:16px;min-width:0}.ov-notif-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ov-notif-grid>.card{min-width:0}.ov-notifications-center .card>h3{margin-top:0}.ov-notifications-center .inp{max-width:100%;min-width:0;box-sizing:border-box}
+.ov-notif-log{display:grid;gap:5px;padding:12px 0;border-bottom:1px solid var(--line,#dde3ee);overflow-wrap:anywhere}.ov-notif-log small{color:var(--mut,#747b8b)}
+@media(max-width:800px){.ov-notif-grid{grid-template-columns:minmax(0,1fr)}.ov-link-candidate{align-items:flex-start}.ov-workspace,.ov-panel,.card{min-width:0}.compact-order .order-detail{min-width:0;overflow-wrap:anywhere}}
+@media(max-width:390px){.ov-notifications-center .search-row{display:grid;grid-template-columns:minmax(0,1fr) auto}.ov-notifications-center .search-row input{width:100%;min-width:0}.ov-link-candidate button{padding:8px 10px!important}.ov-notifications-center .card{padding:14px!important}}

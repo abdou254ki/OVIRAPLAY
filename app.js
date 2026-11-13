@@ -1352,19 +1352,19 @@ function supportBubbleMarkup(m){
 function supportV() {
   const u=me();
   return `<div class="w ov-chat-page ${supportCurrent?'has-thread':'show-list'}"><h1 class="ttl">💬 مركز الرسائل</h1>
-    <p class="note">اكتب كما تشاء وعلى عدة رسائل. يمكن للوكيل الرد على الأسئلة العامة عندما يفعّله المالك؛ مسائل الحساب يتولاها الدعم أو أدوات الحساب الآمنة.</p>
+    <p class="note">راسل إدارة OVIRA PLAY مباشرة. يمكنك إرسال عدة رسائل متتابعة، وسيرد فريق الدعم البشري هنا.</p>
     ${supportError?`<div class="sm" role="alert">${esc(supportError)}</div>`:''}
     <div class="ov-chat-layout">
       <section class="sm ov-chat-directory"><h2 class="sh">محادثاتي</h2>
-        <button class="btn o" onclick="newSupportChat()">+ محادثة جديدة</button>
-        <div class="ov-chat-list">${supportChats.map(x=>`<button class="ov-chat-choice ${supportCurrent===x._id?'chosen':''}" onclick="openSupportChat('${esc(x._id)}')">
-            <strong>${esc(x.subject||'استفسار')}</strong><small>${esc(x.status==='closed'?'مغلقة':'مفتوحة')} · ${esc((x.lastMessageText||'').slice(0,60))}</small></button>`).join('')||'<p class="note">لا توجد محادثات سابقة.</p>'}</div>
+        ${custToken&&supportChats.some(x=>x.isPrimarySupportThread)?`<button class="ov-chat-choice" onclick="openSupportChat('${esc(supportChats[0]._id)}')"><strong>الإدارة — OVIRA PLAY</strong><small>${esc((supportChats[0].lastMessageText||'').slice(0,100))}</small></button>
+          ${supportChats.length>1?`<details class="ov-chat-archives"><summary>المحادثات السابقة (${supportChats.length-1}) — للرجوع إلى السجل</summary>${supportChats.slice(1).map(x=>`<button class="ov-chat-choice" onclick="openSupportChat('${esc(x._id)}')">${esc(x.subject||'سجل سابق')} · ${esc(x.status)}</button>`).join('')}</details>`:''}`:
+        `<button class="btn o" onclick="newSupportChat()">${custToken?'ابدأ مراسلة الإدارة':'+ تذكرة للزائر'}</button><div class="ov-chat-list">${supportChats.map(x=>`<button class="ov-chat-choice ${supportCurrent===x._id?'chosen':''}" onclick="openSupportChat('${esc(x._id)}')"><strong>${esc(x.subject||'استفسار')}</strong><small>${esc(x.status)}</small></button>`).join('')}</div>`} 
       </section>
       <section class="sm ov-chat-thread" aria-label="المحادثة">
-      ${supportCurrent ? `<div class="ov-chat-thread-head"><button class="chip ov-chat-back" onclick="supportBackToList()" aria-label="العودة إلى محادثاتي">← المحادثات</button><h2 class="sh">سجل الرسائل</h2></div><div class="ov-chat-history" role="log" aria-live="polite">${supportMessages.map(supportBubbleMarkup).join('')}||'<p>يُحمّل سجل المحادثة…</p>'}</div>
-        <p class="ov-chat-hint">وصلتنا رسائلك؛ يمكنك كتابة التفاصيل في رسائل متتالية. ننتظر قليلًا قبل إعداد رد واحد.</p><label class="lb" for="supportReply">اكتب رسالتك</label><textarea class="in2" id="supportReply" maxlength="1500" placeholder="اكتب التفاصيل هنا، رسالة بعد رسالة. لا تشارك رمز OTP."></textarea>
+      ${supportCurrent ? `<div class="ov-chat-thread-head"><button class="chip ov-chat-back" onclick="supportBackToList()" aria-label="العودة إلى محادثاتي">← المحادثات</button><h2 class="sh">سجل الرسائل</h2></div><div class="ov-chat-history" role="log" aria-live="polite">${supportMessages.length?supportMessages.map(supportBubbleMarkup).join(''):'<p>لم تصل رسائل بعد.</p>'}}</div>
+        <p class="ov-chat-hint">يمكنك إرسال عدة رسائل متتالية. سيقرأ فريق الإدارة جميع التفاصيل في هذه المحادثة.</p><label class="lb" for="supportReply">اكتب رسالتك</label><textarea class="in2" id="supportReply" maxlength="1500" placeholder="اكتب التفاصيل هنا، رسالة بعد رسالة. لا تشارك رمز OTP."></textarea>
         <button class="btn" onclick="sendSupportReply()" ${supportBusy?'disabled':''}>إرسال الرسالة</button>`
-        : `<h2 class="sh">فتح محادثة جديدة</h2>
+        : `<h2 class="sh">${custToken?'مراسلة الإدارة':'فتح تذكرة دعم للزائر'}</h2>
         ${!custToken?`<label class="lb" for="supportGuestName">الاسم *</label><input class="in2" id="supportGuestName" maxlength="80" value="${esc(u.n||'')}" placeholder="اسمك">`:''}
         <label class="lb" for="supportSubject">موضوع المحادثة</label><input class="in2" id="supportSubject" maxlength="120" placeholder="مثال: استفسار عن الخدمة" value="استفسار">
         <label class="lb" for="supportFirst">رسالتك *</label><textarea class="in2" id="supportFirst" maxlength="1500" placeholder="اكتب سؤالك هنا، دون معلومات حساسة"></textarea>
@@ -1380,7 +1380,7 @@ async function loadSupportChats() {
     supportError='';
     if(custToken) {
       const d=await supportAPI(CHAT_BASE,{headers:supportHeaders()});
-      supportChats=d.conversations||[];
+      supportChats=(d.conversations||[]).sort((a,b)=>Number(!!b.isPrimarySupportThread)-Number(!!a.isPrimarySupportThread));
     } else {
       const ids=guestChats();
       const data=await Promise.all(ids.map(async x=>{
@@ -1389,10 +1389,14 @@ async function loadSupportChats() {
       supportChats=data.filter(Boolean);
     }
     if(supportCurrent && !supportChats.some(x=>x._id===supportCurrent))supportCurrent='';
+    // Opening support on a signed-in account goes straight to its main admin thread.
+    if(custToken && supportChats.some(x=>x.isPrimarySupportThread) && !supportCurrent && location.hash.startsWith('#/support')) {
+      await openSupportChat(supportChats[0]._id); return;
+    }
     if(location.hash.startsWith('#/support'))draw();
   } catch(e){supportError=e.message;if(location.hash.startsWith('#/support'))draw();}
 }
-window.newSupportChat=()=>{supportCurrent='';supportMessages=[];draw();};
+window.newSupportChat=()=>{if(custToken&&supportChats.some(x=>x.isPrimarySupportThread))return openSupportChat(supportChats[0]._id);supportCurrent='';supportMessages=[];draw();};
 window.supportBackToList=()=>{supportCurrent='';supportMessages=[];draw();};
 window.openSupportChat=async(id)=>{
   try{
@@ -1413,6 +1417,8 @@ window.createSupportChat=async()=>{
     const d=await supportAPI(CHAT_BASE,{method:'POST',headers:supportHeaders('',true),body:JSON.stringify({subject,text,...(!custToken?{name}:{})})});
     if(d.guestKey)saveGuestChat(d.conversation._id,d.guestKey);
     supportCurrent=d.conversation._id;supportMessages=[d.message];
+    // A server may reuse an existing administration thread; fetch the complete history.
+    if(custToken){await openSupportChat(supportCurrent);return;}
     await loadSupportChats();draw();toast('بدأت المحادثة، ويمكنك متابعتها هنا');
   }catch(e){toast(e.message)}finally{supportBusy=false;}
 };
@@ -1838,3 +1844,41 @@ route();
 loadCatalog();
 loadReviewSummary();
 loadDeliveryStats();
+
+
+// Public announcements are independent of authenticated account notifications.
+let ovAnnouncementTimer=null;
+async function loadPublicAnnouncements(){
+ const node=document.getElementById('ovAnnouncements');if(!node)return;
+ try{
+  const r=await fetch(API_BASE+'/api/v2/announcements',{cache:'no-store'});
+  const d=await r.json();if(!r.ok||!d.success)throw Error('unavailable');
+  const rows=(d.announcements||[]).slice(0,3);
+  node.hidden=!rows.length;
+  node.innerHTML=rows.map(a=>`<article class="ov-announcement"><strong>📢 ${esc(a.title)}</strong><span>${esc(a.body)}</span></article>`).join('');
+ }catch(_){node.hidden=true;node.replaceChildren();}
+}
+loadPublicAnnouncements();
+ovAnnouncementTimer=setInterval(()=>{if(!document.hidden)loadPublicAnnouncements();},120000);
+
+// Keep the notification badge fresh without re-rendering an active chat composer.
+let ovNotePollBusy=false;
+async function refreshAccountNotificationBadge(){
+ if(ovNotePollBusy||!custToken||document.hidden)return;
+ ovNotePollBusy=true;
+ try{
+  const r=await fetch(API_BASE+'/api/v2/site-notifications',{headers:{Authorization:'Bearer '+custToken},cache:'no-store'});
+  if(!r.ok)return;
+  const d=await r.json();if(!d.success)return;
+  siteNoteUnread=Number(d.unread)||0;
+  const bell=document.querySelector('#hd .ov-bell');
+  if(bell){
+    let mark=bell.querySelector('.cnt');
+    if(siteNoteUnread){if(!mark){mark=document.createElement('span');mark.className='cnt';bell.appendChild(mark);}mark.textContent=String(siteNoteUnread);}
+    else if(mark)mark.remove();
+  }
+ }catch(_){/* keep current display on network loss */}
+ finally{ovNotePollBusy=false;}
+}
+setInterval(refreshAccountNotificationBadge,60000);
+refreshAccountNotificationBadge();

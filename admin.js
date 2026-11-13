@@ -263,6 +263,7 @@ function logout() {
   adm2FaPending = null;
   adm2FaSetup = null;
   agentOneTimeToken = '';
+  if(typeof aiControlSession!=='undefined'){aiControlSession='';aiSessionExpiry=0;}
   localStorage.removeItem('adm_tk');
   sessionStorage.removeItem('adm_tk');
   for(const key of Object.keys(sessionStorage))if(key.startsWith('ovira_inbox_draft:'))sessionStorage.removeItem(key);
@@ -308,7 +309,7 @@ async function loadPanel() {
   } else if (tab === 'customers') {
     if (qFilter) params.set('q', qFilter);
     endpoint = 'customers?' + params.toString();
-  } else if (tab === 'ai' || tab === 'historical' || tab === 'finance' || tab === 'conversations' || tab === 'security' || tab === 'engagement') {
+  } else if (tab === 'ai' || tab === 'historical' || tab === 'finance' || tab === 'conversations' || tab === 'security' || tab === 'engagement' || tab === 'notifications') {
     endpoint = null; // v2 API only; no placeholder numbers
   } else {
     endpoint = 'settings';
@@ -324,7 +325,7 @@ async function loadPanel() {
   }
   if (panel) panel.innerHTML = '<div class="card ov-loading" role="status">يُحمّل من الخادم…</div>';
   try {
-    const target = tab === 'conversations' ? API.replace('/api/admin','/api/v2/admin/conversations') + inboxQuery() : tab === 'security' ? API.replace('/api/admin','/api/v2/admin/security') : tab === 'engagement' ? EG_BASE : tab === 'ai' ? aiUrl('settings') : tab === 'historical' ? historicUrl()+'?page='+historicalPage : tab === 'finance' ? financeUrl() : `${API}/${endpoint}`;
+    const target = tab === 'conversations' ? API.replace('/api/admin','/api/v2/admin/conversations') + inboxQuery() : tab === 'security' ? API.replace('/api/admin','/api/v2/admin/security') : tab === 'engagement' ? EG_BASE : tab === 'notifications' ? notificationAdminUrl('') : tab === 'ai' ? aiUrl('settings') : tab === 'historical' ? historicUrl()+'?page='+historicalPage : tab === 'finance' ? financeUrl() : `${API}/${endpoint}`;
     const r = await fetch(target, {
       headers: { 'Authorization': 'Bearer ' + token }, cache:'no-store'
     });
@@ -446,6 +447,7 @@ function renderMain(d) {
           ${o.customerEmail ? `<div>📧 <b>الإيميل الشخصي:</b> <span dir="ltr">${esc(o.customerEmail)}</span></div>` : ''}
         </div>
 
+        ${tab==='delivered'&&adminInboxRole()==='owner'?`<section class="ov-link-order"><b>🔗 حساب المشتري</b><p class="ov-caption">${o.customerId?'مرتبط بحساب الزبون بالفعل.':'هذا الطلب غير مرتبط بحساب. يمكنك العثور على صاحبه وربطه بعد التحقق من الهوية.'}</p>${o.customerId?'':`<button type="button" class="btn-sm" onclick="showOrderLink('${esc(o._id)}')">ربط الطلب بحساب زبون</button><div id="orderLink_${esc(o._id)}"></div>`}</section>`:''}
         <div class="items">
           ${o.cartItems.map((i) => `• ${esc(i.productName)} — ${i.months} شهر ${i.planLabel ? `(${esc(i.planLabel)})` : ''} × ${i.quantity}`).join('<br>')}
         </div>
@@ -825,6 +827,9 @@ function renderMain(d) {
   else if (tab === 'conversations') {
     content=renderAdminInbox(d);
   }
+  else if (tab === 'notifications') {
+    content=renderNotificationCenter(d);
+  }
   else if (tab === 'engagement') {
     content=renderEngagement(d);
   }
@@ -1040,7 +1045,8 @@ function renderMain(d) {
             ${navButton('payments','💳 الدفع وChargily')}</div>
           <div class="ov-nav-group"><span class="ov-nav-group-label">الزبائن والدعم</span>
             ${navButton('customers','👥 العملاء')}
-            ${navButton('conversations','💬 مركز الرسائل')}</div>
+            ${navButton('conversations','💬 مركز الرسائل')}
+            ${adminInboxRole()==='owner'?navButton('notifications','🔔 مركز الإشعارات'):''}</div>
           <div class="ov-nav-group"><span class="ov-nav-group-label">المنتجات والتسويق</span>
             ${navButton('products','🛍️ المنتجات')}
             ${navButton('reviews','⭐ التقييمات')}
@@ -1055,7 +1061,7 @@ function renderMain(d) {
       <div class="ov-workspace">
         <header class="top-bar">
           <button class="ov-menu-toggle" id="ovMenuButton" aria-expanded="false" aria-controls="ovAdminSidebar" aria-label="فتح القائمة" onclick="toggleAdminNav()">☰ القائمة</button>
-          <h2>${esc(({overview:'الرئيسية',orders:'طلبات الموقع',historical:'القيود اليدوية',finance:'المركز المالي',delivered:'الطلبات المسلّمة',customers:'الزبائن',conversations:'مركز الرسائل',security:'مركز الأمان',complaints:'الشكاوى',ai:'تكامل الوكيل المحلي',engagement:'تدريب المساعد والإشعارات',settings:'الإعدادات',activity:'سجل الإدارة',products:'المنتجات',marketing:'التسويق',reviews:'التقييمات',payments:'الدفع',renewals:'التجديدات',search:'البحث'})[tab] || 'OVIRA PLAY')}</h2>
+          <h2>${esc(({overview:'الرئيسية',orders:'طلبات الموقع',historical:'القيود اليدوية',finance:'المركز المالي',delivered:'الطلبات المسلّمة',customers:'الزبائن',conversations:'مركز الرسائل',security:'مركز الأمان',complaints:'الشكاوى',ai:'تكامل الوكيل المحلي',engagement:'تدريب المساعد',notifications:'إشعارات الزبائن',settings:'الإعدادات',activity:'سجل الإدارة',products:'المنتجات',marketing:'التسويق',reviews:'التقييمات',payments:'الدفع',renewals:'التجديدات',search:'البحث'})[tab] || 'OVIRA PLAY')}</h2>
           <button class="btn-sm" aria-label="تبديل الوضع الفاتح والداكن" onclick="toggleAdminTheme()">◐</button>
           <button class="btn-sm" onclick="loadPanel()">⟳</button>
           <button class="btn-sm" onclick="logout()">خروج</button>
@@ -1814,3 +1820,37 @@ setInterval(() => {
     loadConversationDetail(selectedAdminConversation);
   if(typeof inboxRefresh==='function')inboxRefresh();
 }, 30000);
+
+
+// Phase 5: owner-verified manual assignment of delivered historical purchases.
+function showOrderLink(orderId){
+ const target=document.getElementById('orderLink_'+orderId);if(!target)return;
+ target.innerHTML=`<div class="ov-link-form"><label class="lbl">ابحث بالبريد أو الهاتف أو اسم الحساب</label><div class="search-row"><input class="inp" id="orderLinkSearch_${orderId}" autocomplete="off" placeholder="البريد الإلكتروني أو رقم الهاتف"><button type="button" class="btn-sm" onclick="lookupOrderCustomer('${orderId}')">بحث</button></div><div id="orderLinkMatches_${orderId}" aria-live="polite"></div></div>`;
+}
+async function lookupOrderCustomer(orderId){
+ const q=document.getElementById('orderLinkSearch_'+orderId)?.value.trim()||'';
+ const result=document.getElementById('orderLinkMatches_'+orderId);if(!result)return;
+ if(q.length<3){result.textContent='اكتب ثلاثة أحرف على الأقل.';return;}
+ result.textContent='يتم البحث…';
+ try{
+  const r=await fetch(`${API}/orders/${encodeURIComponent(orderId)}/link-candidates?q=${encodeURIComponent(q)}`,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+  const data=await r.json();if(!r.ok||!data.success)throw Error(data.message||data.code||'فشل البحث');
+  result.innerHTML=(data.candidates||[]).map(c=>`<div class="ov-link-candidate"><div><b>${esc(c.name)}</b><small>${esc(c.email||'')} · ${esc(c.phone||'')}</small><small>${c.match?.verified?'مطابقة موثقة':c.match?.email||c.match?.phone?'مطابقة تحتاج إثبات ملكية مستقل':'لا تطابق بيانات الطلب'}</small></div>${c.match?.email||c.match?.phone?`<button type="button" class="btn-sm" onclick="prepareOrderLink('${orderId}','${esc(c.id)}',${!!c.match?.verified})">اختيار</button>`:'<span class="ov-caption">غير قابل للربط</span>'}</div>`).join('')||'<p class="ov-caption">لم نجد حسابات مطابقة.</p>';
+ }catch(e){result.textContent=e.message;}
+}
+function prepareOrderLink(orderId,customerId,verified){
+ const result=document.getElementById('orderLinkMatches_'+orderId);if(!result)return;
+ result.innerHTML=`<div class="ov-link-confirm"><b>تأكيد ربط الطلب بالحساب المحدد</b><p class="ov-caption">${verified?'هناك بريد أو هاتف موثق مطابق.':'لم يتم التحقق من وسيلة الاتصال. يلزم إثبات مستقل وملاحظة مفصلة.'}</p><label class="lbl">ملاحظة إثبات الملكية ${verified?'(اختيارية)':'(إلزامية)'}</label><textarea class="inp" id="orderProof_${orderId}" maxlength="300" placeholder="كيف تأكدت من ملكية الطلب والحساب؟"></textarea><label class="lbl">كلمة سر المالك</label><input class="inp" type="password" autocomplete="current-password" id="orderPass_${orderId}"><label class="lbl">رمز 2FA</label><input class="inp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" id="orderOtp_${orderId}" dir="ltr"><button type="button" class="btn-pri" onclick="confirmOrderLink('${orderId}','${customerId}')">تأكيد الربط النهائي</button></div>`;
+}
+async function confirmOrderLink(orderId,customerId){
+ const currentPassword=document.getElementById('orderPass_'+orderId)?.value||'';
+ const code=document.getElementById('orderOtp_'+orderId)?.value||'';
+ const evidenceNote=document.getElementById('orderProof_'+orderId)?.value.trim()||'';
+ if(!currentPassword||!/^[0-9]{6}$/.test(code))return toast('أدخل كلمة السر ورمز 2FA');
+ if(!confirm('سيرى صاحب الحساب الطلب وتفاصيل التسليم الموجودة فيه. تأكد من هويته. هل تؤكد الربط؟'))return;
+ try{
+  const r=await fetch(`${API}/orders/${encodeURIComponent(orderId)}/link-customer`,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({customerId,confirm:'LINK_ORDER_TO_ACCOUNT',evidenceNote,currentPassword,code})});
+  const d=await r.json();if(!r.ok||!d.success)throw Error(d.message||d.code||'فشل ربط الطلب');
+  toast('تم ربط الطلب بالحساب مع الاحتفاظ بسجل العملية');loadPanel();
+ }catch(e){toast(e.message);}
+}
