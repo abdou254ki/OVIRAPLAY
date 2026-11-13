@@ -82,3 +82,14 @@ body:has(.ov-shell) { max-width:none; margin:0; padding:0; overflow-x:hidden; ba
 
 .ov-security-row{border-bottom:1px solid var(--line);padding:10px 0}.ov-security-row .badge{margin-inline-start:10px}.ov-security-row p{color:var(--mut);font-size:12px;margin:7px 0}
 
+/* Phase 5 mobile admin navigation: no overlapping button labels or clipped headers. */
+.ov-shell .top-bar{min-width:0}.ov-shell .top-bar h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:420px){
+ .ov-workspace{padding-inline:8px}
+ .ov-shell .top-bar{display:flex;align-items:center;gap:4px}
+ .ov-shell .top-bar h2{flex:1 1 auto;font-size:13px;line-height:1.5}
+ .ov-shell .top-bar .btn-sm{flex:0 0 38px;width:38px;min-width:38px;padding:8px 4px!important;min-height:42px}
+ .ov-menu-toggle{flex:0 0 48px;max-width:48px;font-size:0;padding:8px 4px!important}
+ .ov-menu-toggle::before{content:'☰';font-size:23px;line-height:26px}
+ .ov-shell .ov-global-search{min-width:0;gap:6px}.ov-shell .ov-global-search input{min-width:0;width:100%}
+}

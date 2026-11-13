@@ -1,5 +1,6 @@
 /* Owner-only AI integration UI; server is the sole authority for policies and tokens. */
 let agentOneTimeToken = '';
+let aiControlSession='';let aiSessionExpiry=0;
 function aiUrl(path) { return new URL(API).origin + '/api/v2/admin/ai/' + path; }
 function renderAIControl(d) {
   const ai = d.ai || {};
@@ -43,7 +44,9 @@ function renderAIControl(d) {
       <div class="ov-ai-alert">لا تدخل رمز العامل في كود الموقع أو GitHub أو بيانات محادثة عامة. تأكد من تفعيل 2FA في الإعدادات أولاً؛ ربط الهاتف وحده لا يفعّل الرد التلقائي.</div>
     </section>
     <section class="card"><h3>🎛️ مفتاح الوكيل الذكي — تفعيل وإيقاف مستقل</h3>
-      <p class="ov-caption">كل تغيير لوضع الوكيل والإجابات الآلية يتطلب كلمة سر المالك وOTP الموجودين أعلى هذه الصفحة. إيقاف الطوارئ يلغي الرمز، أما الإيقاف العادي فيحافظ على الاقتران.</p>
+      <p class="ov-caption">للتحكم اليومي: تحقق مرة واحدة لتحصل على جلسة قصيرة مدتها 15 دقيقة في هذه الصفحة فقط. إصدار/إلغاء توكن الهاتف وإيقاف الطوارئ ما زالت تتطلب OTP جديداً. الدعم البشري هو الوضع الافتراضي.</p>
+      <div class="ov-ai-actions"><button class="btn-sm" onclick="unlockAiControls()">🔐 تحقق مرة واحدة لجلسة التحكم</button><small>${aiControlSession&&Date.now()<aiSessionExpiry?'جلسة التحكم مفتوحة':'جلسة التحكم غير مفتوحة'}</small></div>
+      <div class="ov-ai-human-switch"><b>الرد على الزبائن: ${ai.supportHumanOnly!==false?'بشري فقط':'AI متاح بعد تفعيل خاص'}</b><button class="${ai.supportHumanOnly!==false?'btn-sm':'btn-bad'}" onclick="setSupportHumanOnly(${ai.supportHumanOnly===false})">${ai.supportHumanOnly!==false?'إعدادات الرد الآلي (بعد تحقق)':'⏸ إيقاف ردود AI فوراً وإبقاء الربط'}</button></div>
       <p class="ov-caption">يجب وجود هاتف متصل برمز جديد وصلاحية jobs:claim، وضبط AI_EXECUTION_ENABLED=true في Render. يتطلب التفعيل موافقة المالك + 2FA. توليد المسودات وحده لا يرسل أي رسالة. رد Qwen التلقائي إعداد مختلف ومقفل افتراضيًا.</p>
       <div class="ov-ai-actions">
         ${ai.executionEnabled ? '<button class="btn-sm" onclick="changeAgentDraftMode(false)">⏸ إيقاف توليد المسودات</button>' : '<button class="btn-pri" onclick="changeAgentDraftMode(true)">▶ تفعيل توليد مسودات Qwen</button>'}
@@ -83,9 +86,10 @@ function aiAuthValues() {
 }
 async function aiAction(path, payload) {
   try {
-    const response = await fetch(aiUrl(path), { method:'POST', headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+token }, body:JSON.stringify(payload) });
+    const response = await fetch(aiUrl(path), { method:'POST', headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+token,...(aiControlSession&&Date.now()<aiSessionExpiry?{'X-AI-Control-Session':aiControlSession}:{}) }, body:JSON.stringify(payload) });
     const data = await response.json();
-    if (response.status === 401 && data.code !== 'BAD_REAUTH' && data.code !== 'BAD_OTP') return logout();
+    if (data.code==='CONTROL_SESSION_INVALID'){aiControlSession='';aiSessionExpiry=0;}
+    if (response.status === 401 && !['BAD_REAUTH','BAD_OTP','CONTROL_SESSION_INVALID'].includes(data.code)) return logout();
     if (!response.ok || !data.success) throw new Error(data.message || 'لم تنجح العملية');
     return data;
   } catch(e) {toast(e.message || 'تعذر الاتصال بالخادم'); return null;}
@@ -133,7 +137,7 @@ async function restoreAgentConnection() {
 
 async function changeAgentDraftMode(activate) {
   const auth = aiAuthValues();
-  if (!auth.currentPassword || !/^\d{6}$/.test(auth.code)) return toast('أدخل كلمة السر ورمز 2FA من الأعلى');
+  if(activate&&!aiRoutineReady())return;
   if (!confirm(activate ? 'تفعيل توليد مسودات Qwen دون إرسال WhatsApp؟' : 'إيقاف سحب مهام Qwen الجديدة؟')) return;
   const d = await aiAction(activate ? 'enable-drafts' : 'pause-drafts', auth);
   if (d) { toast(d.message); loadPanel(); }
@@ -172,7 +176,7 @@ async function refreshAIOperations() {
 }
 
 async function setAutoFaq(on){
- const auth=aiAuthValues();if(!auth.currentPassword||!/^[0-9]{6}$/.test(auth.code))return toast('كلمة سر المالك ورمز التحقق مطلوبان');
+ const auth=aiAuthValues();if(on&&!aiRoutineReady())return;
  if(!confirm(on?'هل أجريت اختبار Qwen وتؤكد تفعيل الإجابات الثابتة للموقع فقط؟':'تعطيل إجابات الموقع الآلية؟'))return;
  const d=await aiAction('site-auto-faq/'+(on?'enable':'disable'),auth);
  if(d){toast(d.message);loadPanel();}
@@ -180,7 +184,7 @@ async function setAutoFaq(on){
 
 async function setSiteAutoReplies(on){
  const auth=aiAuthValues();
- if(!auth.currentPassword||!/^[0-9]{6}$/.test(auth.code))return toast('أدخل كلمة سر المالك وOTP في الأعلى');
+ if(on&&!aiRoutineReady())return;
  if(!confirm(on?'تفعيل الردود العامة من Qwen على محادثات الموقع؟ لن يغيّر أي حساب أو يرسل WhatsApp.':'إيقاف الردود التلقائية وإبقاء المسودات؟'))return;
  const d=await aiAction('site-auto-replies/'+(on?'enable':'disable'),auth);
  if(d){toast(d.message);loadPanel();}
@@ -194,3 +198,7 @@ async function issueOwnerSupportCode(){
  const box=document.getElementById('ownerSupportCodeResult');
  if(d&&box){box.textContent='رمز الدعم (يظهر مرة واحدة؛ انسخه الآن): '+d.code+' — ينتهي بعد 15 دقيقة.';toast(d.message);}
 }
+
+async function unlockAiControls(){const auth=aiAuthValues();if(!auth.currentPassword||!/^[0-9]{6}$/.test(auth.code))return toast('أدخل كلمة السر ورمز 2FA في الأعلى لمرة واحدة');const d=await aiAction('control-session',auth);if(d){aiControlSession=d.controlSession;aiSessionExpiry=Date.now()+Number(d.expiresIn||900)*1000;const pass=document.getElementById('aiCurrentPassword');const otp=document.getElementById('aiOtp');if(pass)pass.value='';if(otp)otp.value='';toast('تم فتح جلسة تحكم لمدة 15 دقيقة');loadPanel();}}
+function aiRoutineReady(){if(aiControlSession&&Date.now()<aiSessionExpiry)return true;toast('افتح جلسة التحكم أولاً بكلمة السر وOTP مرة واحدة');return false;}
+async function setSupportHumanOnly(humanOnly){if(!humanOnly&&!aiRoutineReady())return;if(!confirm(humanOnly?'إيقاف جميع ردود الموقع الآلية وإبقاء اقتران الهاتف؟':'السماح مستقبلاً بتفعيل الوكيل؟ ستبقى محادثات الزبائن بشرية حتى تفعيل منفصل.'))return;const d=await aiAction('human-support',{humanOnly});if(d){toast(humanOnly?'الدعم البشري فقط مفعل':'الاتصال بالوكيل متاح، دون ردود تلقائية');loadPanel();}}
