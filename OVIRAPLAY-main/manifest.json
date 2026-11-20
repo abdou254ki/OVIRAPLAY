@@ -1,33 +1,24 @@
 {
-  "id": "./",
-  "name": "OVIRA PLAY — المتجر الرقمي",
+  "name": "OVIRA PLAY — متجر الاشتراكات الرقمية",
   "short_name": "OVIRA PLAY",
-  "description": "متجر OVIRA PLAY للاشتراكات والخدمات الرقمية.",
+  "description": "المتجر الجزائري الأول للاشتراكات الرقمية وخدمات البث والذكاء الاصطناعي",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#1684F8",
   "lang": "ar",
   "dir": "rtl",
-  "start_url": "./#/",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#06080F",
-  "theme_color": "#06080F",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "assets/ovira-icon-192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "assets/ovira-icon-512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "assets/ovira-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "type": "image/png"
     }
   ]
 }

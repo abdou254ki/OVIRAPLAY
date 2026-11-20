@@ -1,85 +1,77 @@
-const CACHE_NAME = 'ovira-play-static-v8-modular';
-const APP_SHELL = [
-  './',
-  './index.html',
-  './ovira-core.css',
-  './ovira-experience.css',
-  './style.css',
-  './core/utils.js',
-  './core/state.js',
-  './core/api.js',
-  './components/header.js',
-  './components/footer.js',
-  './views/home.js',
-  './views/shop.js',
-  './views/product.js',
-  './views/cart.js',
-  './views/account.js',
-  './views/support.js',
-  './core/router.js',
-  './app.js',
-  './pwa.js',
-  './manifest.json',
-  './assets/ovira-icon.svg',
-  './assets/ovira-icon-192.png',
-  './assets/ovira-icon-512.png',
-  './assets/fonts/OVIRA-NotoSansArabic-Regular.ttf',
-  './assets/fonts/OVIRA-NotoSansArabic-SemiBold.ttf',
-  './assets/fonts/OVIRA-NotoSansArabic-ExtraBold.ttf',
-  './offline.html'
+// OVIRA PLAY V5 — Safe Service Worker
+const CACHE_NAME = 'ovira-static-v5.0.0';
+const OFFLINE_URL = '/offline.html';
+
+const STATIC_PRECACHE = [
+  '/',
+  '/offline.html',
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_PRECACHE);
+    }).then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith('ovira-play-') && key !== CACHE_NAME).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim())
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  const request = event.request;
-  if (request.method !== 'GET') return;
-
+  const { request } = event;
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  if (url.pathname.includes('/api/')) return;
 
+  // 1. Never cache non-GET requests
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // 2. Strict Security Boundary: NEVER cache API, Account, or Admin routes
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/admin') ||
+    url.pathname.startsWith('/account') ||
+    url.pathname.startsWith('/cart')
+  ) {
+    return;
+  }
+
+  // 3. Static assets & public navigation handling
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy));
-          }
-          return response;
-        })
-        .catch(async () => (await caches.match('./index.html')) || (await caches.match('./offline.html')))
+      fetch(request).catch(() => {
+        return caches.match(OFFLINE_URL);
+      })
     );
     return;
   }
 
-  const isAppAsset = /\.(?:css|js|svg|png|json|woff2?|ttf)$/i.test(url.pathname) || url.pathname.endsWith('/index.html');
-  if (!isAppAsset) return;
-
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response && response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        }
-        return response;
+  // 4. Cache-first strategy for versioned static assets only
+  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        });
       })
-      .catch(async () => (await caches.match(request)) || Response.error())
-  );
+    );
+  }
 });

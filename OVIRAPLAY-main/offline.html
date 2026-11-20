@@ -1,16 +1,85 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0b1740">
-  <title>غير متصل — OVIRA PLAY</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OVIRA PLAY — انقطع الاتصال بالإنترنت</title>
   <style>
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f4f6fb;color:#0b1530;font-family:system-ui,Tahoma,Arial,sans-serif}
-    main{width:min(440px,100%);padding:32px;border:1px solid #e4e9f4;border-radius:24px;background:#fff;text-align:center;box-shadow:0 20px 55px rgba(17,35,82,.08)}
-    b{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 16px;border-radius:18px;background:linear-gradient(135deg,#6b8cff,#244bdc);color:#fff;font-size:26px}
-    h1{font-size:23px}p{color:#697692;font-size:13px;line-height:2}a{display:inline-flex;margin-top:14px;padding:12px 22px;border-radius:13px;background:#315cf4;color:#fff;text-decoration:none;font-weight:800}
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Noto Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+      background-color: #F8FAFC;
+      color: #0F172A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    .card {
+      background: #FFFFFF;
+      padding: 2.5rem 2rem;
+      border-radius: 1.5rem;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+      max-width: 420px;
+      margin: 1rem;
+    }
+    .icon {
+      width: 48px;
+      height: 48px;
+      color: #1684F8;
+      background: #EFF6FF;
+      border-radius: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      margin: 0 0 0.5rem 0;
+    }
+    p {
+      font-size: 0.875rem;
+      color: #64748B;
+      line-height: 1.6;
+      margin: 0 0 1.5rem 0;
+    }
+    button {
+      background: #1684F8;
+      color: #FFFFFF;
+      border: none;
+      padding: 0.75rem 1.75rem;
+      border-radius: 0.75rem;
+      font-weight: 700;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover {
+      background: #0d73dc;
+    }
   </style>
 </head>
-<body><main><b>▶</b><h1>أنت غير متصل بالإنترنت</h1><p>تعذّر الاتصال حالياً. أعد الاتصال بالإنترنت ثم حاول فتح المتجر مجدداً. بيانات الطلبات والدفع لا تعمل دون اتصال.</p><a href="./#/">إعادة المحاولة</a></main></body>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+    </div>
+    <h1>انقطع الاتصال بالإنترنت</h1>
+    <p>يبدو أنك غير متصل بالشبكة حالياً. يرجى التحقق من اتصالك بالإنترنت ثم إعادة المحاولة لعرض أحدث الاشتراكات.</p>
+    <button onclick="window.location.reload()">إعادة المحاولة الآن</button>
+  </div>
+</body>
 </html>
