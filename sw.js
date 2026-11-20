@@ -1,10 +1,22 @@
-const CACHE_NAME = 'ovira-play-static-v7-foundation';
+const CACHE_NAME = 'ovira-play-static-v8-modular';
 const APP_SHELL = [
   './',
   './index.html',
   './ovira-core.css',
   './ovira-experience.css',
   './style.css',
+  './core/utils.js',
+  './core/state.js',
+  './core/api.js',
+  './components/header.js',
+  './components/footer.js',
+  './views/home.js',
+  './views/shop.js',
+  './views/product.js',
+  './views/cart.js',
+  './views/account.js',
+  './views/support.js',
+  './core/router.js',
   './app.js',
   './pwa.js',
   './manifest.json',

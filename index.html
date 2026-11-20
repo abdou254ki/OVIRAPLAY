@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -30,7 +30,18 @@
 
   <div id="ovAnnouncements" class="ov-announcements" role="region" aria-label="إعلانات المتجر" hidden></div>
 
-  <main id="app" tabindex="-1" aria-live="polite"></main>
+  <main id="app" tabindex="-1" aria-live="polite">
+    <!-- 2.2 Skeleton Hero Loading (يُستبدل تلقائياً عند تحميل المتجر) -->
+    <div class="skeleton-hero" aria-hidden="true">
+      <div class="skeleton-shimmer skeleton-title"></div>
+      <div class="skeleton-shimmer skeleton-sub"></div>
+      <div class="skeleton-grid">
+        <div class="skeleton-shimmer skeleton-card"></div>
+        <div class="skeleton-shimmer skeleton-card"></div>
+        <div class="skeleton-shimmer skeleton-card"></div>
+      </div>
+    </div>
+  </main>
 
   <!-- Footer شامل — يُحقن ديناميكياً عبر JS -->
   <footer id="ov-footer" class="ov-footer" role="contentinfo"></footer>
@@ -44,6 +55,19 @@
   <a class="fab" id="fab" href="#/support" aria-label="دعم الموقع">💬</a>
   <div class="toast" id="ts"></div>
 
+  <!-- الوحدات البرمجية المجزأة (Phase 2 Frontend Architecture) -->
+  <script src="core/utils.js"></script>
+  <script src="core/state.js"></script>
+  <script src="core/api.js"></script>
+  <script src="components/header.js"></script>
+  <script src="components/footer.js"></script>
+  <script src="views/home.js"></script>
+  <script src="views/shop.js"></script>
+  <script src="views/product.js"></script>
+  <script src="views/cart.js"></script>
+  <script src="views/account.js"></script>
+  <script src="views/support.js"></script>
+  <script src="core/router.js"></script>
   <script src="app.js"></script>
   <script src="pwa.js"></script>
 </body>
