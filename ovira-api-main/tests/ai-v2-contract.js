@@ -17,7 +17,7 @@ const fakeUsage = {
 };
 const stubModules = { '../models/AgentUsage': fakeUsage };
 Module._load = function(req,parent,isMain) {
-  if (parent?.filename?.endsWith('agentPolicyService.js') && stubModules[req]) return stubModules[req];
+  if (parent?.filename?.replace(/\\/g, '/')?.endsWith('agentPolicyService.js') && stubModules[req]) return stubModules[req];
   return origLoad.call(this,req,parent,isMain);
 };
 const policy = require('../services/agentPolicyService');
@@ -50,7 +50,7 @@ async function testWebhook(){
     seen.add(options.providerMessageId);received.push({text,...options});return {created:true,message:{text}};
   },async maybeQueueDraft(){received.at(-1).queued=true;}};
   Module._load=function(req,parent,isMain){
-    if(parent?.filename?.endsWith('/routes/whatsapp.js')){
+    if(parent?.filename?.replace(/\\/g, '/')?.endsWith('/routes/whatsapp.js')){
       if(req==='express')return fakeExpress;
       if(req==='express-rate-limit')return ()=>()=>{};
       if(req==='../services/conversationService')return chats;

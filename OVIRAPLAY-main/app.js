@@ -1,6 +1,7 @@
 // =========================================================
 // OVIRA PLAY — MAIN ENTRY POINT (app.js)
 // Bootstrap & Event Listeners
+// Checkout architecture (views/cart.js): checkout-steps | الدفع اليدوي لا يُؤكَّد تلقائيًا
 // =========================================================
 
 window.addEventListener('hashchange', () => route(true));

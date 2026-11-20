@@ -82,7 +82,7 @@ function toast(msg) {
 
 function renderLogin(err = '') {
   // إخفاء الشيل وإظهار نموذج الدخول
-  const shell = document.querySelector('.ov-admin-shell');
+  const shell = document.querySelector('.ov-shell') || document.querySelector('.ov-admin-shell');
   if (shell) shell.style.display = 'none';
 
   // إذا كان المدير في خطوة إدخال كود التحقق بخطوتين (2FA)
@@ -108,66 +108,26 @@ function renderLogin(err = '') {
     return;
   }
 
-  // إظهار الشيل
-  let adminShell = document.querySelector('.ov-admin-shell');
-  if (shell) shell.style.display = 'grid';
-
-  // بناء القائمة الجانبية
-  const adminNavGroups = [
-    { label: 'الإدارة', items: [
-      ['overview', '📊', 'نظرة عامة'],
-      ['orders', '🧾', 'الطلبات'],
-      ['delivered', '✅', 'تم التسليم'],
-      ['products', '🛍️', 'المنتجات'],
-      ['reviews', '⭐', 'التقييمات']
-    ]},
-    { label: 'المالية', items: [
-      ['payments', '💳', 'طرق الدفع'],
-      ['finance', '📈', 'التقارير'],
-      ['marketing', '📣', 'التسويق'],
-      ['renewals', '🔔', 'التجديدات']
-    ]},
-    { label: 'الخدمات', items: [
-      ['customers', '👥', 'الزبائن'],
-      ['complaints', '📋', 'الشكاوى'],
-      ['conversations', '💬', 'المحادثات'],
-      ['support', '🎫', 'الدعم']
-    ]},
-    { label: 'النظام', items: [
-      ['activity', '🛡️', 'سجل النشاط'],
-      ['notifications', '🔔', 'الإشعارات'],
-      ['search', '🔍', 'بحث عام'],
-      ['security', '🔒', 'الأمان']
-    ]}
-  ];
-
-  const navHtml = adminNavGroups.map(group => `
-    <div class="ov-admin-nav-group">
-      <span class="ov-admin-nav-label">${group.label}</span>
-      ${group.items.map(([id, icon, label]) => {
-        const isActive = tab === id;
-        const count = id === 'complaints' && openComplaintsCount > 0 ? openComplaintsCount : 0;
-        return `<button class="ov-admin-nav-btn ${isActive ? 'on' : ''}" onclick="goAdmin('${id}')" ${isActive ? 'aria-current="page"' : ''}>
-          <span>${icon}</span>
-          <span>${label}</span>
-          ${count ? `<span class="badge-cnt">${count}</span>` : ''}
-        </button>`;
-      }).join('')}
-    </div>
-  `).join('');
-  document.getElementById('adminNav').innerHTML = navHtml;
-
   document.getElementById('root').innerHTML = `
-    <form class="card login-box" onsubmit="event.preventDefault(); doLogin();">
-      <h1>🔒 لوحة الإدارة</h1>
-      <p>OVIRA PLAY — تسجيل الدخول المحمي</p>
-      <label class="lbl" for="em">البريد الإلكتروني</label>
-      <input class="inp" id="em" name="username" type="email" autocomplete="username" dir="ltr" placeholder="admin@oviraplaydz.com" required>
-      <label class="lbl" for="pw">كلمة السر</label>
-      <input class="inp" id="pw" name="password" type="password" autocomplete="current-password" dir="ltr" placeholder="••••••••" required>
-      <button class="btn-pri" id="loginBtn" type="submit">تسجيل الدخول</button>
-      <div class="err-msg" id="loginErrBox" style="display:${err ? 'block' : 'none'}">${esc(err)}</div>
-    </form>`;
+    <div class="login-wrapper">
+      <form class="card login-box" onsubmit="event.preventDefault(); doLogin();">
+        <div class="login-brand">
+          <span class="brand-badge">⚡ إشراف محمي</span>
+          <h1>OVIRA <b>PLAY</b></h1>
+          <p>لوحة التحكم والإدارة الذكية للاشتراكات الرقمية</p>
+        </div>
+        <div class="form-group">
+          <label class="lbl" for="em">البريد الإلكتروني للإدارة</label>
+          <input class="inp" id="em" name="username" type="email" autocomplete="username" dir="ltr" placeholder="admin@oviraplaydz.com" required autofocus>
+        </div>
+        <div class="form-group">
+          <label class="lbl" for="pw">كلمة المرور</label>
+          <input class="inp" id="pw" name="password" type="password" autocomplete="current-password" dir="ltr" placeholder="••••••••" required>
+        </div>
+        <button class="btn-pri login-btn" id="loginBtn" type="submit">تسجيل الدخول إلى اللوحة ←</button>
+        <div class="err-msg" id="loginErrBox" style="display:${err ? 'block' : 'none'}">${esc(err)}</div>
+      </form>
+    </div>`;
 }
 
 async function doLogin() {

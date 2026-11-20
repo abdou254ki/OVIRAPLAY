@@ -36,7 +36,7 @@ const fakeService={
 };
 const fakeCustomer={async exists(){return null;},find(filter){customerQueries++;assert.deepEqual(filter._id.$in,['507f191e810c19729de860ef']);return {select(fields){assert.equal(fields,'name');return this;},async lean(){return [{_id:'507f191e810c19729de860ef',name:'زبون اختباري',passwordHash:'MUST_NOT_LEAK'}];}};}};
 Module._load=(name,parent,isMain)=>{
- if(parent?.filename?.endsWith('/routes/adminConversations.js')){
+ if(parent?.filename?.replace(/\\/g, '/')?.endsWith('/routes/adminConversations.js')){
   if(name==='express')return {Router:()=>({use(){},get(path,...args){captured.get[path]=args.at(-1);},post(path,...args){captured.post[path]=args.at(-1);},patch(){}})};
   if(name==='express-rate-limit')return ()=>()=>{};
   if(name==='mongoose')return {isValidObjectId:id=>/^[a-f0-9]{24}$/i.test(id)};

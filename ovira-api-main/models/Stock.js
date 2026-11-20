@@ -27,4 +27,8 @@ const stockSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// فهارس المخزون للبحث السريع والتخصيص الذري
+stockSchema.index({ productId: 1, 'slots.status': 1 });
+stockSchema.index({ active: 1, masterExpiresAt: 1 });
+
 module.exports = mongoose.model('Stock', stockSchema);

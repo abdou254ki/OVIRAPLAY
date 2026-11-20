@@ -11,6 +11,14 @@ const PAYMENT_METHODS = [
 
 const STATUSES = ['قيد المراجعة', 'مؤكد', 'تم التسليم', 'ملغي'];
 
+const DELIVERY_STATES = [
+  'pending_payment',
+  'ready_to_deliver',
+  'stock_reserved',
+  'delivered',
+  'cancelled'
+];
+
 const cartItemSchema = new mongoose.Schema(
   {
     productId: { type: String, required: true, trim: true },
@@ -42,6 +50,33 @@ const orderSchema = new mongoose.Schema({
   totalPrice: { type: Number, required: true, min: 0 },
   paymentMethod: { type: String, required: true, enum: PAYMENT_METHODS },
   status: { type: String, enum: STATUSES, default: 'قيد المراجعة', index: true },
+
+  // المرحلة 3: تتبع حالة التسليم المتقدمة وربط المخزون
+  deliveryState: {
+    type: String,
+    enum: DELIVERY_STATES,
+    default: 'pending_payment',
+    index: true
+  },
+  allocatedSlots: [
+    {
+      stockId: { type: mongoose.Schema.Types.ObjectId, ref: 'Stock' },
+      slotNumber: { type: Number },
+      profileName: { type: String, default: '' },
+      assignedAt: { type: Date, default: Date.now }
+    }
+  ],
+
+  // المرحلة 3: جدولة المواعيد
+  requestedAt: { type: Date },
+  scheduledFor: { type: Date, index: true },
+  timezone: { type: String, default: 'Africa/Algiers' },
+  scheduleNote: { type: String, default: '', maxlength: 300 },
+
+  // المرحلة 3: اشتراكات وتجديدات دقيقة
+  subscriptionStartDate: { type: Date },
+  actualDurationDays: { type: Number },
+  renewalLinkedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
 
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', index: true },
   telegramChatId: { type: Number, index: true },
@@ -101,12 +136,19 @@ const orderSchema = new mongoose.Schema({
   riskScore: { type: Number, default: 0 },
   riskFlags: { type: [String], default: [] },
 
-  // مصدر الزيارة (utm) كما أرسلته الواجهة؛ للقياس فقط، بلا default حتى لا تُكتب في الطلبات القديمة.
+  // مصدر الزيارة (utm)
   source: { type: String, trim: true, maxlength: 80 },
 
   createdAt: { type: Date, default: Date.now, index: true }
 });
 
+// فهارس مركبة محسّنة (Indexes Optimization)
+orderSchema.index({ status: 1, createdAt: -1 });
+orderSchema.index({ 'cartItems.productId': 1 });
+orderSchema.index({ scheduledFor: 1, status: 1 });
+orderSchema.index({ customerId: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Order', orderSchema);
 module.exports.PAYMENT_METHODS = PAYMENT_METHODS;
 module.exports.STATUSES = STATUSES;
+module.exports.DELIVERY_STATES = DELIVERY_STATES;

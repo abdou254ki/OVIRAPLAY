@@ -52,7 +52,7 @@ const fakeRateLimit=()=>()=>{};
 function loadRouter(file){
   const router=makeRouter();
   Module._load=function(request,parent,isMain){
-    if(parent?.filename?.endsWith('/routes/'+file+'.js')){
+    if(parent?.filename?.replace(/\\/g, '/')?.endsWith('/routes/'+file+'.js')){
       if(request==='express')return {Router:()=>router};
       if(request==='express-rate-limit')return fakeRateLimit;
       if(request==='mongoose')return {isValidObjectId:x=>/^[a-f0-9]{24}$/.test(x)};

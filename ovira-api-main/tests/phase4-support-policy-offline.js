@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const Module=require('module');
 const orig=Module._load;
 Module._load=function(req,parent,isMain){
- if(parent?.filename?.endsWith('/services/agentPolicyService.js') && req==='../models/AgentUsage')return {};
+ if(parent?.filename?.replace(/\\/g, '/')?.endsWith('/services/agentPolicyService.js') && req==='../models/AgentUsage')return {};
  return orig.call(this,req,parent,isMain);
 };
 const policy=require('../services/agentPolicyService');Module._load=orig;

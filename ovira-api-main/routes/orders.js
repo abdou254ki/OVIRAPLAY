@@ -84,9 +84,11 @@ router.get('/reviews-summary', async (req, res, next) => {
     for (const r of rows) {
       summary[r._id] = {
         count: r.count,
-        average: Number(r.average.toFixed(1)),
-        distribution: { 1: r.one, 2: r.two, 3: r.three, 4: r.four, 5: r.five }
+        average: Number(r.average.toFixed(1))
       };
+      if ([r.one, r.two, r.three, r.four, r.five].some((v) => v !== undefined)) {
+        summary[r._id].distribution = { 1: r.one, 2: r.two, 3: r.three, 4: r.four, 5: r.five };
+      }
     }
 
     res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
