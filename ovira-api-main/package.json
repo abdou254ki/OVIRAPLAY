@@ -1,0 +1,31 @@
+{
+  "name": "ovira-api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "npm run test:offline && node tests/landing-batch1.js && node tests/landing-batch2.js",
+    "test:ai": "node tests/ai-v2-contract.js && node tests/ai-jobs-contract.js",
+    "security:check": "node scripts/security-check.js",
+    "test:offline": "node tests/ai-v2-contract.js && node tests/ai-jobs-contract.js && node tests/conversations-offline.js && node tests/message-history-offline.js && node tests/inbox-v2-offline.js && node scripts/security-check.js && node tests/engagement-offline.js && node tests/phase4-support-policy-offline.js && node tests/phase4-autoreply-offline.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.4.0",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.3.0"
+  }
+}

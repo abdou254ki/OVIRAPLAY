@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Database
+data/mongodb/
+
+# Environment & Secrets
+.env
+LOCAL-ADMIN-CREDENTIALS.txt
+
+# Build output
+dist/
+
+# Backups & Archives
+*.bak
+*.zip
+backups/
+projects_ARCHIVED/
+
+# IDE & Tool configs
+.claude/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

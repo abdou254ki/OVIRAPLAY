@@ -1,0 +1,3 @@
+const mongoose=require('mongoose');
+const schema=new mongoose.Schema({kind:{type:String,enum:['order','renewal','support','offer','general'],required:true},scope:{type:String,enum:['one','all','marketing'],required:true},title:{type:String,required:true,maxlength:100},body:{type:String,required:true,maxlength:600},recipients:{type:Number,default:0},createdBy:{type:mongoose.Schema.Types.ObjectId,ref:'Admin',required:true},status:{type:String,enum:['queued','completed','partial','failed'],default:'queued'},error:{type:String,default:''}},{timestamps:true,autoIndex:false});
+schema.index({createdAt:-1});module.exports=mongoose.model('NotificationCampaign',schema);

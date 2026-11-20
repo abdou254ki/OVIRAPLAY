@@ -1,0 +1,102 @@
+/* =========================================================
+   OVIRA PLAY — DESIGN TOKENS (Minimal Matte Dark RTL)
+   إلزامي: جميع ملفات CSS تستخدم هذه المتغيرات فقط
+   ========================================================= */
+:root {
+  /* Core background surfaces */
+  --bg-obsidian: #06080F;
+  --bg-surface: #0D121D;
+  --bg-surface-elevated: #141C2B;
+  --bg-surface-hover: #1A2436;
+
+  /* Borders */
+  --border-hairline: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Accent — محدود للغاية: 1px border, badge, top hairline فقط */
+  --accent-primary: #0EA5E9;
+  --accent-primary-hover: #0284C7;
+
+  /* Text — WCAG AA على #0D121D */
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+
+  /* Semantic */
+  --color-success: #16A34A;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #0EA5E9;
+
+  /* Radii */
+  --radius-card: 16px;
+  --radius-control: 10px;
+
+  /* Spacing 8px grid */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+
+  /* Legacy bridge tokens — تحافظ على التوافق مع الكود القديم */
+  --ov-bg: var(--bg-obsidian);
+  --ov-surface: var(--bg-surface);
+  --ov-text: var(--text-primary);
+  --ov-text-muted: var(--text-secondary);
+  --ov-border: var(--border-hairline);
+  --ov-primary: #0EA5E9;
+  --ov-primary-action: #0EA5E9;
+  --ov-primary-action-admin: #0EA5E9;
+  --ov-success: var(--color-success);
+  --ov-warning: var(--color-warning);
+  --ov-danger: var(--color-danger);
+  --ov-radius-sm: var(--radius-control);
+  --ov-radius-card: var(--radius-card);
+  --ov-space-1: 8px;
+  --ov-space-2: 16px;
+  --ov-space-3: 24px;
+  --ov-space-4: 32px;
+  --ov-space-6: 48px;
+  --ov-space-8: 64px;
+
+  color-scheme: dark;
+}
+
+/* تطابق تام في الوضع الداكن — لا ألوان فاتحة أبداً */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-obsidian: #06080F;
+    --bg-surface: #0D121D;
+    --bg-surface-elevated: #141C2B;
+    --bg-surface-hover: #1A2436;
+    --border-hairline: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --accent-primary: #0EA5E9;
+    --accent-primary-hover: #0284C7;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+  }
+}
+
+/* الوضع الفاتح — غير مستخدم حالياً لكنه جاهز */
+:root[data-theme="light"] {
+  --bg-obsidian: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #F1F5F9;
+  --bg-surface-hover: #E2E8F0;
+  --border-hairline: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
+  --accent-primary: #2563EB;
+  --accent-primary-hover: #1D4ED8;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --ov-bg: var(--bg-obsidian);
+  --ov-surface: var(--bg-surface);
+  --ov-text: var(--text-primary);
+  --ov-text-muted: var(--text-secondary);
+  --ov-border: var(--border-hairline);
+}

@@ -1,0 +1,684 @@
+/* =========================================================
+   OVIRA PLAY — DESIGN CONSTITUTION V4
+   Applied to the actual OVIRA DOM classes.
+   HTML5 + CSS3 + Vanilla JS only. No framework or runtime dependency.
+   ========================================================= */
+
+:root,
+:root[data-theme="light"],
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-obsidian: #06080F;
+  --bg-surface: rgba(15, 23, 42, 0.72);
+  --bg-surface-elevated: rgba(30, 41, 59, 0.78);
+  --border-hairline: rgba(255, 255, 255, 0.08);
+  --border-glow-active: rgba(14, 165, 233, 0.45);
+  --accent-primary: #0EA5E9;
+  --accent-gradient: linear-gradient(135deg, #0EA5E9 0%, #2563EB 100%);
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --radius-bento: 20px;
+  --radius-control: 12px;
+  --shadow-bento: 0 20px 40px -15px rgba(0, 0, 0, 0.70),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* 8px spacing grid */
+  --ov-space-1: 8px;
+  --ov-space-2: 16px;
+  --ov-space-3: 24px;
+  --ov-space-4: 32px;
+  --ov-space-5: 40px;
+  --ov-space-6: 48px;
+  --ov-space-7: 56px;
+  --ov-space-8: 64px;
+
+  /* Bridge the existing V1/V2 tokens to the new design system */
+  --ovx-ink: var(--text-primary);
+  --ovx-muted: var(--text-secondary);
+  --ovx-line: var(--border-hairline);
+  --ovx-surface: var(--bg-surface);
+  --ovx-bg: var(--bg-obsidian);
+  --ovx-navy: #080C16;
+  --ovx-blue: var(--accent-primary);
+  --ovx-blue-2: #2563EB;
+  --ovx-blue-soft: rgba(14, 165, 233, 0.10);
+  --ovx-shadow: var(--shadow-bento);
+}
+
+html {
+  min-height: 100%;
+  background: var(--bg-obsidian) !important;
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  direction: rtl;
+  color: var(--text-primary) !important;
+  background-color: var(--bg-obsidian) !important;
+  background-image:
+    radial-gradient(circle at 84% 12%, rgba(14, 165, 233, 0.10), transparent 34%),
+    radial-gradient(circle at 12% 88%, rgba(37, 99, 235, 0.06), transparent 38%) !important;
+  font-family: "Cairo", "OVIRA Arabic", Tahoma, Arial, sans-serif !important;
+  font-weight: 600;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body *, body *::before, body *::after { font-family: inherit; }
+button, input, select, textarea { font: inherit; }
+a, button { -webkit-tap-highlight-color: transparent; }
+a { color: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible {
+  outline: 2px solid rgba(14, 165, 233, 0.72);
+  outline-offset: 3px;
+}
+[hidden] { display: none !important; }
+
+/* Latin wordmark, product prices and technical labels */
+.ovx-logo, .logo, .ovx-art-top, .ovx-art-bottom,
+.ovx-art-caption, .ovx-floating-product, .ovx-card-price strong,
+.ovx-card-price span, .ovx-kicker {
+  font-family: "Plus Jakarta Sans", "Cairo", "OVIRA Arabic", sans-serif !important;
+}
+
+/* Header — obsidian glass, clear contrast */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(6, 8, 15, 0.88) !important;
+  border-bottom: 1px solid var(--border-hairline) !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.24) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+header #hd {
+  min-height: 68px;
+}
+header .ovx-logo {
+  color: var(--text-primary) !important;
+  font-weight: 800 !important;
+}
+header .ovx-header-links a {
+  color: var(--text-secondary) !important;
+  font-weight: 700 !important;
+  border: 1px solid transparent;
+}
+header .ovx-header-links a:hover,
+header .ovx-header-links a.active {
+  color: var(--text-primary) !important;
+  background: rgba(14, 165, 233, 0.09) !important;
+  border-color: var(--border-hairline);
+}
+header .ovx-header-actions .ib {
+  color: var(--text-primary) !important;
+  background: transparent !important;
+}
+header .ovx-header-actions .ib:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+header .ovx-logo i {
+  background: linear-gradient(145deg, #0EA5E9, #1646B8) !important;
+  box-shadow: 0 8px 22px rgba(14, 165, 233, 0.18) !important;
+}
+header .ovx-install-app {
+  min-height: 40px !important;
+  height: 40px !important;
+  padding: 0 13px !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: var(--radius-control) !important;
+  background: rgba(15, 23, 42, 0.76) !important;
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+header .ovx-install-app span {
+  color: var(--accent-primary) !important;
+  background: rgba(14, 165, 233, 0.12) !important;
+}
+header .ovx-install-app:hover {
+  border-color: var(--border-glow-active) !important;
+}
+
+/* Shared bento surfaces */
+.ovira-bento-box,
+.ovx-category-strip,
+.ovx-shop-toolbar,
+.ovx-product-card,
+.ovx-service-card,
+.ovx-how-steps article,
+.ovx-checkout-panel,
+.ovx-account-panel,
+.ovx-auth-panel,
+.ovx-review-panel,
+.ovx-shop-empty,
+.ovx-search-box,
+.ovx-sort-box,
+.ovx-shop-count,
+.sm, .ci, .box,
+.ov-chat-page .ov-chat-layout > .sm,
+.ov-account-verify {
+  color: var(--text-primary) !important;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: var(--radius-bento);
+  box-shadow: var(--shadow-bento) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Homepage hero — remove the previous full-width blue gradient */
+.ovx-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 500px;
+  color: var(--text-primary) !important;
+  background:
+    radial-gradient(circle at 78% 22%, rgba(14, 165, 233, 0.10), transparent 31%),
+    radial-gradient(circle at 17% 82%, rgba(37, 99, 235, 0.06), transparent 34%),
+    #06080F !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--shadow-bento) !important;
+}
+.ovx-hero::before,
+.ovx-hero::after {
+  border-color: rgba(255, 255, 255, 0.07) !important;
+  opacity: 0.75;
+}
+.ovx-hero-copy { min-width: 0; }
+.ovx-hero h1 {
+  color: var(--text-primary) !important;
+  font-family: "Cairo", "OVIRA Arabic", sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.035em !important;
+  line-height: 1.28 !important;
+}
+.ovx-hero h1 span {
+  color: #A9C7E8 !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+.ovx-hero-description {
+  color: var(--text-secondary) !important;
+  font-weight: 500 !important;
+  line-height: 2 !important;
+}
+.ovx-eyebrow {
+  color: #CBD5E1 !important;
+  background: rgba(15, 23, 42, 0.76) !important;
+  border: 1px solid var(--border-hairline) !important;
+  font-weight: 700 !important;
+}
+.ovx-live-dot {
+  background: var(--accent-primary) !important;
+  box-shadow: 0 0 0 5px rgba(14, 165, 233, 0.10) !important;
+}
+.ovx-hero-assurances { color: var(--text-secondary) !important; }
+.ovx-hero-assurances b { color: var(--accent-primary) !important; }
+.ovx-live-stats { border-color: var(--border-hairline) !important; }
+.ovx-live-stats strong { color: var(--text-primary) !important; font-weight: 800 !important; }
+.ovx-live-stats span { color: var(--text-muted) !important; }
+
+/* Hero artwork — no tilted card, no rotation animation */
+.ovx-hero-art { isolation: isolate; }
+.ovx-art-glow {
+  background: rgba(14, 165, 233, 0.10) !important;
+  filter: blur(48px) !important;
+}
+.ovx-art-ring,
+.ovx-art-ring-a,
+.ovx-art-ring-b {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  transform: none !important;
+}
+.ovx-art-main {
+  transform: none !important;
+  animation: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 20px !important;
+  background: linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.025)) !important;
+  box-shadow: 0 24px 52px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+.ovx-art-emblem { transform: none !important; }
+.ovx-art-top, .ovx-art-bottom { color: #CBD5E1 !important; }
+.ovx-art-top b, .ovx-art-main > strong em { color: #A9C7E8 !important; }
+.ovx-floating-product {
+  transform: none !important;
+  animation: none !important;
+  color: var(--text-primary) !important;
+  background: rgba(15, 23, 42, 0.88) !important;
+  border: 1px solid var(--border-hairline) !important;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.32) !important;
+}
+.ovx-floating-product small { color: var(--text-secondary) !important; }
+.ovx-art-caption { color: var(--text-muted) !important; }
+
+/* Category rail */
+.ovx-category-strip {
+  padding: 16px 20px !important;
+}
+.ovx-strip-label b { color: var(--text-primary) !important; font-weight: 800 !important; }
+.ovx-strip-label span,
+.ovx-category-pill span { color: var(--accent-primary) !important; }
+.ovx-category-pill {
+  color: var(--text-secondary) !important;
+  background: rgba(2, 6, 23, 0.38) !important;
+  border: 1px solid var(--border-hairline) !important;
+}
+.ovx-category-pill:hover,
+.ovx-category-all {
+  color: var(--text-primary) !important;
+  background: rgba(14, 165, 233, 0.10) !important;
+  border-color: var(--border-glow-active) !important;
+}
+
+/* Product catalog cards — logo, category, product name and price */
+.ovx-product-grid,
+.ovx-shop-grid { gap: 16px !important; }
+.ovx-product-card {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary) !important;
+  background: rgba(10, 14, 25, 0.92) !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 18px 38px rgba(0,0,0,0.30) !important;
+  transform: none !important;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease !important;
+}
+.ovx-product-card:hover {
+  transform: translateY(-3px) !important;
+  border-color: var(--border-glow-active) !important;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.42) !important;
+}
+.ovx-product-card-art {
+  min-height: 176px !important;
+  background:
+    radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--c, #0EA5E9) 12%, transparent), transparent 45%),
+    #080C16 !important;
+  border-bottom: 1px solid var(--border-hairline) !important;
+}
+.ovx-product-card-art::before { background: none !important; }
+.ovx-card-orbit { border-color: rgba(255,255,255,0.07) !important; }
+.ovx-card-logo-wrap .gc {
+  transform: none !important;
+  transition: transform .2s ease, box-shadow .2s ease !important;
+  box-shadow: 0 18px 34px rgba(0,0,0,0.42) !important;
+}
+.ovx-product-card:hover .ovx-card-logo-wrap .gc {
+  transform: translateY(-3px) !important;
+}
+.ovx-product-card-body {
+  min-height: 142px !important;
+  padding: 17px 18px 18px !important;
+  background: rgba(15, 23, 42, 0.76) !important;
+}
+.ovx-card-title-line small {
+  color: var(--accent-primary) !important;
+  font-weight: 700 !important;
+}
+.ovx-card-title-line h3 {
+  color: var(--text-primary) !important;
+  font-weight: 800 !important;
+  line-height: 1.5 !important;
+}
+.ovx-card-arrow {
+  color: var(--accent-primary) !important;
+  background: rgba(14, 165, 233, 0.10) !important;
+}
+.ovx-card-divider { background: var(--border-hairline) !important; }
+.ovx-card-price small { color: var(--text-muted) !important; }
+.ovx-card-price strong {
+  color: var(--text-primary) !important;
+  font-weight: 800 !important;
+}
+.ovx-card-price span { color: var(--text-secondary) !important; }
+.ovx-card-cta { color: var(--accent-primary) !important; font-weight: 700 !important; }
+.ovx-product-card .ovx-card-description,
+.ovx-product-card .ovx-product-description,
+.ovx-product-card .sub,
+.ovx-product-card p { display: none !important; }
+
+/* Section headings and service cards */
+.ovx-section-heading h2,
+.ovx-shop-heading h1,
+.ovx-how-intro h2,
+.ovx-service-card > b {
+  color: var(--text-primary) !important;
+  font-weight: 800 !important;
+}
+.ovx-section-heading p,
+.ovx-shop-heading p,
+.ovx-how-intro p,
+.ovx-service-card > p { color: var(--text-secondary) !important; }
+.ovx-kicker { color: var(--accent-primary) !important; font-weight: 700 !important; }
+.ovx-service-card {
+  min-height: 190px;
+  color: var(--text-primary) !important;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-hairline) !important;
+  box-shadow: var(--shadow-bento) !important;
+}
+.ovx-service-card:hover {
+  transform: translateY(-3px) !important;
+  border-color: var(--border-glow-active) !important;
+}
+.ovx-service-card .ov-home-service-top i {
+  color: var(--accent-primary) !important;
+  background: rgba(14, 165, 233, 0.10) !important;
+}
+.ovx-service-card .ov-home-service-top small,
+.ovx-service-card .ov-home-service-link { color: var(--accent-primary) !important; }
+.ovx-how-section {
+  color: var(--text-primary) !important;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(14,165,233,0.10), transparent 34%),
+    #080C16 !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 22px !important;
+  box-shadow: var(--shadow-bento) !important;
+}
+.ovx-how-intro h2 { color: var(--text-primary) !important; }
+.ovx-how-intro p { color: var(--text-secondary) !important; }
+.ovx-how-steps article {
+  background: rgba(15, 23, 42, 0.60) !important;
+  border: 1px solid var(--border-hairline) !important;
+}
+.ovx-how-steps article > span {
+  color: var(--accent-primary) !important;
+  background: rgba(14, 165, 233, 0.10) !important;
+}
+.ovx-how-steps b { color: var(--text-primary) !important; }
+.ovx-how-steps p { color: var(--text-secondary) !important; }
+
+/* Shop controls */
+.ovx-shop-count strong { color: var(--accent-primary) !important; }
+.ovx-shop-count span,
+.ovx-shop-category-row > span { color: var(--text-secondary) !important; }
+.ovx-search-box,
+.ovx-sort-box { background: var(--bg-surface) !important; }
+.ovx-search-box input,
+.ovx-sort-box select {
+  color: var(--text-primary) !important;
+  background: transparent !important;
+}
+.ovx-search-box input::placeholder { color: var(--text-muted) !important; }
+.ovx-shop-empty {
+  background: var(--bg-surface) !important;
+  border: 1px dashed var(--border-hairline) !important;
+}
+.ovx-shop-empty h2 { color: var(--text-primary) !important; }
+.ovx-shop-empty p { color: var(--text-secondary) !important; }
+
+/* Product detail and purchase panel */
+body.pp,
+body.pp #app { background: transparent !important; color: var(--text-primary) !important; }
+body.pp .ov-product-hero {
+  color: var(--text-primary) !important;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(14,165,233,0.10), transparent 32%),
+    #080C16 !important;
+  border: 1px solid var(--border-hairline) !important;
+  border-radius: 22px !important;
+  box-shadow: var(--shadow-bento) !important;
+}
+body.pp .ov-product-copy h1 { color: var(--text-primary) !important; font-weight: 800 !important; }
+body.pp .ov-product-sub,
+body.pp .ov-product-breadcrumb,
+body.pp .ov-product-brandline { color: var(--text-secondary) !important; }
+body.pp .ov-product-breadcrumb a { color: var(--accent-primary) !important; }
+body.pp .ov-product-highlights span {
+  color: var(--text-secondary) !important;
+  background: rgba(15,23,42,0.72) !important;
+  border: 1px solid var(--border-hairline) !important;
+}
+body.pp .ov-product-jump {
+  color: var(--text-primary) !important;
+  background: rgba(14,165,233,0.12) !important;
+  border: 1px solid var(--border-glow-active) !important;
+  box-shadow: none !important;
+}
+body.pp .ov-product-visual-card {
+  background: rgba(15,23,42,0.72) !important;
+  border: 1px solid var(--border-hairline) !important;
+  box-shadow: var(--shadow-bento) !important;
+}
+body.pp .ov-buy-card,
+body.pp .ov-product-main .ov-landing-section,
+body.pp .ov-product-proof-grid .ov-evidence,
+body.pp .ov-reviews-panel,
+body.pp .ov-review-card {
+  color: var(--text-primary) !important;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-hairline) !important;
+  box-shadow: var(--shadow-bento) !important;
+}
+body.pp .ov-buy-card h2,
+body.pp .ov-product-main h2,
+body.pp .ov-reviews-heading h2 { color: var(--text-primary) !important; }
+body.pp .ov-buy-card .pl.ov-plan-option {
+  color: var(--text-secondary) !important;
+  background: rgba(2,6,23,0.38) !important;
+  border: 1px solid var(--border-hairline) !important;
+}
+body.pp .ov-buy-card .pl.ov-plan-option.on {
+  color: var(--text-primary) !important;
+  background: rgba(14,165,233,0.10) !important;
+  border-color: var(--border-glow-active) !important;
+  box-shadow: none !important;
+}
+body.pp .ov-buy-total strong { color: var(--accent-primary) !important; }
+body.pp .ov-product-action-bar {
+  background: rgba(6,8,15,0.94) !important;
+  border: 1px solid var(--border-hairline) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.40) !important;
+}
+
+/* Cart, checkout, account, support and wallet */
+.ttl { color: var(--text-primary) !important; font-weight: 800 !important; }
+.sm, .ci, .box,
+.ov-chat-page .ov-chat-layout > .sm,
+.ov-account-verify,
+.checkout-steps, .checkout-help,
+.ovx-install-card {
+  color: var(--text-primary) !important;
+  background: var(--bg-surface) !important;
+  border-color: var(--border-hairline) !important;
+  box-shadow: var(--shadow-bento) !important;
+}
+.wallet-card {
+  color: var(--text-primary) !important;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(14,165,233,0.10), transparent 36%),
+    #080C16 !important;
+  border: 1px solid var(--border-hairline) !important;
+  box-shadow: var(--shadow-bento) !important;
+}
+.ovx-checkout-panel,
+.checkout-trust,
+.checkout-help {
+  color: var(--text-primary) !important;
+  background: var(--bg-surface) !important;
+  border-color: var(--border-hairline) !important;
+}
+.ovx-checkout input, .ovx-checkout select, .ovx-checkout textarea,
+.in2, .sel, input, select, textarea {
+  color: var(--text-primary);
+  background-color: rgba(2, 6, 23, 0.72);
+  border-color: var(--border-hairline);
+}
+input::placeholder, textarea::placeholder { color: var(--text-muted); }
+.ovx-checkout input:focus, .ovx-checkout select:focus,
+.ovx-checkout textarea:focus, input:focus, select:focus, textarea:focus {
+  border-color: var(--border-glow-active) !important;
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.08) !important;
+}
+.checkout-trust { color: var(--text-secondary) !important; }
+.checkout-total, .ovx-card-divider { border-color: var(--border-hairline) !important; }
+.fab {
+  background: var(--accent-gradient) !important;
+  box-shadow: 0 10px 24px rgba(14,165,233,0.18) !important;
+}
+.ovx-install-dialog { background: rgba(2,6,23,0.76) !important; }
+.ovx-install-card {
+  color: var(--text-primary) !important;
+  background: #0B1120 !important;
+  border: 1px solid var(--border-hairline) !important;
+}
+.ovx-install-card p { color: var(--text-secondary) !important; }
+.ovx-install-card .ovx-install-close {
+  color: var(--text-primary) !important;
+  background: rgba(30,41,59,0.78) !important;
+  border: 1px solid var(--border-hairline) !important;
+}
+
+/* Compact action controls — never a giant fixed bottom bar */
+.ovx-btn, .btn, .ovira-btn-primary, .ovira-btn-secondary,
+.ovx-product-jump, .ovx-install-app {
+  min-height: 46px !important;
+  height: 46px !important;
+  padding: 0 24px !important;
+  border-radius: var(--radius-control) !important;
+  font-weight: 700 !important;
+  box-shadow: none;
+}
+.ovx-btn-primary, .btn:not(.o):not(.wa):not(.tg), .ovira-btn-primary {
+  color: #fff !important;
+  background: var(--accent-gradient) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+.ovx-btn-glass, .ovira-btn-secondary {
+  color: var(--text-primary) !important;
+  background: var(--bg-surface-elevated) !important;
+  border: 1px solid var(--border-hairline) !important;
+}
+.ovx-btn:hover, .btn:hover { transform: translateY(-1px); }
+.ovx-hero-actions { gap: 8px !important; }
+.ovx-hero-actions .ovx-btn { width: auto !important; max-width: 220px !important; }
+.ovx-product-action-bar .btn { width: auto !important; max-width: 220px !important; }
+
+/* Footer */
+.ovx-footer, footer, .ov-footer {
+  color: var(--text-secondary) !important;
+  background: transparent !important;
+  border-color: var(--border-hairline) !important;
+}
+.ovx-footer p, .ovx-footer > small,
+.ovx-footer > div a { color: var(--text-secondary) !important; }
+
+/* RTL, mobile performance and accessibility */
+@media (max-width: 800px) {
+  .ovx-home, .ovx-shop { padding-inline: 16px !important; }
+  .ovx-hero {
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
+    padding: 26px 20px !important;
+    gap: 18px !important;
+  }
+  .ovx-hero h1 { font-size: clamp(34px, 9vw, 48px) !important; }
+  .ovx-hero-art { min-height: 260px !important; }
+  .ovx-art-main { width: min(300px, 82%) !important; min-height: 240px !important; }
+  .ovx-art-ring-a { width: 290px !important; height: 290px !important; }
+  .ovx-art-ring-b { width: 230px !important; height: 230px !important; }
+  .ovx-product-grid, .ovx-shop-grid { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap: 12px !important; }
+  .ovx-product-card-art { min-height: 142px !important; }
+  .ovx-product-card-body { min-height: 132px !important; padding: 13px !important; }
+  .ovx-card-title-line h3 { font-size: 14px !important; }
+  .ovx-card-price strong { font-size: 17px !important; }
+  .ovx-btn { max-width: 220px !important; }
+}
+@media (max-width: 380px) {
+  .ovx-product-grid, .ovx-shop-grid { grid-template-columns: 1fr !important; }
+  .ovx-hero-actions { display: flex !important; flex-wrap: wrap !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}/* OVIRA HERO FINAL CONSTITUTION PATCH */
+
+#app .ovx-hero,
+.ovx-hero {
+  background-color: #06080F !important;
+  background-image:
+    radial-gradient(circle at 82% 18%, rgba(14,165,233,0.10), transparent 34%),
+    radial-gradient(circle at 16% 82%, rgba(37,99,235,0.07), transparent 38%) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow:
+    0 24px 60px -28px rgba(0,0,0,0.85),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+
+#app .ovx-hero::before,
+#app .ovx-hero::after,
+.ovx-hero::before,
+.ovx-hero::after {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+#app .ovx-hero-art,
+.ovx-hero-art {
+  transform: none !important;
+  rotate: none !important;
+}
+
+#app .ovx-hero-art > *,
+.ovx-hero-art > * {
+  transform: none !important;
+}
+
+#app .ovx-hero h1,
+.ovx-hero h1 {
+  font-family: "Cairo", sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.035em !important;
+  line-height: 1.08 !important;
+}
+
+#app .ovx-hero h1 span,
+.ovx-hero h1 span {
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #AFC5FF !important;
+}
+
+#app .ovx-hero-description,
+.ovx-hero-description {
+  font-family: "Cairo", sans-serif !important;
+  font-weight: 500 !important;
+  color: #CBD5E1 !important;
+}
+
+#app .ovx-hero .ovira-btn-primary,
+#app .ovx-hero .ovx-btn-primary {
+  height: 46px !important;
+  min-height: 46px !important;
+  max-width: 220px !important;
+  padding: 0 24px !important;
+  border-radius: 12px !important;
+}
+
+#app .ovx-hero .ovira-btn-secondary,
+#app .ovx-hero .ovx-btn-secondary {
+  height: 46px !important;
+  min-height: 46px !important;
+  max-width: 220px !important;
+  padding: 0 24px !important;
+  border-radius: 12px !important;
+}

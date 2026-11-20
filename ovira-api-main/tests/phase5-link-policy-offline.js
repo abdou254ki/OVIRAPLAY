@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict');
+const {normalizePhone,matchesHistoricalPurchase}=require('../services/historicalLinkPolicy');
+assert.equal(normalizePhone('0555 11 22 33'), '213555112233');
+assert.equal(normalizePhone('+213 555 11 22 33'), '213555112233');
+assert.equal(normalizePhone('00213 555 11 22 33'), '213555112233');
+const order={customerEmail:'Old@Example.com',whatsappNumber:'0555112233'};
+assert.deepEqual(matchesHistoricalPurchase(order,{email:'old@example.com',phone:'',emailVerified:true}),{email:true,phone:false,verified:true});
+assert.deepEqual(matchesHistoricalPurchase(order,{email:'no@example.com',phone:'+213555112233',phoneVerified:true}),{email:false,phone:true,verified:true});
+const uncertain=matchesHistoricalPurchase(order,{email:'old@example.com',phone:'',emailVerified:false});
+assert.equal(uncertain.verified,false);
+const mismatch=matchesHistoricalPurchase(order,{email:'attacker@example.com',phone:'0777000000',phoneVerified:true,emailVerified:true});
+assert.equal(mismatch.email||mismatch.phone,false);
+console.log('PHASE5_LINK_POLICY_OK');
