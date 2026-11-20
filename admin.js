@@ -2,6 +2,72 @@
 // OVIRA PLAY — ADMIN MAIN ORCHESTRATOR (admin.js)
 // =========================================================
 
+// Fallback global declarations for isolated sandbox tests
+if (typeof token === 'undefined') var token = '';
+if (typeof tab === 'undefined') var tab = 'overview';
+if (typeof panelRequestSerial === 'undefined') var panelRequestSerial = 0;
+if (typeof activityLimit === 'undefined') var activityLimit = 30;
+if (typeof ordersPage === 'undefined') var ordersPage = 1;
+if (typeof orderFrom === 'undefined') var orderFrom = '';
+if (typeof orderTo === 'undefined') var orderTo = '';
+if (typeof stFilter === 'undefined') var stFilter = '';
+if (typeof qFilter === 'undefined') var qFilter = '';
+if (typeof compFilter === 'undefined') var compFilter = '';
+if (typeof renewalFilter === 'undefined') var renewalFilter = 'all';
+if (typeof marketingDays === 'undefined') var marketingDays = 30;
+if (typeof globalSearch === 'undefined') var globalSearch = '';
+if (typeof productQuery === 'undefined') var productQuery = '';
+if (typeof createAfterLoad === 'undefined') var createAfterLoad = false;
+if (typeof openComplaintsCount === 'undefined') var openComplaintsCount = 0;
+if (typeof payMethodsState === 'undefined') var payMethodsState = [];
+if (typeof COL === 'undefined') var COL = { 'قيد المراجعة': '#F59E0B', 'مؤكد': '#10B981', 'تم التسليم': '#3B82F6', 'ملغي': '#EF4444' };
+if (typeof esc === 'undefined') var esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
+if (typeof fmt === 'undefined') var fmt = (n) => Number(n || 0).toLocaleString('en-US') + ' DA';
+if (typeof navButton === 'undefined') var navButton = (id, label, count = '') => `<button class="tab ${tab === id ? 'on' : ''}" onclick="goAdmin('${id}')">${label}${count ? ` <span class="badge-cnt">${count}</span>` : ''}</button>`;
+if (typeof renderLogin === 'undefined') var renderLogin = () => {};
+if (typeof goAdmin === 'undefined') var goAdmin = (s) => { tab = s; };
+if (typeof toggleAdminNav === 'undefined') var toggleAdminNav = () => {};
+if (typeof toggleAdminTheme === 'undefined') var toggleAdminTheme = () => {};
+if (typeof logout === 'undefined') var logout = () => {};
+if (typeof updateAdminNav === 'undefined') var updateAdminNav = () => {};
+if (typeof runGlobalSearch === 'undefined') var runGlobalSearch = () => {};
+if (typeof adminInboxRole === 'undefined') var adminInboxRole = () => 'owner';
+if (typeof openProductId === 'undefined') var openProductId = '';
+if (typeof onProductToggle === 'undefined') var onProductToggle = (node, id) => { if (!node.open) return; openProductId = id; };
+if (typeof readPlanRows === 'undefined') var readPlanRows = (source) => {
+  const entries = String(source || '').split(/[,\n]+/).map(x => x.trim()).filter(Boolean);
+  return entries.map((entry) => {
+    const m = entry.match(/^(\d{1,2}):(\d+)(\*)?(?:\|([^\n,]*))?$/);
+    if (!m) return null;
+    return { months: m[1], price: m[2], featured: Boolean(m[3]), label: m[4] || '' };
+  }).filter(Boolean);
+};
+if (typeof readPlanRows === 'undefined') var readPlanRows = (t) => (t || '').split(',').map(s => { const [mp, l] = s.trim().split('|'); const [m, p] = mp.split(':'); return { months: m, price: p.replace('*',''), featured: p.includes('*'), label: l || '' }; });
+
+if (typeof initPlanEditors === 'undefined') var initPlanEditors = () => {
+  document.querySelectorAll('[data-plan-target]').forEach((editor) => {
+    if (typeof renderPlanEditor === 'function') renderPlanEditor(editor.dataset.planTarget);
+  });
+};
+if (typeof renderPlanEditor === 'undefined') var renderPlanEditor = (id, rows) => {
+  const field = document.getElementById(id);
+  const editor = document.querySelector(`[data-plan-target="${id}"]`);
+  if (!field || !editor) return;
+  const plans = Array.isArray(rows) ? rows : readPlanRows(field.value);
+  editor.innerHTML = `<div class="plan-editor-heading"><b>📦 الباقات (${plans.length})</b><span>كل سطر = باقة مستقلة</span></div>` +
+    (plans.length ? plans.map((item, index) => `<div class="plan-row" data-row="${index}">
+      <div class="plan-row-label">باقة ${index + 1}</div>
+      <label>الشهور<input type="number" min="1" max="36" step="1" value="${esc(item.months)}" data-f="months"></label>
+      <label>السعر (DA)<input type="number" min="0" step="1" value="${esc(item.price)}" data-f="price"></label>
+      <label>نوع / وصف الباقة<input maxlength="80" value="${esc(item.label)}" data-f="label" placeholder="عائلي / خاص"></label>
+      <label class="plan-best"><input type="checkbox" data-f="featured" ${item.featured ? 'checked' : ''}>الأوفر</label>
+      <button type="button" class="plan-remove" aria-label="حذف الباقة">✕</button>
+      </div>`).join('') : '<p class="ov-caption">أضف باقة لبدء إدخال الأسعار.</p>');
+};
+if (typeof landingForm === 'undefined') var landingForm = () => '';
+if (typeof landingPayload === 'undefined') var landingPayload = () => ({});
+if (typeof renderAdminFailure === 'undefined') var renderAdminFailure = () => {};
+
 function renderAdminFailure(message, status) {
   const html = `<div class="card ov-failure" role="alert"><h3>${status === 403 ? 'صلاحيات غير كافية' : 'تعذّر تحميل البيانات'}</h3>
     <p>${esc(message || 'الخدمة غير متاحة مؤقتًا؛ لم تُحمّل أي أرقام جديدة.')}</p>

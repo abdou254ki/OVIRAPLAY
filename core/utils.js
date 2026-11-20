@@ -100,15 +100,15 @@ function cp(t) {
 
 function theme() {
   const r = document.documentElement;
-  const d = r.dataset.theme ? r.dataset.theme == 'dark' : true;
-  r.dataset.theme = d ? 'light' : 'dark';
+  const isDark = r.dataset.theme === 'dark';
+  r.dataset.theme = isDark ? 'light' : 'dark';
   try { localStorage.setItem('ovira_theme_v3', r.dataset.theme); } catch (e) {}
 }
 try {
   const s = localStorage.getItem('ovira_theme_v3');
-  document.documentElement.dataset.theme = s === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = s === 'dark' ? 'dark' : 'light';
 } catch (e) {
-  document.documentElement.dataset.theme = 'dark';
+  document.documentElement.dataset.theme = 'light';
 }
 
 // جلب إعدادات المصادقة (Google Client ID + Bot Name)
