@@ -25,6 +25,7 @@ const { bot } = require('./bot/telegram');
 const { initBackupJob } = require('./services/backupService');
 const { initRenewalJob } = require('./services/renewalService');
 const { createOrderLimiters } = require('./services/limiters');
+const { mongoSanitize } = require('./middleware/sanitize');
 const crypto = require('crypto');
 
 const { PORT = 3000, MONGODB_URI, CORS_ORIGINS = '' } = process.env;
@@ -71,6 +72,7 @@ app.use(
     }
   })
 );
+app.use(mongoSanitize);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 

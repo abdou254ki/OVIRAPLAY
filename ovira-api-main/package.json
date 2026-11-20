@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "npm run test:offline && node tests/landing-batch1.js && node tests/landing-batch2.js",
+    "test": "npm run test:offline && node tests/landing-batch1.js && node tests/landing-batch2.js && node tests/security-roles.js",
     "test:ai": "node tests/ai-v2-contract.js && node tests/ai-jobs-contract.js",
     "security:check": "node scripts/security-check.js",
     "test:offline": "node tests/ai-v2-contract.js && node tests/ai-jobs-contract.js && node tests/conversations-offline.js && node tests/message-history-offline.js && node tests/inbox-v2-offline.js && node scripts/security-check.js && node tests/engagement-offline.js && node tests/phase4-support-policy-offline.js && node tests/phase4-autoreply-offline.js"

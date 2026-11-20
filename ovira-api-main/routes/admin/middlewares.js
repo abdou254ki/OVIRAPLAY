@@ -22,7 +22,7 @@ async function recordAdminAudit({ adminId, action, entity, entityId, summary }) 
       adminId: Number(adminId) || 0,
       action,
       entity,
-      entityId: String(entityId || ''),
+      entityId: String(entityId || 'system'),
       summary: String(summary || '').slice(0, 400)
     });
   } catch (e) {
