@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OVIRA PLAY | متجر الاشتراكات الرقمية</title>
+  <meta name="description" content="OVIRA PLAY — اطّلع على الاشتراكات الرقمية المتاحة، الباقات والأسعار وشروط الخدمة قبل الشراء.">
+  <meta name="theme-color" content="#FFFFFF">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="OVIRA PLAY">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="assets/ovira-icon.svg">
+  <link rel="apple-touch-icon" href="assets/ovira-icon-192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OVIRA PLAY">
+  <meta property="og:title" content="OVIRA PLAY | متجر الاشتراكات الرقمية">
+  <meta property="og:description" content="OVIRA PLAY — تعرف على الاشتراكات الرقمية المتاحة قبل الشراء.">
+  <link rel="stylesheet" href="ovira-core.css">
+  <link rel="stylesheet" href="ovira-experience.css?v=ovira-v6-20261117-185920">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <a href="#app" class="skip-link" onclick="event.preventDefault(); document.getElementById('app').focus()">تخطي إلى المحتوى</a>
+  <header>
+    <div class="w" id="hd"></div>
+  </header>
+
+  <div id="ovAnnouncements" class="ov-announcements" role="region" aria-label="إعلانات المتجر" hidden></div>
+
+  <main id="app" tabindex="-1" aria-live="polite">
+    <!-- 2.2 Skeleton Hero Loading (يُستبدل تلقائياً عند تحميل المتجر) -->
+    <div class="skeleton-hero" aria-hidden="true">
+      <div class="skeleton-shimmer skeleton-title"></div>
+      <div class="skeleton-shimmer skeleton-sub"></div>
+      <div class="skeleton-grid">
+        <div class="skeleton-shimmer skeleton-card"></div>
+        <div class="skeleton-shimmer skeleton-card"></div>
+        <div class="skeleton-shimmer skeleton-card"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer شامل — يُحقن ديناميكياً عبر JS -->
+  <footer id="ov-footer" class="ov-footer" role="contentinfo"></footer>
+
+  <!-- Bottom Bar للموبايل -->
+  <nav id="ov-bottom-bar" class="ov-bottom-bar" aria-label="التنقل السفلي"></nav>
+
+  <button id="siteNavScrim" aria-label="إغلاق القائمة" onclick="toggleSiteNav(false)"></button>
+  <nav id="nv" aria-label="القائمة الرئيسية"></nav>
+
+  <a class="fab" id="fab" href="#/support" aria-label="دعم الموقع">💬</a>
+  <div class="toast" id="ts"></div>
+
+  <!-- الوحدات البرمجية المجزأة (Phase 2 Frontend Architecture) -->
+  <script src="core/utils.js"></script>
+  <script src="core/state.js"></script>
+  <script src="core/api.js"></script>
+  <script src="components/header.js"></script>
+  <script src="components/footer.js"></script>
+  <script src="views/home.js"></script>
+  <script src="views/shop.js"></script>
+  <script src="views/product.js"></script>
+  <script src="views/cart.js"></script>
+  <script src="views/account.js"></script>
+  <script src="views/support.js"></script>
+  <script src="core/router.js"></script>
+  <script src="app.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>

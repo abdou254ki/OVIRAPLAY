@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>لوحة الإدارة | OVIRA PLAY</title>
+  <meta name="theme-color" content="#FFFFFF">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="ovira-core.css">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin/admin-layout.css">
+  <link rel="stylesheet" href="admin/messages.css">
+</head>
+<body>
+  <div id="root"></div>
+  <div class="admin-scrim" id="adminScrim" onclick="toggleAdminNav(false)"></div>
+  <div class="toast" id="admToast"></div>
+
+  <!-- وحدات لوحة الإدارة المقسمة (Phase 2 Admin Architecture) -->
+  <script src="admin/core.js"></script>
+  <script src="admin/orders.js"></script>
+  <script src="admin/products.js"></script>
+  <script src="admin/customers.js"></script>
+  <script src="admin/stats.js"></script>
+  <script src="admin/ai-control.js"></script>
+  <script src="admin/historical-finance.js"></script>
+  <script src="admin/engagement.js"></script>
+  <script src="admin/messages.js"></script>
+  <script src="admin/notifications.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
