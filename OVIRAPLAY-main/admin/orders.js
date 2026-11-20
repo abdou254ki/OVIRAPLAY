@@ -145,3 +145,223 @@ window.showOrderLink = showOrderLink;
 window.lookupOrderCustomer = lookupOrderCustomer;
 window.prepareOrderLink = prepareOrderLink;
 window.confirmOrderLink = confirmOrderLink;
+
+// =========================================================
+// طلبات يدوية وإدارة المخزون والشاشات
+// =========================================================
+
+async function submitManualOrder() {
+  const name = document.getElementById('mo_name')?.value.trim();
+  const phone = document.getElementById('mo_phone')?.value.trim();
+  const email = document.getElementById('mo_email')?.value.trim() || undefined;
+  const prodSelect = document.getElementById('mo_prod');
+  const productId = prodSelect?.value;
+  const productName = prodSelect?.options[prodSelect.selectedIndex]?.text;
+  const planId = document.getElementById('mo_plan')?.value || undefined;
+  const price = Number(document.getElementById('mo_price')?.value) || 0;
+  const months = Number(document.getElementById('mo_months')?.value) || 1;
+  const quantity = Number(document.getElementById('mo_qty')?.value) || 1;
+  const paymentMethod = document.getElementById('mo_pay_method')?.value || 'يدوي / إداري';
+  const paymentStatus = document.getElementById('mo_pay_status')?.value || 'paid';
+  const scheduledFor = document.getElementById('mo_sched_for')?.value || undefined;
+  const scheduleNote = document.getElementById('mo_sched_note')?.value.trim() || undefined;
+  const autoAssignStock = !!document.getElementById('mo_auto_stock')?.checked;
+  const adminNote = document.getElementById('mo_note')?.value.trim() || undefined;
+
+  if (!name || !phone) return toast('يرجى إدخال اسم الزبون ورقم الهاتف');
+  if (!productId) return toast('يرجى اختيار المنتج المطلوب');
+
+  const idempotencyKey = 'mo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+  try {
+    const r = await fetch(`${API}/orders/manual`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        customerName: name,
+        customerPhone: phone,
+        customerEmail: email,
+        productId,
+        productName,
+        planId,
+        price,
+        months,
+        quantity,
+        paymentMethod,
+        paymentStatus,
+        scheduledFor,
+        scheduleNote,
+        autoAssignStock,
+        adminNote,
+        idempotencyKey
+      })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.message || 'فشل حفظ الطلب اليدوي');
+    toast(d.message || 'تم إنشاء الطلب اليدوي بنجاح ✓');
+    tab = 'orders';
+    loadPanel();
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+function onManualProductChange() {
+  const prodSelect = document.getElementById('mo_prod');
+  const planSelect = document.getElementById('mo_plan');
+  const priceInput = document.getElementById('mo_price');
+  const monthsInput = document.getElementById('mo_months');
+  if (!prodSelect || !planSelect) return;
+
+  const opt = prodSelect.options[prodSelect.selectedIndex];
+  if (!opt || !opt.value) {
+    planSelect.innerHTML = '<option value="">-- اختر الباقة --</option>';
+    if (priceInput) priceInput.value = '';
+    return;
+  }
+
+  let plans = [];
+  try {
+    plans = JSON.parse(opt.getAttribute('data-plans') || '[]');
+  } catch (_) {}
+
+  if (plans && plans.length > 0) {
+    planSelect.innerHTML = plans.map(p => `<option value="${esc(p.id || p.planId || '')}" data-price="${p.price || 0}" data-months="${p.months || 1}">${esc(p.label || p.name || 'باقة')} — ${p.price || 0} دج</option>`).join('');
+    onManualPlanChange();
+  } else {
+    planSelect.innerHTML = '<option value="standard" data-price="1000" data-months="1">باقة أساسية</option>';
+    onManualPlanChange();
+  }
+}
+
+function onManualPlanChange() {
+  const planSelect = document.getElementById('mo_plan');
+  const priceInput = document.getElementById('mo_price');
+  const monthsInput = document.getElementById('mo_months');
+  if (!planSelect) return;
+  const opt = planSelect.options[planSelect.selectedIndex];
+  if (opt && opt.getAttribute('data-price') && priceInput) {
+    priceInput.value = opt.getAttribute('data-price');
+  }
+  if (opt && opt.getAttribute('data-months') && monthsInput) {
+    monthsInput.value = opt.getAttribute('data-months');
+  }
+}
+
+async function createStockAccountAdmin() {
+  const productId = document.getElementById('stk_prod')?.value.trim();
+  const email = document.getElementById('stk_email')?.value.trim();
+  const password = document.getElementById('stk_pass')?.value.trim();
+  const slotsCount = Number(document.getElementById('stk_slots')?.value) || 5;
+  const costPrice = Number(document.getElementById('stk_cost')?.value) || 0;
+  const masterDays = Number(document.getElementById('stk_days')?.value) || 30;
+  const notes = document.getElementById('stk_notes')?.value.trim() || '';
+
+  if (!productId || !email || !password) return toast('يرجى ملء معرف المنتج والبريد وكلمة المرور');
+
+  try {
+    const r = await fetch(`${API}/stock`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ productId, email, password, slotsCount, costPrice, masterDays, notes })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.message || 'فشل إضافة الحساب');
+    toast(d.message || 'تمت إضافة حساب المخزون بنجاح ✓');
+    loadPanel();
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+async function releaseStockSlotAdmin(stockId, slotNumber) {
+  if (!confirm(`هل تريد بالتأكيد تحرير الشاشة رقم ${slotNumber} وجعلها متاحة في المخزون؟`)) return;
+  try {
+    const r = await fetch(`${API}/stock/${stockId}/release-slot`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ slotNumber, rotatePin: true })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.message || 'فشل تحرير الشاشة');
+    toast(d.message || 'تم تحرير الشاشة بنجاح ✓');
+    loadPanel();
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+async function deleteStockAccountAdmin(stockId) {
+  if (!confirm('هل أنت متأكد من حذف حساب المخزون هذا نهائياً؟')) return;
+  try {
+    const r = await fetch(`${API}/stock/${stockId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.message || 'فشل حذف الحساب');
+    toast(d.message || 'تم حذف الحساب بنجاح ✓');
+    loadPanel();
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+async function fillDeliveryFromStock(orderId, productId) {
+  if (!productId) return toast('لا يوجد معرف منتج محدد لهذا الطلب');
+  try {
+    const r = await fetch(`${API}/stock?productId=${encodeURIComponent(productId)}&active=true`, {
+      headers: { 'Authorization': 'Bearer ' + token },
+      cache: 'no-store'
+    });
+    const d = await r.json();
+    if (!r.ok || !d.success) throw new Error(d.message || 'تعذر جلب المخزون');
+    const stocks = d.stocks || [];
+    let matchedSlot = null;
+    let matchedAccount = null;
+    for (const st of stocks) {
+      const avail = (st.slots || []).find(s => s.status === 'available');
+      if (avail) {
+        matchedSlot = avail;
+        matchedAccount = st;
+        break;
+      }
+    }
+    if (!matchedSlot || !matchedAccount) {
+      return toast('لا توجد شاشات فارغة متاحة لهذا المنتج في المخزون حالياً');
+    }
+
+    const typeField = document.getElementById('dlv_type_' + orderId);
+    if (typeField) {
+      typeField.value = 'screen';
+      toggleDeliveryFields(orderId);
+    }
+    const credField = document.getElementById('dlv_cred_' + orderId);
+    if (credField) credField.value = `${matchedAccount.email} : ${matchedAccount.password}`;
+    const profField = document.getElementById('dlv_prof_' + orderId);
+    if (profField) profField.value = matchedSlot.profileName || `شاشة ${matchedSlot.slotNumber}`;
+    const pinField = document.getElementById('dlv_pin_' + orderId);
+    if (pinField) pinField.value = matchedSlot.pin || '';
+
+    toast(`تم استخراج بيانات شاشة ${matchedSlot.slotNumber} من الحساب ${matchedAccount.code} بنجاح ✓`);
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+window.submitManualOrder = submitManualOrder;
+window.onManualProductChange = onManualProductChange;
+window.onManualPlanChange = onManualPlanChange;
+window.createStockAccountAdmin = createStockAccountAdmin;
+window.releaseStockSlotAdmin = releaseStockSlotAdmin;
+window.deleteStockAccountAdmin = deleteStockAccountAdmin;
+window.fillDeliveryFromStock = fillDeliveryFromStock;
