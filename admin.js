@@ -86,12 +86,13 @@ async function loadPanel() {
   const pageTitle = document.getElementById('adminPageTitle');
   if (pageTitle) {
     const titles = {
-      overview: 'نظرة عامة', orders: 'الطلبات', delivered: 'تم التسليم',
-      products: 'المنتجات', reviews: 'التقييمات', payments: 'طرق الدفع',
+      overview: 'نظرة عامة', orders: 'إدارة الطلبات', manual_order: 'إنشاء طلب يدوي',
+      stock: 'المخزون والشاشات', delivered: 'تم التسليم',
+      products: 'المنتجات والباقات', reviews: 'التقييمات والشكاوى', payments: 'المالية وطرق الدفع',
       finance: 'التقارير المالية', marketing: 'التسويق', renewals: 'التجديدات',
-      customers: 'الزبائن', complaints: 'الشكاوى', conversations: 'المحادثات',
+      customers: 'العملاء والمحافظ', complaints: 'الشكاوى', conversations: 'المحادثات والدعم',
       support: 'الدعم', activity: 'سجل النشاط', notifications: 'الإشعارات',
-      search: 'بحث عام', security: 'الأمان'
+      search: 'بحث عام', security: 'الأمان والإعدادات', settings: 'إعدادات النظام'
     };
     pageTitle.textContent = titles[tab] || 'لوحة الإدارة';
   }
@@ -111,6 +112,10 @@ async function loadPanel() {
     endpoint = 'orders?' + params.toString();
   } else if (tab === 'overview') {
     endpoint = 'overview';
+  } else if (tab === 'stock') {
+    endpoint = 'stock';
+  } else if (tab === 'manual_order') {
+    endpoint = 'products';
   } else if (tab === 'activity') {
     endpoint = 'activity?limit=' + activityLimit;
   } else if (tab === 'search') {
@@ -246,6 +251,8 @@ function renderMain(d) {
           <b style="font-size:17px" dir="ltr">${esc(o.orderCode)} ${o.isPaidOnline ? '⚡' : ''} ${o.telegram ? '📲' : ''}</b>
         </div>
         <div class="meta">🕒 تاريخ الطلب: ${new Date(o.createdAt).toLocaleString('fr-DZ')}</div>
+        ${o.scheduledFor ? `<div class="meta" style="color:var(--pri);font-weight:700">📅 موعد التسليم المجدول: ${new Date(o.scheduledFor).toLocaleString('fr-DZ')} ${o.scheduleNote ? `(${esc(o.scheduleNote)})` : ''}</div>` : ''}
+        ${o.stockAllocation && o.stockAllocation.allocated ? `<div class="meta" style="color:var(--ok);font-weight:700">📦 شاشة مخصصة من المخزون: رقم ${o.stockAllocation.slotNumber || 1} (${esc(o.stockAllocation.stockCode || '')})</div>` : ''}
 
         <div class="cust-box">
           <div>👤 <b>الاسم:</b> ${esc(o.customerName)}</div>
@@ -273,7 +280,10 @@ function renderMain(d) {
         </div>` : ''}
 
         <details class="deliver-box delivery-wizard"><summary>🔑 تسليم الطلب · افتح النموذج</summary>
-          <p class="ov-caption">1. اختر نوع التسليم ← 2. أدخل البيانات ← 3. راجع وأرسل. تُرسل المعلومات إلى صاحب الطلب فقط.</p>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+            <p class="ov-caption" style="margin:0">1. اختر نوع التسليم ← 2. أدخل البيانات ← 3. راجع وأرسل.</p>
+            <button type="button" class="btn-sm" style="font-size:12px;color:var(--pri)" onclick="fillDeliveryFromStock('${o._id}', '${esc(o.cartItems?.[0]?.productId || '')}')">📦 ملء تلقائي من المخزون</button>
+          </div>
           <label class="lbl">نوع التسليم</label>
           <select class="inp" id="dlv_type_${o._id}" onchange="toggleDeliveryFields('${o._id}')">
             <option value="screen" ${(!da.type || da.type === 'screen') ? 'selected' : ''}>📺 شاشة / بروفايل</option>
@@ -342,6 +352,237 @@ function renderMain(d) {
         </div>
       </div>
       ${list || '<div class="card" style="text-align:center">لا توجد طلبات مطابقة حالياً</div>'}`;
+  }
+
+  // ==================== 1.1 تبويب إنشاء طلب يدوي سريع ====================
+  else if (tab === 'manual_order') {
+    const prods = d.products || [];
+    content = `
+      <div class="card" style="max-width:850px;margin:0 auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid var(--border-hairline);padding-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div>
+            <h3 style="margin:0;font-size:18px">➕ إنشاء طلب يدوي سريع</h3>
+            <p class="ov-caption" style="margin:4px 0 0">إنشاء وتوثيق طلبات الزبائن الواردة عبر واتساب أو تيليغرام أو مباشرة مع خيار تخصيص المخزون الفوري</p>
+          </div>
+          <button class="btn-sm" onclick="goAdmin('orders')">📋 عرض الطلبات</button>
+        </div>
+
+        <form id="manualOrderForm" onsubmit="event.preventDefault();submitManualOrder()">
+          <h4 style="margin:16px 0 8px;color:var(--pri)">👤 بيانات الزبون</h4>
+          <div class="grid-2">
+            <div>
+              <label class="lbl">اسم الزبون *</label>
+              <input class="inp" id="mo_name" required placeholder="مثال: محمد بن علي">
+            </div>
+            <div>
+              <label class="lbl">رقم الهاتف / واتساب *</label>
+              <input class="inp" id="mo_phone" dir="ltr" required placeholder="05XXXXXXXX / 06XXXXXXXX">
+            </div>
+          </div>
+          <div style="margin-top:10px">
+            <label class="lbl">البريد الإلكتروني للزبون (اختياري)</label>
+            <input class="inp" id="mo_email" type="email" dir="ltr" placeholder="client@example.com">
+          </div>
+
+          <h4 style="margin:20px 0 8px;color:var(--pri)">🛍️ تفاصيل الخدمة والاشتراك</h4>
+          <div class="grid-2">
+            <div>
+              <label class="lbl">المنتج المطلوب *</label>
+              <select class="inp" id="mo_prod" onchange="onManualProductChange()" required>
+                <option value="">-- اختر المنتج من الكتالوج --</option>
+                ${prods.map(p => `<option value="${esc(p.productId || p._id)}" data-plans='${esc(JSON.stringify(p.plans || []))}'>${esc(p.title)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="lbl">الخطة / الباقة</label>
+              <select class="inp" id="mo_plan" onchange="onManualPlanChange()">
+                <option value="">-- اختر الباقة --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:10px">
+            <div>
+              <label class="lbl">السعر الإجمالي (دج) *</label>
+              <input class="inp" id="mo_price" type="number" dir="ltr" required placeholder="مثال: 1200">
+            </div>
+            <div>
+              <label class="lbl">المدة بالأشهر</label>
+              <input class="inp" id="mo_months" type="number" min="1" max="36" dir="ltr" value="1">
+            </div>
+            <div>
+              <label class="lbl">الكمية</label>
+              <input class="inp" id="mo_qty" type="number" min="1" max="50" dir="ltr" value="1">
+            </div>
+          </div>
+
+          <h4 style="margin:20px 0 8px;color:var(--pri)">💳 الدفع والجدولة والمخزون</h4>
+          <div class="grid-2">
+            <div>
+              <label class="lbl">طريقة الدفع</label>
+              <select class="inp" id="mo_pay_method">
+                <option value="بريدي موب (BaridiMob)">بريدي موب (BaridiMob)</option>
+                <option value="بطاقة ذهبية / CIB">بطاقة ذهبية / CIB</option>
+                <option value="يدوي / إداري">يدوي / إداري</option>
+                <option value="نقداً عند الاستلام">نقداً</option>
+                <option value="رصيد المحفظة">رصيد المحفظة</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl">حالة الدفع</label>
+              <select class="inp" id="mo_pay_status">
+                <option value="paid">✅ مدفوع ومؤكد</option>
+                <option value="pending">⏳ قيد المراجعة / معلق</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:10px">
+            <div>
+              <label class="lbl">موعد التسليم المجدول (اختياري)</label>
+              <input class="inp" id="mo_sched_for" type="datetime-local" dir="ltr">
+            </div>
+            <div>
+              <label class="lbl">ملاحظة الموعد المجدول</label>
+              <input class="inp" id="mo_sched_note" placeholder="مثال: التسليم بعد صلاة العصر">
+            </div>
+          </div>
+
+          <div style="margin:16px 0;padding:12px;border:1px solid var(--border-hairline);border-radius:var(--radius-control);background:var(--bg-surface-elevated)">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer">
+              <input type="checkbox" id="mo_auto_stock" checked style="width:18px;height:18px">
+              <span>📦 تخصيص شاشة/حساب متاح من المخزون تلقائياً لهذا الطلب</span>
+            </label>
+            <p class="ov-caption" style="margin:4px 26px 0">في حال توفر شاشة فارغة للمنتج المحدد، سيتم ربطها بالطلب مباشرة وإشغال المقعد دون تدخل إضافي.</p>
+          </div>
+
+          <div>
+            <label class="lbl">ملاحظة إدارية داخلية</label>
+            <textarea class="inp" id="mo_note" rows="2" placeholder="ملاحظة خاصة بفريق الإدارة (لا تظهر للزبون)..."></textarea>
+          </div>
+
+          <button class="btn-pri" type="submit" style="width:100%;margin-top:16px;padding:12px;font-size:16px">➕ حفظ وإنشاء الطلب الآن</button>
+        </form>
+      </div>`;
+  }
+
+  // ==================== 1.2 تبويب إدارة المخزون والشاشات ====================
+  else if (tab === 'stock') {
+    const summary = d.summary || {};
+    const stocks = d.stocks || [];
+    content = `
+      <div class="grid-4" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+        <div class="card" style="text-align:center;padding:14px">
+          <small class="ov-caption">إجمالي الحسابات</small>
+          <div style="font-size:24px;font-weight:800;color:var(--text-primary)">${summary.accountsCount || 0}</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <small class="ov-caption">إجمالي الشاشات / المقاعد</small>
+          <div style="font-size:24px;font-weight:800;color:var(--text-primary)">${summary.totalSlots || 0}</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <small class="ov-caption">الشاشات المتاحة</small>
+          <div style="font-size:24px;font-weight:800;color:var(--ok)">${summary.availableSlots || 0}</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <small class="ov-caption">الشاشات المحجوزة</small>
+          <div style="font-size:24px;font-weight:800;color:var(--pri)">${summary.occupiedSlots || 0}</div>
+        </div>
+      </div>
+
+      <details class="card" style="margin-bottom:16px"><summary><b>➕ إضافة حساب مخزون جديد للمتجر</b></summary>
+        <form onsubmit="event.preventDefault();createStockAccountAdmin()" style="margin-top:12px">
+          <div class="grid-2">
+            <div>
+              <label class="lbl">معرف المنتج أو اسمه (مثال: netflix / shahid / canva) *</label>
+              <input class="inp" id="stk_prod" required placeholder="معرف المنتج مثل netflix">
+            </div>
+            <div>
+              <label class="lbl">البريد الإلكتروني للحساب *</label>
+              <input class="inp" id="stk_email" type="email" dir="ltr" required placeholder="account@domain.com">
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:10px">
+            <div>
+              <label class="lbl">كلمة المرور *</label>
+              <input class="inp" id="stk_pass" dir="ltr" required placeholder="كلمة المرور">
+            </div>
+            <div>
+              <label class="lbl">عدد الشاشات / البروفايلات (افتراضي 5)</label>
+              <input class="inp" id="stk_slots" type="number" min="1" max="20" dir="ltr" value="5">
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:10px">
+            <div>
+              <label class="lbl">تكلفة شراء الحساب (دج)</label>
+              <input class="inp" id="stk_cost" type="number" dir="ltr" value="0">
+            </div>
+            <div>
+              <label class="lbl">صلاحية الحساب بالأيام (افتراضي 30 يوم)</label>
+              <input class="inp" id="stk_days" type="number" min="1" max="365" dir="ltr" value="30">
+            </div>
+          </div>
+          <div style="margin-top:10px">
+            <label class="lbl">ملاحظات داخلية للحساب</label>
+            <input class="inp" id="stk_notes" placeholder="ملاحظات حول المورد أو طريقة التجديد...">
+          </div>
+          <button class="btn-pri" type="submit" style="margin-top:12px">💾 إضافة الحساب للمخزون</button>
+        </form>
+      </details>
+
+      <div class="stocks-list">
+        ${stocks.length ? stocks.map(st => `
+          <div class="card" style="margin-bottom:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--border-hairline);padding-bottom:10px">
+              <div>
+                <b style="font-size:16px">${esc(st.productName || st.productId)}</b>
+                <span class="badge" style="margin-right:6px;background:${st.active ? 'var(--ok)' : 'var(--bad)'}">${st.active ? 'نشط' : 'معطل'}</span>
+                <code dir="ltr" style="font-size:12px;color:var(--mut)">${esc(st.code)}</code>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="badge" style="background:var(--accent-soft);color:var(--pri)">
+                  ${st.availableSlots} من ${st.totalSlots} متاحة
+                </span>
+                ${adminInboxRole() === 'owner' ? `<button class="btn-sm" style="color:var(--bad)" onclick="deleteStockAccountAdmin('${st._id}')">🗑️ حذف</button>` : ''}
+              </div>
+            </div>
+
+            <div class="grid-2" style="margin:10px 0;background:var(--bg-surface-elevated);padding:10px;border-radius:var(--radius-control)">
+              <div>📧 <b>البريد:</b> <code dir="ltr">${esc(st.email)}</code></div>
+              <div>🔑 <b>كلمة السر:</b> <code dir="ltr">${esc(st.password)}</code></div>
+              <div>📅 <b>تاريخ الانتهاء:</b> <span dir="ltr">${st.masterExpiresAt ? new Date(st.masterExpiresAt).toLocaleDateString('fr-DZ') : '—'}</span></div>
+              <div>💰 <b>التكلفة:</b> <span>${fmt(st.costPrice || 0)}</span></div>
+            </div>
+
+            <h5 style="margin:10px 0 6px">📺 الشاشات والبروفايلات (${(st.slots || []).length}):</h5>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
+              ${(st.slots || []).map(sl => `
+                <div style="border:1px solid ${sl.status === 'available' ? 'var(--ok)' : 'var(--border-hairline)'};border-radius:8px;padding:8px;background:${sl.status === 'available' ? 'rgba(22,163,74,0.04)' : 'var(--bg-surface)'}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                    <b>شاشة ${sl.slotNumber}: ${esc(sl.profileName)}</b>
+                    <span class="badge" style="font-size:10px;background:${sl.status === 'available' ? 'var(--ok)' : 'var(--pri)'}">
+                      ${sl.status === 'available' ? 'متاح ✓' : 'محجوز'}
+                    </span>
+                  </div>
+                  ${sl.status === 'occupied' ? `
+                    <div style="font-size:11px;color:var(--text-secondary);line-height:1.4">
+                      <div>👤 ${esc(sl.customerName || 'عميل')}</div>
+                      <div>📱 ${esc(sl.customerPhone || '')}</div>
+                      <div>🧾 طلب: <code dir="ltr">${esc(sl.orderCode || '')}</code></div>
+                      ${sl.pin ? `<div>🔢 PIN: <code dir="ltr">${esc(sl.pin)}</code></div>` : ''}
+                    </div>
+                    <button class="btn-sm" style="margin-top:6px;width:100%;font-size:11px" onclick="releaseStockSlotAdmin('${st._id}', ${sl.slotNumber})">
+                      🔓 تحرير الشاشة
+                    </button>
+                  ` : `
+                    <div style="font-size:11px;color:var(--ok);margin-top:4px">جاهز للتخصيص الفوري</div>
+                  `}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('') : '<div class="card" style="text-align:center">لا توجد حسابات مسجلة في المخزون حالياً</div>'}
+      </div>`;
   }
 
   // ==================== 2. تبويب بطاقات العرض وصفحات الهبوط ====================
