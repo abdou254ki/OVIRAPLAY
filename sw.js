@@ -1,11 +1,10 @@
-const CACHE_NAME = 'ovira-play-static-v6-20261117-185920';
+const CACHE_NAME = 'ovira-play-static-v7-foundation';
 const APP_SHELL = [
   './',
   './index.html',
-  './style.css',
+  './ovira-core.css',
   './ovira-experience.css',
-  './ovira-design-v4.css?v=20261118-v4',
-  './shared/ovira-tokens.css',
+  './style.css',
   './app.js',
   './pwa.js',
   './manifest.json',

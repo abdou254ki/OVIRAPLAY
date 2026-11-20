@@ -1,4 +1,6 @@
-const API_BASE = 'http://127.0.0.1:5001';
+const API_BASE = (location.hostname === '127.0.0.1' || location.hostname === 'localhost')
+  ? 'http://127.0.0.1:5001'
+  : 'https://ovira-api.onrender.com';
 const API_URL = API_BASE + '/api/orders';
 const ACC_URL = API_BASE + '/api/account';
 

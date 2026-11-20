@@ -1,4 +1,7 @@
-const API = 'http://127.0.0.1:5001/api/admin';
+const API_HOST = (location.hostname === '127.0.0.1' || location.hostname === 'localhost')
+  ? 'http://127.0.0.1:5001'
+  : 'https://ovira-api.onrender.com';
+const API = API_HOST + '/api/admin';
 let token = localStorage.getItem('adm_tk') || sessionStorage.getItem('adm_tk') || '';
 let tab = 'overview', stFilter = '', qFilter = '', compFilter = '';
 let orderFrom = '', orderTo = '', productQuery = '';
